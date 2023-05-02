@@ -15,9 +15,11 @@ private:
 	Server();
 	~Server();
 
-	static std::string	configFile;
-	static int			socketFd;
-	static std::string	errorMsg;
+	static std::string			configFile;
+	static int					socketFd;
+	static std::string			errorMsg;
+	static struct sockaddr_in	addr;
+	static socketlen_t			len;
 public:
 	static void	startServer();
 

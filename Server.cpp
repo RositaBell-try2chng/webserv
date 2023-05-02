@@ -1,15 +1,19 @@
 #include "Server.hpp"
+#include "Exceptions.hpp"
 
 //инициализируем статические переменный класса
 std::string Server::errorMsg = std::string("none");
 std::string Server::configFile = std::string("./conf/serv.conf");
 int			Server::socketFd = -1;
 
-
 void Server::startServer()
 {
 	Server::putMsg("Start Server");
-	//Server::socketFd = socket(AF_INET, SOCK_STREAM);
+	Server::socketFd = socket(AF_INET, SOCK_STREAM, 0);
+	if (Server::socketFd < 0)
+		throw exceptionSocket();
+	if (bind(Server::socketFd, (struct sockaddr*)&addr ) != 0)
+		throw exceptionBind();
 }
 
 int Server::putErrMsg(std::string msg)
