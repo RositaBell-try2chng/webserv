@@ -1,4 +1,4 @@
-SRCS		= main.cpp Server.cpp Exceptions.cpp
+SRCS		= main.cpp Server.cpp Exceptions.cpp Logger.cpp
 
 OBJS		= ${SRCS:.cpp=.o}
 
@@ -28,4 +28,10 @@ fclean:		clean
 
 re:			fclean all
 
-.PHONY:		all clean fclean re run
+log_clean:
+			${RM} logs/errors.txt logs/info.txt logs/queries.txt
+
+stop:
+			pkill webserv
+
+.PHONY:		all clean fclean re run log_clean

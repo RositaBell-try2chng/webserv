@@ -1,11 +1,12 @@
 #include "Exceptions.hpp"
 
-const char* exceptionSocket::what() const throw()
+const char* exceptionErrno::what() const throw()
 {
-	return ("socket failed");
+	Logger::putErrMsg(std::string("Exception: ") + strerror(errno));
+	return (strerror(errno));
 }
 
-const char* exceptionBind::what() const throw()
+const char* exceptionGetAddrInfo::what() const throw()
 {
-	return (strerror(errno));
+	return ("Exception: getaddrinfo failed. Read logs.\n");
 }

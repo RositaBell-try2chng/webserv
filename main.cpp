@@ -1,11 +1,13 @@
 #include "Server.hpp"
+#include "Logger.hpp"
+#include "Exceptions.hpp"
 
 int main(int argc, char **argv)
 {
 	if (!Server::checkArgs(argc, argv))
-		return (Server::putErrMsg());
-	if (!Server::parse(false))
-		return (Server::putErrMsg());
+		return (1);
+	if (!Server::parse())
+		return (1);
 	try
 	{
 		Server::startServer();

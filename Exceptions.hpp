@@ -1,15 +1,16 @@
 #ifndef EXCEPTIONS_HPP
 # define EXCEPTIONS_HPP
 
-#include <iostream>
+# include "webserv.hpp"
+# include "Logger.hpp"
 
-class exceptionSocket : public std::exception
+class exceptionErrno : public std::exception
 {
 public:
 	const char *what() const throw();
 };
 
-class exceptionBind : public std::exception
+class exceptionGetAddrInfo : public std::exception
 {
 public:
 	const char *what() const throw();

@@ -6,31 +6,23 @@
 //Mesages
 #define TOO_MANY_ARGS			"Too many args\nUse only first argument\n"
 #define WRONG_EXTENSION_OF_FILE	"Wrong extension of config file"
-#define NOT_PASSED_ARG			"Config file doesn't passed.\n"
+#define NOT_PASSED_ARG			"Config file doesn't passed."
 #define TRY_DEFAULT				"Trying to use default config file:\n"
+
+#define DEFAULT_CONF "./conf/serv.conf"
 
 class Server
 {
 private:
 	Server();
 	~Server();
-
-	static std::string			configFile;
-	static int					socketFd;
-	static std::string			errorMsg;
-	static struct sockaddr_in	addr;
-	static socketlen_t			len;
+	static std::string	conf;
+	static t_listen		*main;
 public:
-	static void	startServer();
-
-	//getters
-	static std::string const &getErrMsg();
-	//parse arguments
+	static void	startServer(); //запускаем сервер
 	static bool	checkArgs(int args, char **argv); //проверяет количество аргументов + расширение имени файла
-	static bool	parse(bool flgSecond);
-	//вывод сообщений
-	static int	putErrMsg(std::string msg = Server::errorMsg);
-	static int	putMsg(std::string msg);
+	static bool	parse(); //парсим конфиг
+	static void exitHandler(int sig);
 };
 
 #endif
