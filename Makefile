@@ -1,4 +1,6 @@
-SRCS		= main.cpp Server.cpp Exceptions.cpp Logger.cpp
+R_PARS		= ./request_parse/
+
+SRCS		= main.cpp Server.cpp Exceptions.cpp Logger.cpp #${R_PARS}Request_parse.cpp
 
 OBJS		= ${SRCS:.cpp=.o}
 
@@ -29,7 +31,7 @@ fclean:		clean
 re:			fclean all
 
 log_clean:
-			${RM} logs/errors.txt logs/info.txt logs/queries.txt
+			${RM} logs/errors.txt logs/info.txt logs/requests.txt logs/wrong_requests.txt
 
 stop:
 			pkill webserv
