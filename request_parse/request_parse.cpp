@@ -17,7 +17,7 @@ Request_parse::HTTP_Request Request_parse::ft_strtorec(raw, req) {
 		req->method.push_back(raw[i]);
 	raw.erase(0, i);
 	if (req->method.size == 0) {
-		Logger::putMsg("Request haven\'t method", FILE_WREQ, WREQ);
+		Logger::putMsg("Request hasn\'t method", FILE_WREQ, WREQ);
 		return NULL;
 	}
 	
@@ -26,7 +26,7 @@ Request_parse::HTTP_Request Request_parse::ft_strtorec(raw, req) {
 		req->uri.push_back(raw[i]);
 	raw.erase(0, i)
 	if (req->uri.size == 0) {
-		Logger::putMsg("Request haven\'t URI" + raw, FILE_WREQ, WREQ);
+		Logger::putMsg("Request hasn\'t URI" + raw, FILE_WREQ, WREQ);
 		return NULL;
 	}
 
@@ -44,12 +44,12 @@ Request_parse::HTTP_Request Request_parse::ft_strtorec(raw, req) {
 	raw.erase(0, i);
 
 	if (req->version.size == 0) {
-		Logger::putMsg("Request haven\'t HTML version", FILE_WREQ, WREQ);
+		Logger::putMsg("Request hasn\'t HTML version", FILE_WREQ, WREQ);
 		return NULL;
 	}
 
 // Headers
-	while (!raw.substr(0, 2).compare("\r\n") && raw[0]!=("\n") && raw.size() > 0) {
+	while (raw[0]!=("\n") && raw.size() > 0) {
 		i = 0;
 
 		while (raw[i] != ':')
@@ -63,14 +63,15 @@ Request_parse::HTTP_Request Request_parse::ft_strtorec(raw, req) {
 		map.insert(key, value);
 		key.clean;
 		value.clean;
+		if (raw[0] == '\r')
+			++i;
 		raw.erase(0, i);
 	}
 
 	if (headers.find("Host") == headers.end()) {
-		Logger::putMsg("Request haven\'t \"Host\" header", FILE_WREQ, WREQ);
+		Logger::putMsg("Request hasn't \"Host\" header", FILE_WREQ, WREQ);
 		return NULL;
 	}
-
 
 // Body
 	if (raw.size > 0)

@@ -7,6 +7,8 @@ struct HTTP_Request
 {
 	private:
 
+	// Get "raw" request and parse into structure
+		HTTP_Request ft_strtoreq(std::string raw);
 
 	public:
 
@@ -20,9 +22,6 @@ struct HTTP_Request
 
 		~HTTP_Request();
 		HTTP_Request();
-
-	// Get "raw" request and parse into structure
-		HTTP_Request ft_strtoreq(std::string raw);
 		
 };
 
