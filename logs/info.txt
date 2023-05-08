@@ -1,0 +1,22 @@
+==========================
+Mon May  8 13:35:31 2023
+ERROR: 
+Config file doesn't passed.
+==========================
+==========================
+Mon May  8 13:35:31 2023
+INFO: 
+Trying to use default config file:
+./conf/serv.conf
+==========================
+==========================
+Mon May  8 13:38:48 2023
+ERROR: 
+Config file doesn't passed.
+==========================
+==========================
+Mon May  8 13:38:48 2023
+INFO: 
+Trying to use default config file:
+./conf/serv.conf
+==========================
