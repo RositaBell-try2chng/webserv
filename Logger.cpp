@@ -1,7 +1,7 @@
 #include "Logger.hpp"
 
-Logger::Logger() = default;
-Logger::~Logger() = default;
+Logger::Logger() {};
+Logger::~Logger() {};
 
 int Logger::putErrMsg(const std::string &msg)
 {

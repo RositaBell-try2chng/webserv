@@ -2,8 +2,8 @@
 #include "Exceptions.hpp"
 #include "Logger.hpp"
 
-Server::Server() = default;
-Server::~Server() = default;
+Server::Server() {};
+Server::~Server() {};
 
 //инициализируем статические переменный класса
 std::string Server::conf = std::string(DEFAULT_CONF);
