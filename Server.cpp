@@ -6,46 +6,113 @@ Server::Server() {};
 Server::~Server() {};
 
 //инициализируем статические переменный класса
-std::string Server::conf = std::string(DEFAULT_CONF);
-t_listen	*Server::main = nullptr;
+std::string 	Server::conf = std::string(DEFAULT_CONF);
+t_listen		*Server::main = nullptr;
 
 void Server::startServer()
 {
 	Logger::putMsg("Start launching server");
 
-	t_use	use;
-	signal(SIGTERM, Server::exitHandler);
-	Server::main = new t_listen;
-	bzero(&Server::main->hints, sizeof(Server::main->hints));
+	Server::prepareServ();
+	Server::mainLoop();
+}
+
+void Server::fillHints()
+{
 	Server::main->hints.ai_family = AF_INET;
 	Server::main->hints.ai_socktype = SOCK_STREAM;
 	Server::main->hints.ai_flags = AI_PASSIVE;
+}
 
-	Server::main->stts = getaddrinfo(nullptr, "80", &Server::main->hints, &Server::main->info);
+void Server::prepareServ()
+{
+	signal(SIGTERM, Server::exitHandler);
+
+	Server::main = new t_listen;
+	bzero(&Server::main->hints, sizeof(Server::main->hints));
+	Server::fillHints();
+
+	Server::main->stts = getaddrinfo(nullptr, "8080", &Server::main->hints, &Server::main->info);
 	if (Server::main->stts != 0)
 		throw exceptionGetAddrInfo();
 	Server::main->sockFd = socket(Server::main->info->ai_family, Server::main->info->ai_socktype, Server::main->info->ai_protocol);
 	if (Server::main->sockFd < 0 || \
+		fcntl(Server::main->sockFd, F_SETFL, O_NONBLOCK) == -1 || \
 		bind(Server::main->sockFd, Server::main->info->ai_addr, Server::main->info->ai_addrlen) < 0 || \
-		listen(Server::main->sockFd, 20) < 0)
+		listen(Server::main->sockFd, 10) < 0)
 		throw exceptionErrno();
-	Logger::putMsg("Server ready to accept connections, start main loop");
+	Logger::putMsg("Server ready to accept connections");
+}
+
+void Server::mainLoop()
+{
+	timeval			timeout;
+	fd_set			readFds;
+//	fd_set			writeFds;
+	std::set<int>	clients;
+	int				fd;
+	int				maxFd;
+	std::string		request;
+
+	timeout.tv_sec = 55;
+	timeout.tv_usec = 0;
+	clients.clear();
+
 	while (1)
 	{
-		use.addrSize = sizeof(use.addr);
-		use.sockFd = accept(Server::main->sockFd, (struct sockaddr *)&use.addr, &use.addrSize);
-		if (use.sockFd < 0)
+		FD_ZERO(&readFds);
+//		FD_ZERO(&writeFds);
+		std::cout << "1\n";
+		FD_SET(Server::main->sockFd, &readFds);
+//		FD_SET(Server::main->sockFd, &writeFds);
+		std::cout << "2\n";
+		for(std::set<int>::iterator it = clients.begin(); it != clients.end(); it++)
 		{
-			Logger::putMsg(strerror(errno), FILE_ERR, ERR);
-			continue;
+			FD_SET(*it, &readFds);
+//			FD_SET(*it, &writeFds);
 		}
-		use.resRecv = recv(use.sockFd, use.buf, 1000, 0);
-		if (use.resRecv < 0)
+		std::cout << "3\n";
+		maxFd = std::max(Server::main->sockFd, *max_element(clients.begin(), clients.end()));
+		if(select(maxFd + 1, &readFds, NULL, NULL, &timeout) <= 0)
+			throw exceptionErrno();
+		std::cout << "4\n";
+		fd = accept(Server::main->sockFd, nullptr, nullptr);//(struct sockaddr *)&use.addr, &use.addrSize); //пока непонятно нужны ли эти данные
+		if (fd < 0 || fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
 			Logger::putMsg(strerror(errno), FILE_ERR, ERR);
-		Logger::putMsg(std::string(use.buf, use.resRecv), FILE_REQ, REQ);
-		if (send(use.sockFd, use.buf, use.resRecv, 0) < 0)
-			Logger::putMsg(strerror(errno), FILE_ERR, ERR);
+		else
+			clients.insert(fd);
+		std::cout << "5\n";
+		for(std::set<int>::iterator it = clients.begin(); it != clients.end(); it++)
+		{
+			if (!request.empty())
+			request.clear();
+			if(FD_ISSET(*it, &readFds))
+				request = recvAll(*it, clients, request);
+//			if(FD_ISSET(*it, &writeFds))
+//				sendall(*it);
+		}
+		std::cout << "6\n";
 	}
+}
+
+std::string & Server::recvAll(int fd, std::set<int> clients, std::string &res)
+{
+	int			recvRes;
+	char		buf[200];
+
+	recvRes = recv(fd, buf, 100, 0);
+	while (recvRes > 0)
+	{
+		res += std::string(buf, recvRes);
+		recvRes = recv(fd, buf, 100, 0);
+	}
+	if (recvRes < 0)
+		Logger::putMsg("error while recv", FILE_ERR, ERR);
+	Logger::putMsg(res, FILE_REQ, REQ);
+	send(fd, res.c_str(), res.length(), 0);
+	close(fd);
+	clients.erase(fd);
+	return (res);
 }
 
 bool Server::checkArgs(int args, char **argv)
@@ -95,7 +162,7 @@ bool Server::parse()
 
 void Server::exitHandler(int sig)
 {
-	if (sig != SIGTERM)
+	if (sig != SIGTERM && sig != -1)
 		return ;
 	std::cout << "clear exit\n";
 	if (Server::main != nullptr)
@@ -105,7 +172,10 @@ void Server::exitHandler(int sig)
 		delete Server::main;
 		Server::main = nullptr;
 	}
-	Logger::putMsg("Get SIGTERM. server shutdown");
+	if (sig == -1)
+		Logger::putMsg("Exception Exit", FILE_ERR, ERR);
+	else
+		Logger::putMsg("Get SIGTERM. server shutdown");
 	Logger::putMsg(DELIMITER_END);
 	exit(0);
 }
