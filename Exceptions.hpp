@@ -3,6 +3,7 @@
 
 # include "webserv.hpp"
 # include "Logger.hpp"
+# include "Server.hpp"
 
 class exceptionErrno : public std::exception
 {
