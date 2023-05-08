@@ -3,9 +3,9 @@
 #include "Server.hpp"
 #include "Logger.hpp"
 #include "Exceptions.hpp"
-//#include "./request_parse/Request_parse.hpp"
+#include "./request_parse/HTTP_Request.hpp"
 
-
+/*
 int main(int argc, char **argv)
 {
 	Logger::putMsg(DELIMITER_START);
@@ -24,22 +24,24 @@ int main(int argc, char **argv)
 	}
 	return (0);
 }
+*/
 
-/*
 int main(int argc, char **argv)
 {
-	std::string raw = "";
 
-	std::cout << raw << "\n\n-----------------\n-----------------\n\n";
 
-	Request_parse::HTTP_request req = Request_parse::ft_strtoreq(raw);
+	std::string raw = "GET / HTTP/1.1\r\nHost: alizar.habrahabr.ru";
 
-	std::cout << "method name:	" << req->method << std::endl;
-	std::cout << "URI:			" << req->method << std::endl;
-	std::cout << "version:		" << req->method << "\n" << std::endl;
+	std::cout << raw << "\n\n-------------------------\n-------------------------\n\n";
 
-	std::cout << "Host: " << req->headers.find("Host") << "\n" << std::endl;
+	HTTP_Request req;
 
-	std::cout << "body: " << req->body << std::endl;
+	HTTP_Request::ft_strtoreq(raw, req);
+	std::cout << "method name:	" << req.method << std::endl;
+	std::cout << "URI:			" << req.method << std::endl;
+	std::cout << "version:		" << req.method << "\n" << std::endl;
+
+	//std::cout << "Host: " << req.headers.find("Host") << "\n" << std::endl;
+
+	std::cout << "body:			" << req.body << std::endl;
 }
-*/

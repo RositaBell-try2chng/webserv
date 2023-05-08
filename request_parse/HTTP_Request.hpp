@@ -1,7 +1,8 @@
-#ifndef REQUEST_PARSE_HPP
-# define REQUEST_PARSE_HPP
+#ifndef HTTP_REQUEST_HPP
+# define HTTP_REQUEST_HPP
 
 # include "../webserv.hpp"
+# include <map>
 
 struct HTTP_Request
 {
@@ -22,7 +23,7 @@ struct HTTP_Request
 		HTTP_Request();
 
 		// Get "raw" request and parse into a structure
-		HTTP_Request ft_strtoreq(std::string raw);		
+		static int ft_strtoreq(std::string raw, HTTP_Request req);		
 };
 
 #endif

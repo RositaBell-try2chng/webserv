@@ -1,6 +1,6 @@
 R_PARS		= ./request_parse/
 
-SRCS		= main.cpp Server.cpp Exceptions.cpp Logger.cpp #${R_PARS}Request_parse.cpp
+SRCS		= main.cpp Server.cpp Exceptions.cpp Logger.cpp ${R_PARS}HTTP_Request.cpp
 
 OBJS		= ${SRCS:.cpp=.o}
 
