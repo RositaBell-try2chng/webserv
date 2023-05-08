@@ -29,7 +29,7 @@ fclean:		clean
 re:			fclean all
 
 log_clean:
-			${RM} logs/errors.txt logs/info.txt logs/queries.txt
+			${RM} logs/errors.txt logs/info.txt logs/requests.txt logs/wrong_requests.txt
 
 stop:
 			pkill webserv
