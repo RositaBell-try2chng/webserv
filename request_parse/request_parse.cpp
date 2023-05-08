@@ -4,13 +4,13 @@
 Request_parse::HTTP_Request() {};
 Request_parse::~HTTP_Request() {};
 
-Request_parse::HTTP_Request Request_parse::ft_strtorec(raw, req) {
+Request_parse::HTTP_Request Request_parse::ft_strtoreq(std::string raw) {
 
 	HTTP_Request	req;
 	std::string		key;
 	std::string		value;
 
-// Start
+// URL
 
 	// Method
 	for (int i = 0; raw[i] != ' '; ++i)

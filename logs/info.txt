@@ -220,3 +220,53 @@ END OF ANOTHER LAUNCH
 
 //////////////////
 ==========================
+==========================
+Mon May  8 19:26:10 2023
+INFO:
+//////////////////
+
+START OF ANOTHER LAUNCH
+
+//////////////////
+==========================
+==========================
+Mon May  8 19:26:10 2023
+INFO:
+start parsing arguments
+==========================
+==========================
+Mon May  8 19:26:10 2023
+ERROR:
+Config file doesn't passed.
+==========================
+==========================
+Mon May  8 19:26:10 2023
+INFO:
+Trying to use default config file:
+./conf/serv.conf
+==========================
+==========================
+Mon May  8 19:26:10 2023
+INFO:
+parsing arguments SUCCESS
+==========================
+==========================
+Mon May  8 19:26:10 2023
+INFO:
+start parsing config file
+==========================
+==========================
+Mon May  8 19:26:10 2023
+INFO:
+parsing config file SUCCESS
+==========================
+==========================
+Mon May  8 19:26:10 2023
+INFO:
+Start launching server
+==========================
+==========================
+Mon May  8 19:26:10 2023
+INFO:
+Server ready to accept connections, start main loop
+==========================
