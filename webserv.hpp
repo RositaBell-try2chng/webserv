@@ -9,6 +9,9 @@
 # include "cstring"
 # include <csignal>
 # include <unistd.h>
+# include <set>
+# include <fcntl.h>
+# include <algorithm>
 
 typedef struct	s_listen
 {
@@ -18,13 +21,13 @@ typedef struct	s_listen
 	struct addrinfo			*info;
 } t_listen;
 
-typedef struct	s_use
-{
-	int						resRecv;
-	int 					sockFd;
-	struct sockaddr_storage	addr;
-	socklen_t				addrSize;
-	char					buf[1000];
-} t_use;
+//typedef struct	s_use
+//{
+//	int						resRecv;
+//	int 					sockFd;
+//	struct sockaddr_storage	addr;
+//	socklen_t				addrSize;
+//	char					buf[1000];
+//} t_use;
 
 #endif
