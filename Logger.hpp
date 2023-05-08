@@ -5,6 +5,7 @@
 # include <ctime>
 
 # define LOGS		"./logs/"
+
 # define DEF_FILE	"info.txt"
 # define DEF_TYPE	"INFO"
 
@@ -13,6 +14,9 @@
 
 # define FILE_REQ	"requests.txt"
 # define REQ		"REQUEST"
+
+# define FILE_WREQ	"wrong_requests.txt"
+# define WREQ		"WRONG_REQUEST"
 
 class Logger
 {
