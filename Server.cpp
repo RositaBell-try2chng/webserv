@@ -21,7 +21,7 @@ void Server::startServer()
 	Server::main->hints.ai_socktype = SOCK_STREAM;
 	Server::main->hints.ai_flags = AI_PASSIVE;
 
-	Server::main->stts = getaddrinfo(nullptr, "8080", &Server::main->hints, &Server::main->info);
+	Server::main->stts = getaddrinfo(nullptr, "80", &Server::main->hints, &Server::main->info);
 	if (Server::main->stts != 0)
 		throw exceptionGetAddrInfo();
 	Server::main->sockFd = socket(Server::main->info->ai_family, Server::main->info->ai_socktype, Server::main->info->ai_protocol);
@@ -100,11 +100,13 @@ void Server::exitHandler(int sig)
 	std::cout << "clear exit\n";
 	if (Server::main != nullptr)
 	{
+		close(Server::main->sockFd);
 		freeaddrinfo(Server::main->info);
 		delete Server::main;
 		Server::main = nullptr;
 	}
 	Logger::putMsg("Get SIGTERM. server shutdown");
+	Logger::putMsg(DELIMITER_END);
 	exit(0);
 }
 

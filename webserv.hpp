@@ -8,6 +8,7 @@
 # include <netdb.h>
 # include "cstring"
 # include <csignal>
+# include <unistd.h>
 
 typedef struct	s_listen
 {

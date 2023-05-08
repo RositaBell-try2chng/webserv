@@ -4,6 +4,7 @@
 
 int main(int argc, char **argv)
 {
+	Logger::putMsg(DELIMITER_START);
 	if (!Server::checkArgs(argc, argv))
 		return (1);
 	if (!Server::parse())
