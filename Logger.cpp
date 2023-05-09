@@ -10,7 +10,7 @@ void	Logger::putMsg(std::string const &msg, std::string const &filename, std::st
 {
 	std::ofstream	out;
 
-	out.open(std::string(LOGS) + filename, std::ios::app);
+	out.open((std::string(LOGS) + filename).c_str(), std::ios::app);
 	if (!out.is_open())
 	{
 		std::cerr << "Can't log " << typeOfMsg << " in " << filename << " in directory " << LOGS << " because:\n" << \

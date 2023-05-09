@@ -26,7 +26,7 @@ private:
 	static void			prepareServ();
 	static void			fillHints();
 	static void			mainLoop();
-	static std::string&	recvAll(int fd, std::set<int> clients, std::string &res);
+	static std::string&	recvAll(int fd, std::set<int> &clients, std::string &res);
 public:
 	static void				startServer(); //запускаем сервер
 	static bool				checkArgs(int args, char **argv); //проверяет количество аргументов + расширение имени файла

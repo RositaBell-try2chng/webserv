@@ -7,7 +7,7 @@ Server::~Server() {};
 
 //инициализируем статические переменный класса
 std::string 	Server::conf = std::string(DEFAULT_CONF);
-t_listen		*Server::main = nullptr;
+t_listen		*Server::main = NULL;
 
 void Server::startServer()
 {
@@ -32,7 +32,7 @@ void Server::prepareServ()
 	bzero(&Server::main->hints, sizeof(Server::main->hints));
 	Server::fillHints();
 
-	Server::main->stts = getaddrinfo(nullptr, "8080", &Server::main->hints, &Server::main->info);
+	Server::main->stts = getaddrinfo(NULL, "8081", &Server::main->hints, &Server::main->info);
 	if (Server::main->stts != 0)
 		throw exceptionGetAddrInfo();
 	Server::main->sockFd = socket(Server::main->info->ai_family, Server::main->info->ai_socktype, Server::main->info->ai_protocol);
@@ -50,68 +50,73 @@ void Server::mainLoop()
 	fd_set			readFds;
 //	fd_set			writeFds;
 	std::set<int>	clients;
-	int				fd;
 	int				maxFd;
 	std::string		request;
+	int				selRes;
 
-	timeout.tv_sec = 55;
+	timeout.tv_sec = 15;
 	timeout.tv_usec = 0;
 	clients.clear();
 
-	while (1)
+	while (true)
 	{
 		FD_ZERO(&readFds);
 //		FD_ZERO(&writeFds);
-		std::cout << "1\n";
 		FD_SET(Server::main->sockFd, &readFds);
 //		FD_SET(Server::main->sockFd, &writeFds);
-		std::cout << "2\n";
-		for(std::set<int>::iterator it = clients.begin(); it != clients.end(); it++)
+		for (std::set<int>::iterator it = clients.begin(); it != clients.end(); it++)
 		{
 			FD_SET(*it, &readFds);
 //			FD_SET(*it, &writeFds);
 		}
-		std::cout << "3\n";
 		maxFd = std::max(Server::main->sockFd, *max_element(clients.begin(), clients.end()));
-		if(select(maxFd + 1, &readFds, NULL, NULL, &timeout) <= 0)
-			throw exceptionErrno();
-		std::cout << "4\n";
-		fd = accept(Server::main->sockFd, nullptr, nullptr);//(struct sockaddr *)&use.addr, &use.addrSize); //пока непонятно нужны ли эти данные
-		if (fd < 0 || fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
-			Logger::putMsg(strerror(errno), FILE_ERR, ERR);
-		else
-			clients.insert(fd);
-		std::cout << "5\n";
+		selRes = select(maxFd + 1, &readFds, NULL, NULL, &timeout);
+		if (selRes <= 0)
+		{
+			if (selRes < 0)
+				Logger::putMsg(strerror(errno), FILE_ERR, ERR);
+			continue;
+		}
+		if (FD_ISSET(Server::main->sockFd, &readFds))
+		{
+			int	fd;
+			fd = accept(Server::main->sockFd, NULL, NULL);//(struct sockaddr *)&use.addr, &use.addrSize); //пока непонятно нужны ли эти данные
+			if (fd < 0 || fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
+				Logger::putMsg(strerror(errno), FILE_ERR, ERR);
+			else
+				clients.insert(fd);
+		}
 		for(std::set<int>::iterator it = clients.begin(); it != clients.end(); it++)
 		{
 			if (!request.empty())
-			request.clear();
-			if(FD_ISSET(*it, &readFds))
+				request.clear();
+			if (FD_ISSET(*it, &readFds))
 				request = recvAll(*it, clients, request);
 //			if(FD_ISSET(*it, &writeFds))
 //				sendall(*it);
 		}
-		std::cout << "6\n";
 	}
 }
 
-std::string & Server::recvAll(int fd, std::set<int> clients, std::string &res)
+std::string & Server::recvAll(int fd, std::set<int> &clients, std::string &res)
 {
 	int			recvRes;
-	char		buf[200];
+	char		buf[1000];
 
-	recvRes = recv(fd, buf, 100, 0);
-	while (recvRes > 0)
+	recvRes = recv(fd, buf, 1000, 0);
+	//while (recvRes > 0)
 	{
 		res += std::string(buf, recvRes);
-		recvRes = recv(fd, buf, 100, 0);
+		//recvRes = recv(fd, buf, 1000, 0);
 	}
-	if (recvRes < 0)
-		Logger::putMsg("error while recv", FILE_ERR, ERR);
+	if (recvRes <= 0)
+	{
+		Logger::putMsg(std::string("error while recv ") + strerror(errno), FILE_ERR, ERR);
+		clients.erase(fd);
+		close(fd);
+	}
 	Logger::putMsg(res, FILE_REQ, REQ);
 	send(fd, res.c_str(), res.length(), 0);
-	close(fd);
-	clients.erase(fd);
 	return (res);
 }
 
@@ -143,12 +148,12 @@ bool Server::parse()
 	//fix me: add deep parsing of config file
 	std::ifstream in;
 
-	in.open(Server::conf);
+	in.open(Server::conf.c_str());
 	if (!in.is_open())
 	{
 		Logger::putMsg(std::string(strerror(errno)) + std::string("\n") + std::string(Server::conf), FILE_ERR, ERR);
 		Logger::putMsg(std::string("TRY to open same file in 'conf' directory\n"));
-		in.open(std::string("./conf/") + Server::conf);
+		in.open((std::string("./conf/") + Server::conf).c_str());
 	}
 	if (!in.is_open())
 	{
@@ -165,12 +170,12 @@ void Server::exitHandler(int sig)
 	if (sig != SIGTERM && sig != -1)
 		return ;
 	std::cout << "clear exit\n";
-	if (Server::main != nullptr)
+	if (Server::main != NULL)
 	{
 		close(Server::main->sockFd);
 		freeaddrinfo(Server::main->info);
 		delete Server::main;
-		Server::main = nullptr;
+		Server::main = NULL;
 	}
 	if (sig == -1)
 		Logger::putMsg("Exception Exit", FILE_ERR, ERR);
@@ -180,4 +185,9 @@ void Server::exitHandler(int sig)
 	exit(0);
 }
 
-const t_listen& Server::getMain() { return *(Server::main); }
+const t_listen& Server::getMain()
+{
+	if (Server::main)
+		return *(Server::main);
+	throw noMainStructException();
+}

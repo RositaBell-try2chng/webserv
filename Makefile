@@ -1,6 +1,6 @@
 R_PARS		= ./request_parse/
 
-SRCS		= main.cpp Server.cpp Exceptions.cpp Logger.cpp ${R_PARS}HTTP_Request.cpp ${R_PARS}HTTP_Answer.cpp ${R_PARS}HTTP_Utils.cpp
+SRCS		= main.cpp Server.cpp Exceptions.cpp Logger.cpp #${R_PARS}HTTP_Request.cpp ${R_PARS}HTTP_Answer.cpp ${R_PARS}HTTP_Utils.cpp
 
 OBJS		= ${SRCS:.cpp=.o}
 
@@ -16,7 +16,7 @@ CFLAGS		= -Wall -Wextra -Werror -std=c++98 -fsanitize=address
 
 all:		${NAME}
 
-%.opp:	%.cpp ${HEADER}
+%.o:	%.cpp ${HEADER}
 		${CC} ${CFLAGS} -c $< -o $@
 
 ${NAME}:	${OBJS}

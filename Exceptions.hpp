@@ -17,6 +17,12 @@ public:
 	const char *what() const throw();
 };
 
+class noMainStructException : public std::exception
+{
+public:
+	const char *what() const throw();
+};
+
 class exceptionWrongRequest : public std::exception
 {
 public:
