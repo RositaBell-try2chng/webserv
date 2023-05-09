@@ -28,7 +28,8 @@ int HTTP_Request::ft_strtoreq(std::string raw, HTTP_Request *req) {
 		Logger::putMsg("Request hasn\'t URI" + raw, FILE_WREQ, WREQ);
 		return 1;
 	}
-		
+	
+	// Version
 	for (++i; raw[i] != '\n'  && i != end; ++i) {
 		if (raw[i] != '\r')
 			req->version.push_back(raw[i]);

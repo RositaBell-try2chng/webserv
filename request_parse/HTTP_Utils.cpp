@@ -8,8 +8,9 @@ int ft_strtohdrs(std::string raw, int i, int end,
 	std::string		key;
 	std::string		value;
 
+// Headers
 	for (++i; raw[i] != ('\n') && i != end; ) {
-
+	// Key
 		for (; i != end && raw[i] != ':'; ++i) {
 			key.push_back(raw[i]);
 		}
@@ -17,9 +18,11 @@ int ft_strtohdrs(std::string raw, int i, int end,
 			Logger::putMsg("Header " + key + "Doesn't have a value", FILE_WREQ, WREQ);
 			return 1;
 		}
+
+	// Value
+		for (++i; raw[i] == ' '; ++i) {}
 	
-		
-		for (++i; i != end && raw[i] != '\n'; ++i)
+		for (; i != end && raw[i] != '\n'; ++i)
 			if (raw[i] != '\r')
 				value.push_back(raw[i]);
 
@@ -28,9 +31,9 @@ int ft_strtohdrs(std::string raw, int i, int end,
 		key.clear();
 		value.clear();
 		if (i != end) {
+			++i;
 			if (raw[i + 1] == '\r')
-				i += 2;
-			else ++i;
+				++i;
 		}
 	}
 
