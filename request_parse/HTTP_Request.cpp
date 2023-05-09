@@ -1,6 +1,4 @@
-#include "HTTP_Utils.hpp"
 #include "HTTP_Request.hpp"
-#include "../Logger.hpp"
 
 HTTP_Request::HTTP_Request() {};
 HTTP_Request::~HTTP_Request() {};
@@ -41,6 +39,6 @@ int HTTP_Request::ft_strtoreq(std::string raw, HTTP_Request *req) {
 		return 1;
 	}
 
-// HTTP_Utils.hpp              Headers and Body 
+// Headers and Body				HTTP_Utils.hpp
 	return ft_strtohdrs(raw, i, end, &(req->headers), &(req->body));
 }

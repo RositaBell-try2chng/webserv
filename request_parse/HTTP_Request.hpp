@@ -2,7 +2,8 @@
 # define HTTP_REQUEST_HPP
 
 # include "../webserv.hpp"
-# include "HTTP_Answer.hpp"
+# include "../Logger.hpp"
+# include "HTTP_Utils.hpp"
 # include <map>
 
 struct HTTP_Request

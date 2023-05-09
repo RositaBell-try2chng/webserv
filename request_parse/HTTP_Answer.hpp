@@ -1,7 +1,10 @@
-#ifndef HTTP_REQUEST_HPP
-# define HTTP_REQUEST_HPP
+#ifndef HTTP_ANSWER_HPP
+# define HTTP_ANSWER_HPP
 
 # include "../webserv.hpp"
+# include "../Logger.hpp"
+# include "HTTP_Utils.hpp"
+# include "HTTP_Request.hpp"
 # include <map>
 
 struct HTTP_Answer {
@@ -18,7 +21,11 @@ struct HTTP_Answer {
 		
 		std::string							body;
 
-		//static int ft_reqtoansw(std::string raw, HTTP_Request *req);
+		~HTTP_Answer();
+		HTTP_Answer();
+
+		// Get request and make answer for it
+		static int ft_reqtoansw(HTTP_Request req, HTTP_Answer *answ);
 };
 
 #endif
