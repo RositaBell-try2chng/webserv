@@ -29,19 +29,20 @@ int main(int argc, char **argv)
 int main(int argc, char **argv)
 {
 
+	std::string raw = "GET /j HTTP/1.1\r\nHost: alizar.habrahabr.ru\r\nHot: alizar.habrahabr.ru\r\n\r\ntrue";
 
-	std::string raw = "GET / HTTP/1.1\r\nHost: alizar.habrahabr.ru";
-
-	std::cout << raw << "\n\n-------------------------\n-------------------------\n\n";
+	std::cout << raw << "\n\n=================================================================\n=================================================================\n\n";
 
 	HTTP_Request req;
 
-	HTTP_Request::ft_strtoreq(raw, req);
+	HTTP_Request::ft_strtoreq(raw, &req);
+
 	std::cout << "method name:	" << req.method << std::endl;
-	std::cout << "URI:			" << req.method << std::endl;
-	std::cout << "version:		" << req.method << "\n" << std::endl;
+	std::cout << "URI:		" << req.uri << std::endl;
+	std::cout << "version:	" << req.version << "\n" << std::endl;
 
-	//std::cout << "Host: " << req.headers.find("Host") << "\n" << std::endl;
+	std::cout << "Host:		" << (*(req.headers.find("Host"))).second << "\n" << std::endl;
+	std::cout << "Hot:		" << (*(req.headers.find("Hot"))).second << "\n" << std::endl;
 
-	std::cout << "body:			" << req.body << std::endl;
+	std::cout << "body:		" << req.body << std::endl;
 }
