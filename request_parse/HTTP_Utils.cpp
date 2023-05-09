@@ -32,7 +32,7 @@ int ft_strtohdrs(std::string raw, int i, int end,
 		value.clear();
 		if (i != end) {
 			++i;
-			if (raw[i + 1] == '\r')
+			if (raw[i] == '\r')
 				++i;
 		}
 	}
