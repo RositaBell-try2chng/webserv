@@ -26,7 +26,7 @@ int main(int argc, char **argv)
 }
 */
 
-int main(int argc, char **argv)
+int main()
 {
 
 	std::string raw = "GET /j HTTP/1.1\r\nHost: alizar.habrahabr.ru\r\nHot: alizar.habrahabr.ru\r\n\r\ntrue";
