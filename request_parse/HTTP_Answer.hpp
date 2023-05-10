@@ -11,6 +11,14 @@ struct HTTP_Answer {
 
 	private:
 
+		// Sets answer's reason phrase depends on status code
+		static std::string ft_set_rp(std::string status_code);
+
+		// Acts depends on request's method (GET, POST, DELETE)
+		static void ft_get_answ(HTTP_Request req, HTTP_Answer *answ);
+		static void ft_post_answ(HTTP_Request req, HTTP_Answer *answ);
+		static void ft_delete_answ(HTTP_Request req, HTTP_Answer *answ);
+
 	public:
 
 		std::string	version;
@@ -21,11 +29,14 @@ struct HTTP_Answer {
 		
 		std::string							body;
 
-		~HTTP_Answer();
-		HTTP_Answer();
+		~HTTP_Answer() {};
+		HTTP_Answer() {};
 
-		// Get request and make answer for it
-		static int ft_reqtoansw(HTTP_Request req, HTTP_Answer *answ);
+		// Parse answer to string
+		static std::string ft_answtostr(HTTP_Answer answ);
+
+		// Creates answer depends on request
+		static std::string ft_reqtoansw(HTTP_Request req, HTTP_Answer *answ);
 };
 
 #endif

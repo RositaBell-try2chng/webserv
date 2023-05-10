@@ -1,7 +1,7 @@
 #include "HTTP_Utils.hpp"
 #include "../Logger.hpp"
 
-int ft_strtohdrs(std::string raw, int i, int end,
+std::string ft_strtohdrs(std::string raw, int i, int end,
 		std::map<std::string, std::string> *hdrs,
 		std::string *body) {
 
@@ -16,7 +16,7 @@ int ft_strtohdrs(std::string raw, int i, int end,
 		}
 		if (i == end) {
 			Logger::putMsg("Header " + key + "Doesn't have a value", FILE_WREQ, WREQ);
-			return 1;
+			return "400";
 		}
 
 	// Value
@@ -39,7 +39,7 @@ int ft_strtohdrs(std::string raw, int i, int end,
 
 	if (hdrs->find("Host") == hdrs->end()) {
 		Logger::putMsg("Request hasn't \"Host\" header", FILE_WREQ, WREQ);
-		return 1;
+		return "400";
 	}
 
 // Body
@@ -47,5 +47,17 @@ int ft_strtohdrs(std::string raw, int i, int end,
 		raw.erase(0, ++i);
 		*body = raw;
 
-	return (0);
+	return ("200");
+}
+
+std::string ft_hdrstostr(std::map<std::string, std::string> headers) {
+	
+	std::string	concat_hdrs;
+	std::string	hdr;
+	for (std::map<std::string, std::string>::iterator it = headers.begin(); it != headers.end(); it++) {
+        hdr = (*it).first + ": " + (*it).second + "\r\n";
+		concat_hdrs.append(hdr);
+		hdr.clear();
+    }
+	return (concat_hdrs);
 }
