@@ -48,7 +48,6 @@ void Server::mainLoop()
 {
 	timeval			timeout;
 	fd_set			readFds;
-//	fd_set			writeFds;
 	std::set<int>	clients;
 	int				maxFd;
 	std::string		request;
@@ -61,15 +60,12 @@ void Server::mainLoop()
 	while (true)
 	{
 		FD_ZERO(&readFds);
-//		FD_ZERO(&writeFds);
 		FD_SET(Server::main->sockFd, &readFds);
-//		FD_SET(Server::main->sockFd, &writeFds);
 		for (std::set<int>::iterator it = clients.begin(); it != clients.end(); it++)
-		{
 			FD_SET(*it, &readFds);
-//			FD_SET(*it, &writeFds);
-		}
-		maxFd = std::max(Server::main->sockFd, *max_element(clients.begin(), clients.end()));
+		maxFd = Server::main->sockFd;
+		if (!clients.empty())
+			maxFd = std::max(maxFd, *max_element(clients.begin(), clients.end()));
 		selRes = select(maxFd + 1, &readFds, NULL, NULL, &timeout);
 		if (selRes <= 0)
 		{
@@ -77,47 +73,66 @@ void Server::mainLoop()
 				Logger::putMsg(strerror(errno), FILE_ERR, ERR);
 			continue;
 		}
+
 		if (FD_ISSET(Server::main->sockFd, &readFds))
 		{
-			int	fd;
-			fd = accept(Server::main->sockFd, NULL, NULL);//(struct sockaddr *)&use.addr, &use.addrSize); //пока непонятно нужны ли эти данные
-			if (fd < 0 || fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
-				Logger::putMsg(strerror(errno), FILE_ERR, ERR);
-			else
-				clients.insert(fd);
+			Server::acceptNewConnection(clients);
+			continue;
 		}
-		for(std::set<int>::iterator it = clients.begin(); it != clients.end(); it++)
-		{
-			if (!request.empty())
-				request.clear();
-			if (FD_ISSET(*it, &readFds))
-				request = recvAll(*it, clients, request);
-//			if(FD_ISSET(*it, &writeFds))
-//				sendall(*it);
-		}
+		Server::communicate(clients, request, &readFds);
 	}
 }
 
-std::string & Server::recvAll(int fd, std::set<int> &clients, std::string &res)
+void Server::communicate(std::set<int> &clients, std::string &request, fd_set *pReadFds)
+{
+	std::set<int>::iterator it;
+
+	it = clients.begin();
+	while (it != clients.end())
+	{
+		request.clear();
+		if (FD_ISSET(*it, pReadFds))
+			recvAll(it, clients, request);
+		else
+			it++;
+	}
+}
+
+void Server::acceptNewConnection(std::set<int> &clients)
+{
+	int	fd;
+
+	fd = accept(Server::main->sockFd, NULL, NULL);
+	if (fd < 0 || fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
+		Logger::putMsg(strerror(errno), FILE_ERR, ERR);
+	else
+		clients.insert(fd);
+}
+
+void Server::recvAll(std::set<int>::iterator &it, std::set<int> &clients, std::string &res)
 {
 	int			recvRes;
-	char		buf[1000];
+	char		buf[BUF_SIZE];
+	int			fd;
 
-	recvRes = recv(fd, buf, 1000, 0);
-	//while (recvRes > 0)
+	fd = *it;
+	recvRes = recv(*it, buf, BUF_SIZE, 0);
+	while (recvRes > 0)
 	{
 		res += std::string(buf, recvRes);
-		//recvRes = recv(fd, buf, 1000, 0);
-	}
-	if (recvRes <= 0)
-	{
-		Logger::putMsg(std::string("error while recv ") + strerror(errno), FILE_ERR, ERR);
-		clients.erase(fd);
-		close(fd);
+		recvRes = recv(*it, buf, BUF_SIZE, 0);
 	}
 	Logger::putMsg(res, FILE_REQ, REQ);
-	send(fd, res.c_str(), res.length(), 0);
-	return (res);
+	//handler of requests
+	send(fd, ANSWER, ANSWER_LEN, 0);
+	if (recvRes <= 0)
+	{
+		if (recvRes < 0)
+			Logger::putMsg(std::string("error while recv ") + strerror(errno), FILE_ERR, ERR);
+		close(fd);
+		it++;
+		clients.erase(fd);
+	}
 }
 
 bool Server::checkArgs(int args, char **argv)

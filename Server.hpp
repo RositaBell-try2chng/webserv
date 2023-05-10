@@ -3,6 +3,8 @@
 
 #include "webserv.hpp"
 
+#define BUF_SIZE 4096
+
 //Mesages
 #define TOO_MANY_ARGS			"Too many args\nUse only first argument\n"
 #define WRONG_EXTENSION_OF_FILE	"Wrong extension of config file: "
@@ -14,6 +16,9 @@
 # define DELIMITER_START "//////////////////\n\nSTART OF ANOTHER LAUNCH\n\n//////////////////"
 # define DELIMITER_END "//////////////////\n\nEND OF ANOTHER LAUNCH\n\n//////////////////"
 
+#define ANSWER "HTTP/1.1 200 OK"
+#define ANSWER_LEN 15
+
 class Server
 {
 private:
@@ -23,10 +28,12 @@ private:
 	static std::string		conf;
 	static t_listen			*main;
 
-	static void			prepareServ();
-	static void			fillHints();
-	static void			mainLoop();
-	static std::string&	recvAll(int fd, std::set<int> &clients, std::string &res);
+	static void	prepareServ();
+	static void	fillHints();
+	static void	mainLoop();
+	static void	recvAll(std::set<int>::iterator &it, std::set<int> &clients, std::string &res);
+	static void	acceptNewConnection(std::set<int> &clients);
+	static void	communicate(std::set<int> &clients, std::string &request, fd_set *readFds);
 public:
 	static void				startServer(); //запускаем сервер
 	static bool				checkArgs(int args, char **argv); //проверяет количество аргументов + расширение имени файла
