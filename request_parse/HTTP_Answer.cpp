@@ -1,4 +1,5 @@
 #include "HTTP_Answer.hpp"
+#include "Status_Codes.hpp"
 
 std::string	HTTP_Answer::ft_set_rp(std::string status_code) {
 
