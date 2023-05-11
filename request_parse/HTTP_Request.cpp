@@ -14,7 +14,8 @@ void HTTP_Request::ft_strtoreq(std::string raw, HTTP_Request *req) {
 
 	if (req->method.size() == 0) {
 		Logger::putMsg("Request hasn\'t method", FILE_WREQ, WREQ);
-		req->answ_code = "400";
+		req->answ_code[0] = 4;
+		req->answ_code[0] = 0;
 		return ;
 	}
 	
@@ -25,7 +26,8 @@ void HTTP_Request::ft_strtoreq(std::string raw, HTTP_Request *req) {
 	
 	if (req->uri.size() == 0) {
 		Logger::putMsg("Request hasn\'t URI" + raw, FILE_WREQ, WREQ);
-		req->answ_code = "400";
+		req->answ_code[0] = 4;
+		req->answ_code[0] = 0;
 		return ;
 	}
 	
@@ -37,10 +39,13 @@ void HTTP_Request::ft_strtoreq(std::string raw, HTTP_Request *req) {
 
 	if (req->version.size() == 0) {
 		Logger::putMsg("Request hasn\'t HTML version", FILE_WREQ, WREQ);
-		req->answ_code = "400";
+		req->answ_code[0] = 4;
+		req->answ_code[0] = 0;
 		return ;
 	}
 
 // Headers and Body				HTTP_Utils.hpp
-	req->answ_code = ft_strtohdrs(raw, i, end, &(req->headers), &(req->body));
+	req->answ_code[0] = ft_strtohdrs(raw, i, end, &(req->headers), &(req->body));
+	req->answ_code[1] = req->answ_code[0] % 100;
+	req->answ_code[0] = req->answ_code[0] / 100;
 }

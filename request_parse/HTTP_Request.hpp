@@ -21,10 +21,14 @@ struct HTTP_Request
 		
 		std::string							body;
 
-		std::string							answ_code;
+		int									answ_code[2];
 
 		~HTTP_Request() {};
-		HTTP_Request() : answ_code("700") {};
+		HTTP_Request() {
+
+			answ_code[0] = 2;
+			answ_code[0] = 0;
+		};
 
 		// Get "raw" request and parse into a structure
 		static void ft_strtoreq(std::string raw, HTTP_Request *req);

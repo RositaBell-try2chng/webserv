@@ -1,7 +1,7 @@
 #include "HTTP_Utils.hpp"
 #include "../Logger.hpp"
 
-std::string ft_strtohdrs(std::string raw, int i, int end,
+int ft_strtohdrs(std::string raw, int i, int end,
 		std::map<std::string, std::string> *hdrs,
 		std::string *body) {
 
@@ -16,7 +16,7 @@ std::string ft_strtohdrs(std::string raw, int i, int end,
 		}
 		if (i == end) {
 			Logger::putMsg("Header " + key + "Doesn't have a value", FILE_WREQ, WREQ);
-			return "400";
+			return 400;
 		}
 
 	// Value
@@ -26,10 +26,16 @@ std::string ft_strtohdrs(std::string raw, int i, int end,
 			if (raw[i] != '\r')
 				value.push_back(raw[i]);
 
-		
-		hdrs->insert(std::make_pair(key, value));
+		std::pair<std::string, std::string> hdr = std::make_pair(key, value);
 		key.clear();
 		value.clear();
+
+		if (hdrs->find(hdr.first) != hdrs->end()){
+			Logger::putMsg("Multiple request's header: " + hdr.first, FILE_WREQ, WREQ);
+			return (400);
+		}
+		hdrs->insert(hdr);
+
 		if (i != end) {
 			++i;
 			if (raw[i] == '\r')
@@ -39,7 +45,7 @@ std::string ft_strtohdrs(std::string raw, int i, int end,
 
 	if (hdrs->find("Host") == hdrs->end()) {
 		Logger::putMsg("Request hasn't \"Host\" header", FILE_WREQ, WREQ);
-		return "400";
+		return 400;
 	}
 
 // Body
@@ -47,7 +53,7 @@ std::string ft_strtohdrs(std::string raw, int i, int end,
 		raw.erase(0, ++i);
 		*body = raw;
 
-	return ("200");
+	return 200;
 }
 
 std::string ft_hdrstostr(std::map<std::string, std::string> headers) {
