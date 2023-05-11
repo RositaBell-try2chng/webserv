@@ -1,16 +1,19 @@
-#ifndef HTTP_STATUS_CATEGORIES_HPP
-# define HTTP_STATUS_CATEGORIES_HPP
+#ifndef HTTP_SPECIFIC_CODES_HPP
+# define HTTP_SPECIFIC_CODES_HPP
 
 # include "../webserv.hpp"
 
 
-enum Status_Categories {	Informational_responses = 1,
-							Successful_responses,
-							Redirection_messages,
-							Client_error_responses,
-							Server_error_responses,
-							Security_events,
-							NO_NAME						};
+enum Status_Categories {	informational_responses = 1,
+							successful_responses,
+							redirection_messages,
+							client_error_responses,
+							server_error_responses,
+							security_events,
+							no_name						};
+
+//=======================================================================
+//=======================================================================
 
 enum Informational_responses {	Continue,
 								Switching_Protocols,
@@ -27,6 +30,8 @@ enum Successful_responses {	OK,
 							Multi_Status,
 							Already_Reported,
 							IM_Used	= 26					};
+
+
 
 enum Redirection_messages {	Multiple_Choices,
 							Moved_Permanently,
@@ -48,5 +53,11 @@ enum Client_error_responses {	Bad_Request,
 // Not all
 enum Server_error_responses {	Internal_server_error,
 								Not_Implemented			};
+
+//=======================================================================
+//=======================================================================
+
+template<class Category>
+std::string ft_reason_phrase(int num) {};
 
 #endif
