@@ -1,22 +1,26 @@
 #include "HTTP_Answer.hpp"
-#include "Status_Codes.hpp"
+#include "Status_Categories.hpp"
 
-std::string	HTTP_Answer::ft_set_rp(std::string status_code) {
+std::string	HTTP_Answer::ft_set_rp(int *status_code) {
 
-	if (status_code[0] == '1')
+	Status_Categories category;
+
+	category = static_cast<Status_Categories>(status_code[0]);
+
+	if (category == Informational_responses)
 		return ("OK");
-	else if (status_code[0] == '2')
+	else if (category == Successful_responses)
 		return ("OK");
-	else if (status_code[0] == '3')
+	else if (category == Redirection_messages)
 		return ("OK");
-	else if (status_code[0] == '4')
+	else if (category == Client_error_responses)
 		return ("NE OK");
-	else if (status_code[0] == '5')
+	else if (category == Server_error_responses)
 		return ("Not implemented");
-	else if (status_code[0] == '6')
+	else if (category == Security_events)
 		return ("NE OK");
 	else
-		return ("Work on this (watch logs)");
+		return ("Work on this, you need actual code (watch logs)");
 }
 
 void HTTP_Answer::ft_get_answ(HTTP_Request req, HTTP_Answer *answ) {
@@ -45,9 +49,12 @@ std::string HTTP_Answer::ft_answtostr(HTTP_Answer answ) {
 	return (answer_str);
 }
 
-void ft_pars_status_code(int *integ_code, std::string *str_code) {
+void HTTP_Answer::ft_pars_status_code(int *integ_code, std::string *str_code) {
 
+	// code category cast
 	str_code->push_back(static_cast<char>(integ_code[0] + 48));
+
+	// specific code cast
 	if (integ_code[1] < 10)
 		str_code->push_back('0');
 	else
@@ -57,6 +64,7 @@ void ft_pars_status_code(int *integ_code, std::string *str_code) {
 
 std::string HTTP_Answer::ft_reqtoansw(HTTP_Request req, HTTP_Answer *answ) {
 
+	//version equal to request.version
 	answ->version = req.version;
 
 	if (req.answ_code[0] < 4) {
@@ -74,7 +82,7 @@ std::string HTTP_Answer::ft_reqtoansw(HTTP_Request req, HTTP_Answer *answ) {
 	}
 
 	ft_pars_status_code(req.answ_code, &(answ->status_code));
-	answ->reason_phrase = ft_set_rp(answ->status_code);
+	answ->reason_phrase = ft_set_rp(req.answ_code);
 
 	return (ft_answtostr(*answ));
 };

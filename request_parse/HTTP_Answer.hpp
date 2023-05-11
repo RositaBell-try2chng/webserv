@@ -15,7 +15,7 @@ struct HTTP_Answer {
 		static void ft_pars_status_code(int *integ_code, std::string *str_code);
 
 		// Sets answer's reason phrase depends on status code
-		static std::string ft_set_rp(std::string status_code);
+		static std::string ft_set_rp(int *status_code);
 
 		// Acts depends on request's method (GET, POST, DELETE)
 		static void ft_get_answ(HTTP_Request req, HTTP_Answer *answ);
@@ -35,7 +35,7 @@ struct HTTP_Answer {
 		~HTTP_Answer() {};
 		HTTP_Answer() {};
 
-		// Parse answer to string
+		// Parse answer to string (concatenation)
 		static std::string ft_answtostr(HTTP_Answer answ);
 
 		// Creates answer depends on request
