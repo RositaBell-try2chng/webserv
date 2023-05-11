@@ -11,6 +11,9 @@ struct HTTP_Answer {
 
 	private:
 
+		// make std::string from int
+		static void ft_pars_status_code(int *integ_code, std::string *str_code);
+
 		// Sets answer's reason phrase depends on status code
 		static std::string ft_set_rp(std::string status_code);
 
