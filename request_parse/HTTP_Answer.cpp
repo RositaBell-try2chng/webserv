@@ -48,14 +48,11 @@ std::string HTTP_Answer::ft_answtostr(HTTP_Answer answ) {
 void ft_pars_status_code(int *integ_code, std::string *str_code) {
 
 	str_code->push_back(static_cast<char>(integ_code[0] + 48));
-	if (integ_code[1] < 10) {
+	if (integ_code[1] < 10)
 		str_code->push_back('0');
-		str_code->push_back(static_cast<char>(integ_code[1] + 48));
-	}
-	else {
+	else
 		str_code->push_back(static_cast<char>(integ_code[1] / 10 + 48));
-		str_code->push_back(static_cast<char>(integ_code[1] % 10 + 48));
-	}
+	str_code->push_back(static_cast<char>(integ_code[1] % 10 + 48));
 }
 
 std::string HTTP_Answer::ft_reqtoansw(HTTP_Request req, HTTP_Answer *answ) {
