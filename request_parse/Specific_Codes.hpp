@@ -18,7 +18,12 @@ enum Status_Categories {	informational_responses = 1,
 enum Informational_responses {	Continue,
 								Switching_Protocols,
 								Processing,
-								Early_Hints			};
+								Early_Hints,
+								Response_is_Stale = 10,
+								Revalidation_Failed,
+								Disconnected_Operation,
+								Heuristic_Expiration,
+								Miscellaneous_Warning = 99	};
 
 enum Successful_responses {	OK,
 							Created,
@@ -29,7 +34,9 @@ enum Successful_responses {	OK,
 							Partial_Content,
 							Multi_Status,
 							Already_Reported,
-							IM_Used	= 26					};
+							Transformation_Applied = 14,
+							IM_Used	= 26,
+							Miscellaneous_Persistent_Warning = 99	};
 
 enum Redirection_messages {	Multiple_Choices,
 							Moved_Permanently,
@@ -50,7 +57,9 @@ enum Client_error_responses {	Bad_Request,
 
 // Not all
 enum Server_error_responses {	Internal_Server_Error,
-								Not_Implemented			};
+								Not_Implemented,
+								Bad_Gateway,
+								Service_Unavailable	};
 
 //=======================================================================
 //=======================================================================
