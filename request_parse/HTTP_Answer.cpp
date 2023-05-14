@@ -1,28 +1,4 @@
 #include "HTTP_Answer.hpp"
-#include "Specific_Codes.hpp"
-
-std::string	HTTP_Answer::ft_set_rp(int *status_code) {
-
-	Status_Categories category;
-	category = static_cast<Status_Categories>(status_code[0]);
-
-	if (category == informational_responses)
-		return (reason_phrase<Informational_responses>(status_code[1]));
-	else if (category == successful_responses)
-		return ("OK");
-	else if (category == redirection_messages)
-		return ("OK");
-	else if (category == client_error_responses)
-		return ("NE OK");
-	else if (category == server_error_responses)
-		return ("Not implemented");
-	else if (category == security_events)
-		return ("NE OK");
-	else
-		return ("Work on this, you need actual code (watch logs)");
-
-	
-}
 
 void HTTP_Answer::ft_get_answ(HTTP_Request req, HTTP_Answer *answ) {
 
@@ -83,7 +59,7 @@ std::string HTTP_Answer::ft_reqtoansw(HTTP_Request req, HTTP_Answer *answ) {
 	}
 
 	ft_pars_status_code(req.answ_code, &(answ->status_code));
-	answ->reason_phrase = ft_set_rp(req.answ_code);
+	answ->reason_phrase = ::ft_reason_phrase(req.answ_code);
 
 	return (ft_answtostr(*answ));
 };

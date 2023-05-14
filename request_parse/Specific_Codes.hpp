@@ -57,7 +57,25 @@ enum Server_error_responses {	Internal_server_error,
 //=======================================================================
 //=======================================================================
 
-template<class Category>
-std::string ft_reason_phrase(int num) {};
+std::string ft_reason_phrase(int *code) {
+
+	Status_Categories category = static_cast<Status_Categories>(code[0]);
+
+	if (category == informational_responses) {
+		Informational_responses num = static_cast<Informational_responses>(code[1]);
+		if (num == Continue)
+			return "Continue";
+		else if (num == Switching_Protocols)
+			return "Switching protocols";
+	}
+	else if (category == successful_responses) {
+		Successful_responses num = static_cast<Successful_responses>(code[1]);
+		if (num == OK)
+			return "Continue";
+		else if (num == Created)
+			return "Switching protocols";
+	}
+	return "Strange things...";
+};
 
 #endif

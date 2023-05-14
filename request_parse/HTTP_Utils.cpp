@@ -49,9 +49,10 @@ int ft_strtohdrs(std::string raw, int i, int end,
 	}
 
 // Body
-	if (raw.size() > 0)
+	if (raw.size() > 0) {
 		raw.erase(0, ++i);
 		*body = raw;
+	}
 
 	return 200;
 }
