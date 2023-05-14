@@ -31,13 +31,11 @@ enum Successful_responses {	OK,
 							Already_Reported,
 							IM_Used	= 26					};
 
-
-
 enum Redirection_messages {	Multiple_Choices,
 							Moved_Permanently,
 							Found,
 							See_Other,
-							Not_modified,
+							Not_Modified,
 							Use_Proxy,
 							Unused,
 							Temporary_Redirect,
@@ -46,36 +44,17 @@ enum Redirection_messages {	Multiple_Choices,
 // Not all
 enum Client_error_responses {	Bad_Request,
 								Unauthorized,
-								Payment_required,
+								Payment_Required,
 								Forbidden,
-								Not_found			};
+								Not_Found			};
 
 // Not all
-enum Server_error_responses {	Internal_server_error,
+enum Server_error_responses {	Internal_Server_Error,
 								Not_Implemented			};
 
 //=======================================================================
 //=======================================================================
 
-std::string ft_reason_phrase(int *code) {
-
-	Status_Categories category = static_cast<Status_Categories>(code[0]);
-
-	if (category == informational_responses) {
-		Informational_responses num = static_cast<Informational_responses>(code[1]);
-		if (num == Continue)
-			return "Continue";
-		else if (num == Switching_Protocols)
-			return "Switching protocols";
-	}
-	else if (category == successful_responses) {
-		Successful_responses num = static_cast<Successful_responses>(code[1]);
-		if (num == OK)
-			return "Continue";
-		else if (num == Created)
-			return "Switching protocols";
-	}
-	return "Strange things...";
-};
+std::string ft_reason_phrase(int *code);
 
 #endif
