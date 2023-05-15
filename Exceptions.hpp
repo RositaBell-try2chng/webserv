@@ -17,6 +17,18 @@ public:
 	const char *what() const throw();
 };
 
+class serversAlreadyExists : public std::exception
+{
+public:
+	const char *what() const throw();
+};
+
+class noSuchConnection : public std::exception
+{
+public:
+	const char *what() const throw();
+};
+
 class noMainStructException : public std::exception
 {
 public:

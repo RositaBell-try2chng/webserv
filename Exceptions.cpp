@@ -17,3 +17,13 @@ const char* noMainStructException::what() const throw()
 	Logger::putMsg("Exception: try to get struct main, when mainptr is null", FILE_ERR, ERR);
 	return ("Exception: getMain failed. Read logs.\n");
 }
+
+const char* serversAlreadyExists::what() const throw()
+{
+	return ("Exception: try to create more than one obj of Servers.");
+}
+
+const char* noSuchConnection::what() const throw()
+{
+	return ("Exception: No connection with fd: ");
+}
