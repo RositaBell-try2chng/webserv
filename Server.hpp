@@ -23,23 +23,32 @@ class Server
 {
 private:
 	Server();
+
+	std::string	host;
+	std::string	port;
+	std::string	request;
+	std::string response;
+	bool		responseReadyFlg;
+	bool		cgiConnectionFlg;
+	pid_t		childPid;
+public:
+	Server(std::string const& _host, std::string const& _port)
 	~Server();
 
-	static std::string		conf;
-	static t_listen			*main;
+	std::string const&	getHost();
+	std::string const&	getPort();
+	std::string	const&	getReq();
+	std::string	const&	getRes();
+	bool				respReady(); // get responseReadyFlg
+	bool				cgiFlg(); // get cgiConnection
+	pid_t				getChPid(); // get childPid
+	void				setRespReady(bool flg);
 
-	static void	prepareServ();
-	static void	fillHints();
-	static void	mainLoop();
-	static void	recvAll(std::set<int>::iterator &it, std::set<int> &clients, std::string &res);
-	static void	acceptNewConnection(std::set<int> &clients);
-	static void	communicate(std::set<int> &clients, std::string &request, fd_set *readFds);
-public:
-	static void				startServer(); //запускаем сервер
-	static bool				checkArgs(int args, char **argv); //проверяет количество аргументов + расширение имени файла
-	static bool				parse(); //парсим конфиг
-	static void				exitHandler(int sig);
-	static const t_listen	&getMain();
+	void				reqClear();
+	void				resClear();
+	void				addToRes(std::string const& src);
+
+	Server*				clone();
 };
 
 #endif
