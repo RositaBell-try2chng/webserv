@@ -27,29 +27,32 @@ bool ConfParser::checkArgs(int args, char **argv)
     return (true);
 }
 
-bool ConfParser::parseConf(char *arg, Servers* allServers)
+bool ConfParser::parseConf(char *arg, Servers** allServers)
 {
     std::ifstream   in;
     bool            flgDef;
     std::string     conf;
+    std::string     fileName;
 
     flgDef = false;
     if (!arg)
     {
-        arg = DEFAULT_CONF;
+        fileName = std::string(DEFAULT_CONF);
         flgDef = true;
     }
-    in.open(arg);
+    else
+        fileName = std::string(arg);
+    in.open(fileName.c_str());
     if (!flgDef && !in.is_open())
     {
-        Logger::putMsg(std::string(strerror(errno)) + std::string("\n") + std::string(arg), FILE_ERR, ERR);
+        Logger::putMsg(std::string(strerror(errno)) + std::string("\n") + fileName, FILE_ERR, ERR);
         Logger::putMsg(std::string("TRY to open same file in 'conf' directory\n"));
-        arg = (std::string("./conf/") + std::string(arg)).c_str();
-        in.open(arg);
+        fileName = (std::string("./conf/") + fileName);
+        in.open(fileName.c_str());
     }
     if (!in.is_open())
     {
-        Logger::putMsg(std::string(strerror(errno)) + std::string("\n") + std::string(arg), FILE_ERR, ERR);
+        Logger::putMsg(std::string(strerror(errno)) + std::string("\n") + fileName, FILE_ERR, ERR);
         throw cannotOpenConfigFile();
     }
     ConfParser::readAll(in, conf);
@@ -65,11 +68,11 @@ void ConfParser::readAll(std::ifstream &in, std::string &conf)
     in.close();
 }
 
-bool ConfParser::deepParser(const std::string &conf, Servers* allServers)
+bool ConfParser::deepParser(const std::string &conf, Servers** allServers)
 {
-    allServers = new Servers();
+    *allServers = new Servers();
     if (conf.empty())
-        return (ConfParser::gagParser(allServers));
+        return (ConfParser::gagParser(*allServers));
     //fix me: add deep parsing of config file
     std::cout << "deep parsing\n";
     return (true);

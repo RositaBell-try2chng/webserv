@@ -36,7 +36,7 @@ void	Logger::putMsg(std::string const &msg, std::string const &filename, std::st
 		Logger::putMsg(msg, DEF_FILE, typeOfMsg);
 }
 
-void	Logger::putMsg(std::string const &msg, std::string const &filename, std::string const &typeOfMsg, int fd)
+void	Logger::putMsg(std::string const &msg, int fd, std::string const &filename, std::string const &typeOfMsg)
 {
 	std::ofstream	out;
 
@@ -63,7 +63,7 @@ void	Logger::putMsg(std::string const &msg, std::string const &filename, std::st
 	out << "==========================\n";
 	out.close();
 	if (filename == std::string(FILE_ERR))
-		Logger::putMsg(msg, DEF_FILE, typeOfMsg, fd);
+		Logger::putMsg(msg, fd, DEF_FILE, typeOfMsg);
 }
 
 std::string Logger::getTime()

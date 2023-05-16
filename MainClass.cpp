@@ -22,7 +22,7 @@ void MainClass::doIt(int args, char **argv)
 
     try
     {
-        if (ConfParser::parseConf(arg, MainClass::allServers))
+        if (ConfParser::parseConf(arg, &MainClass::allServers))
             std::cout << "parse config SUCCESS\n";
         else
             std::cerr << "parse config SUCCESS with WARNING\n";
@@ -35,7 +35,7 @@ void MainClass::doIt(int args, char **argv)
         return;
     }
 
-    if (!allServers)
+    if (!MainClass::allServers)
     {
         std::cerr << "NO SERVER CREATED, CHECK YOUR CONFIG\n";
         return;
@@ -45,13 +45,16 @@ void MainClass::doIt(int args, char **argv)
 
 void MainClass::mainLoop()
 {
-    std::map<int, Server> connections = MainClass::allServers->getConnections();
+    std::map<int, Server*> connections = MainClass::allServers->getConnections();
     std::set<int> fds = MainClass::allServers->getFds();
 
     std::cout << "connections\n";
-    for (std::map<int, Server>::iterator it = connections.begin(); it != connections.end(); it++)
-        std::cout << "fd is " << it->first << "\nserver host is " << it->second->getHost() << "\nport is " <<
-            it->second->getPort();
+    for (std::map<int, Server*>::iterator it = connections.begin(); it != connections.end(); it++)
+       std::cout << "fd is " << it->first << "\nserver host is " << it->second->getHost() << "\nport is " <<
+            it->second->getPort() << std::endl;
+    std::cout << "fds\n";
+    for (std::set<int>::iterator it = fds.begin(); it != fds.end(); it++)
+        std::cout << "fd is " << *it << std::endl;
     delete MainClass::allServers;
 }
 

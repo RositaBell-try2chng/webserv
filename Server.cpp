@@ -26,7 +26,7 @@ bool Server::cgiFlg() { return (this->cgiConnectionFlg); }
 pid_t Server::getChPid() { return (this->childPid); }
 
 //setters
-void Server::setRespReady(bool flg) {this->responseReadyFlg = true;}
+void Server::setRespReady(bool flg) {this->responseReadyFlg = flg;}
 
 void Server::reqClear() { this->request.clear(); }
 void Server::resClear()
@@ -40,7 +40,7 @@ void Server::addToRes(const std::string &src)
 	this->request += src;
 }
 
-Server* Server::clone()
+Server* Server::clone() const
 {
 	return (new Server(this->host, this->port));
 }

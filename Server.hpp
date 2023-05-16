@@ -21,7 +21,7 @@ private:
 	bool		cgiConnectionFlg;
 	pid_t		childPid;
 public:
-	Server(std::string const& _host, std::string const& _port)
+	Server(std::string const& _host, std::string const& _port);
 	~Server();
 
 	std::string const&	getHost();
@@ -37,7 +37,7 @@ public:
 	void				resClear();
 	void				addToRes(std::string const& src);
 
-	Server*				clone();
+	Server*				clone() const;
 };
 
 #endif

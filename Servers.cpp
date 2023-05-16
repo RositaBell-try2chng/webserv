@@ -43,10 +43,10 @@ void    Servers::addConnection(int fd, Server const &src)
     it = this->connections.find(fd);
     if (it != this->connections.end())
     {
-        Logger::putMsg("This fd already exists: ", FILE_ERR, ERR, fd);
+        Logger::putMsg("This fd already exists: ", fd, FILE_ERR, ERR);
         return;
     }
-    this->connection.insert(pair<int, Server *>(fd, src.clone()));
+    this->connections.insert(std::pair<int, Server *>(fd, src.clone()));
     this->fds.insert(fd);
 }
 
@@ -57,7 +57,7 @@ void    Servers::removeConnection(int fd)
     it = this->connections.find(fd);
     if (it == this->connections.end())
     {
-        Logger::putMsg("There is no such fd: ", FILE_ERR, ERR, fd);
+        Logger::putMsg("There is no such fd: ", fd, FILE_ERR, ERR);
         return;
     }
     delete it->second;
@@ -75,9 +75,11 @@ void    Servers::createServer(std::string const &host, std::string const &port)
     all.hints.ai_socktype = SOCK_STREAM;
     all.hints.ai_flags = AI_PASSIVE;
 
-    all.stts = getaddrinfo(host, port, &all.hints, &all.info);
-    if (all.stts != 0)
+    all.stts = getaddrinfo(host.c_str(), port.c_str(), &all.hints, &all.info);
+    if (all.stts != 0) {
+        Logger::putMsg(std::string("getaddrinfo Failed\n") + std::string(gai_strerror(all.stts)), FILE_ERR, ERR);
         throw exceptionGetAddrInfo();
+    }
     all.sockFd = socket(all.info->ai_family, all.info->ai_socktype, all.info->ai_protocol);
     if (all.sockFd < 0 || \
 		fcntl(all.sockFd, F_SETFL, O_NONBLOCK) == -1 || \

@@ -32,7 +32,7 @@ public:
 //	static void putInfoMsg(std::string const &msg, bool flgError);
 //	static void putQuery(t_use &use);
 	static void	putMsg(std::string const &msg, std::string const &filename = DEF_FILE, std::string const &typeOfMsg = DEF_TYPE);
-	static void	putMsg(std::string const &msg, std::string const &filename = DEF_FILE, std::string const &typeOfMsg = DEF_TYPE, int fd);
+	static void	putMsg(std::string const &msg, int fd, std::string const &filename = DEF_FILE, std::string const &typeOfMsg = DEF_TYPE);
 };
 
 #endif
