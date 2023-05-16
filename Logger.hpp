@@ -18,6 +18,9 @@
 # define FILE_WREQ	"wrong_requests.txt"
 # define WREQ		"WRONG_REQUEST"
 
+# define DELIMITER_START "//////////////////\n\nSTART OF ANOTHER LAUNCH\n\n//////////////////"
+# define DELIMITER_END "//////////////////\n\nEND OF ANOTHER LAUNCH\n\n//////////////////"
+
 class Logger
 {
 private:

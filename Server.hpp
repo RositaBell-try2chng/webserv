@@ -5,17 +5,6 @@
 
 #define BUF_SIZE 4096
 
-//Mesages
-#define TOO_MANY_ARGS			"Too many args\nUse only first argument\n"
-#define WRONG_EXTENSION_OF_FILE	"Wrong extension of config file: "
-#define NOT_PASSED_ARG			"Config file doesn't passed."
-#define TRY_DEFAULT				"Trying to use default config file:\n"
-
-#define DEFAULT_CONF "./conf/serv.conf"
-
-# define DELIMITER_START "//////////////////\n\nSTART OF ANOTHER LAUNCH\n\n//////////////////"
-# define DELIMITER_END "//////////////////\n\nEND OF ANOTHER LAUNCH\n\n//////////////////"
-
 #define ANSWER "HTTP/1.1 200 OK"
 #define ANSWER_LEN 15
 

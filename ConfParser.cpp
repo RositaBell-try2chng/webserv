@@ -52,6 +52,7 @@ bool ConfParser::parseConf(char *arg)
         Logger::putMsg(std::string(strerror(errno)) + std::string("\n") + std::string(arg), FILE_ERR, ERR);
         return (false);
     }
+
     in.close();
     Logger::putMsg("parsing config file SUCCESS");
     return (true);
