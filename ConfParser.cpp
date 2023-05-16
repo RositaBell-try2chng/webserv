@@ -27,11 +27,11 @@ bool ConfParser::checkArgs(int args, char **argv)
     return (true);
 }
 
-bool ConfParser::parseConf(char *arg)
+bool ConfParser::parseConf(char *arg, Servers* allServers)
 {
-    //fix me: add deep parsing of config file
     std::ifstream   in;
     bool            flgDef;
+    std::string     conf;
 
     flgDef = false;
     if (!arg)
@@ -50,10 +50,33 @@ bool ConfParser::parseConf(char *arg)
     if (!in.is_open())
     {
         Logger::putMsg(std::string(strerror(errno)) + std::string("\n") + std::string(arg), FILE_ERR, ERR);
-        return (false);
+        throw cannotOpenConfigFile();
     }
+    ConfParser::readAll(in, conf);
+    return (ConfParser::deepParser(conf, allServers));
+}
 
+void ConfParser::readAll(std::ifstream &in, std::string &conf)
+{
+    std::string buf;
+
+    while (std::getline(in, buf))
+        conf += buf;
     in.close();
-    Logger::putMsg("parsing config file SUCCESS");
+}
+
+bool ConfParser::deepParser(const std::string &conf, Servers* allServers)
+{
+    allServers = new Servers();
+    if (conf.empty())
+        return (ConfParser::gagParser(allServers));
+    //fix me: add deep parsing of config file
+    std::cout << "deep parsing\n";
+    return (true);
+}
+
+bool ConfParser::gagParser(Servers* allServers)
+{
+    allServers->createServer(DEF_HOST, DEF_PORT);
     return (true);
 }

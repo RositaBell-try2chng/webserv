@@ -27,3 +27,8 @@ const char* noSuchConnection::what() const throw()
 {
 	return ("Exception: No connection with fd: ");
 }
+
+const char* cannotOpenConfigFile::what() const throw()
+{
+	return ("Exception: can't open config file");
+}

@@ -41,4 +41,10 @@ public:
 	const char *what() const throw();
 };
 
+class cannotOpenConfigFile : public std::exception
+{
+public:
+	const char *what() const throw();
+};
+
 #endif

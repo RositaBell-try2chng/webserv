@@ -15,6 +15,9 @@
 # include <fcntl.h>
 # include <algorithm>
 
+# define DEF_PORT "8080"
+# define DEF_HOST "127.0.0.1"
+
 typedef struct	s_listen
 {
 	int						stts;

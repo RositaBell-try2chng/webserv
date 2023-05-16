@@ -3,6 +3,8 @@
 
 # include "webserv.hpp"
 # include "Logger.hpp"
+# include "Servers.hpp"
+# include "Exceptions.hpp"
 
 //Mesages
 #define TOO_MANY_ARGS			"Too many args\nUse only first argument\n"
@@ -17,9 +19,12 @@ class ConfParser
 private:
     ConfParser();
     ~ConfParser();
+    static bool gagParser(Servers* allServers);
+    static bool deepParser(std::string const& conf, Servers* allServers);
+    static void readAll(std::ifstream& in, std::string& conf);
 public:
     static bool checkArgs(int args, char **argv);
-    static bool parseConf(char* arg);
+    static bool parseConf(char* arg, Servers* allServers);
 };
 
 #endif
