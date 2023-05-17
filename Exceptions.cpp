@@ -31,3 +31,8 @@ const char* cannotOpenConfigFile::what() const throw()
 {
 	return ("Exception: can't open config file");
 }
+
+const char* notEnoughFds::what() const throw()
+{
+	return ("Exception: fds is empty");
+}

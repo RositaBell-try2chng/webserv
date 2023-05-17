@@ -22,7 +22,12 @@ Servers::~Servers()
     Logger::putMsg("delete obj of servers");
 }
 
-std::map<int, Server *>&    Servers::getConnections() { return (this->connections); }
+std::map<int, Server *>&    Servers::getConnections(bool lstFlg)
+{
+    if (!lstFlg)
+        return (this->connections);
+    return (this->lst);
+}
 
 std::set<int>&  Servers::getFds() { return (this->fds);}
 
@@ -36,33 +41,44 @@ Server& Servers::getServer(int fd)
     return *(it->second);
 }
 
-void    Servers::addConnection(int fd, Server const &src)
+void    Servers::addConnection(int fd, Server const &src, bool lstFlg)
 {
-    std::map<int, Server *>::iterator it;
+    std::set<int>::iterator it;
 
-    it = this->connections.find(fd);
-    if (it != this->connections.end())
+    it = this->fds.find(fd);
+    if (it != this->fds.end())
     {
         Logger::putMsg("This fd already exists: ", fd, FILE_ERR, ERR);
         return;
     }
-    this->connections.insert(std::pair<int, Server *>(fd, src.clone()));
+    if (!lstFlg)
+        this->connections.insert(std::pair<int, Server *>(fd, src.clone()));
+    else
+        this->lst.insert(std::pair<int, Server *>(fd, src.clone()));
     this->fds.insert(fd);
+    Logger::putMsg(std::string("add connection "), fd);
 }
 
-void    Servers::removeConnection(int fd)
+void    Servers::removeConnection(int fd, bool lstFlg)
 {
-    std::map<int, Server *>::iterator it;
+    std::map<int, Server*>::iterator    it;
 
-    it = this->connections.find(fd);
-    if (it == this->connections.end())
+    if (!lstFlg)
+        it = this->connections.find(fd);
+    else
+        it = this->lst.find(fd);
+    if ((!lstFlg && it == this->connections.end()) || (lstFlg && it == this->lst.end()))
     {
         Logger::putMsg("There is no such fd: ", fd, FILE_ERR, ERR);
         return;
     }
     delete it->second;
-    this->connections.erase(fd);
+    if (!lstFlg)
+        this->connections.erase(fd);
+    else
+        this->lst.erase(fd);
     this->fds.erase(fd);
+    Logger::putMsg(std::string("remove connection "), fd);
 }
 
 void    Servers::createServer(std::string const &host, std::string const &port)
@@ -86,6 +102,6 @@ void    Servers::createServer(std::string const &host, std::string const &port)
 		bind(all.sockFd, all.info->ai_addr, all.info->ai_addrlen) < 0 || \
 		listen(all.sockFd, 20) < 0)
         throw exceptionErrno();
-    this->addConnection(all.sockFd, tmp);
+    this->addConnection(all.sockFd, tmp, true);
     freeaddrinfo(all.info);
 }

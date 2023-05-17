@@ -35,7 +35,7 @@ public:
 
 	void				reqClear();
 	void				resClear();
-	void				addToRes(std::string const& src);
+	void				addToReq(char const* src);
 
 	Server*				clone() const;
 };

@@ -8,6 +8,8 @@
 # include "Exceptions.hpp"
 # include "ConfParser.hpp"
 
+# define BUF_SIZE 4096
+
 class MainClass
 {
 private:
@@ -18,6 +20,9 @@ private:
     static int      maxFd;
     static Servers* allServers;
     static void     mainLoop();
+    static void     acceptConnections(std::map<int, Server*>::iterator &it);
+    static void     readRequests(std::map<int, Server*>::iterator &it);
+    static bool     checkCont();
 public:
     static void     doIt(int args, char** argv);
     static void     exitHandler(int sig);

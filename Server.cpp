@@ -35,9 +35,9 @@ void Server::resClear()
 	this->responseReadyFlg = false;
 }
 
-void Server::addToRes(const std::string &src)
+void Server::addToReq(const char *src)
 {
-	this->request += src;
+	this->request += std::string(src);
 }
 
 Server* Server::clone() const
