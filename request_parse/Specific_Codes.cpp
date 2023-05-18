@@ -59,7 +59,7 @@ std::string ft_reason_phrase(int *code) {
 		if (num == Heuristic_Expiration)		// 113
 			return "Heuristic Expiration";
 
-		if (num == Miscellaneous_Warning)		// 199
+		if (num == Miscellaneous_Warning)	// 199
 			return "Miscellaneous Warning";
 	//================================================================================
 
@@ -103,8 +103,9 @@ std::string ft_reason_phrase(int *code) {
 
 	//		CASHING WRITING CODES:		( description uppper (1 X X) )
 	//================================================================================
-		if (num == Transformation_Applied)				// 214
+		if (num == Transformation_Applied)		// 214
 			return "Transformation Applied";
+
 		if (num == Miscellaneous_Persistent_Warning)	// 299
 			return "Miscellaneous Persistent Warning";
 	//================================================================================
@@ -167,119 +168,144 @@ std::string ft_reason_phrase(int *code) {
 	if (category == client_error_responses) {
 		Client_error_responses num = static_cast<Client_error_responses>(code[1]);
 
-		if (num == Bad_Request)				// 400
+		if (num == Bad_Request)						// 400
 			return "Bad request";
-		if (num == Unauthorized)			// 401
+		if (num == Unauthorized)					// 401
 			return "Unauthorized";
-		if (num == Payment_Required)		// 402
+		if (num == Payment_Required)				// 402
 			return "Payment required";
-		if (num == Forbidden)				// 403
+		if (num == Forbidden)						// 403
 			return "Forbidden";
-		if (num == Not_Found)				// 404
+		if (num == Not_Found)						// 404
+		 	return "Not found";
+		if (num == Method_Not_Allowed)				// 405
+			return "Method Not Allowed";
+		if (num == Not_Acceptable)					// 406
+			return "Not Acceptable";
+		if (num == Proxy_Authentication_Required)	// 407
+			return "Proxy Authentication Required";
+		if (num == Request_Timeout)					// 408
+			return "Request Timeout";
+		if (num == Conflict)						// 409
+			return "Conflict";
+		if (num == Gone)							// 410
+			return "Gone";
+		if (num == Length_Required)					// 411
+			return "Length Required";
+		if (num == Precondition_Failed)				// 412
+			return "Precondition Failed";
+		if (num == Payload_Too_Large)				// 413
+			return "Payload Too Large";
+		if (num == URI_Too_Long)					// 414
+			return "URI Too Long";
+		if (num == Unsupported_Media_Type)			// 415
+			return "Unsupported Media Type";
+		if (num == Range_Not_Satisfiable)			// 416
+			return "Range Not Satisfiable";
+		if (num == Expectation_Failed)				// 417
+			return "Expectation Failed";
+		if (num == Teapot)							// 418	(RFC 2324, RFC 7168)
+			return "I'm a teapot";
 
-		// 	return "Not found";
-		// if (num == Bad_Request)				// 405
-		// 	return "Bad request";
-		// if (num == Unauthorized)			// 406
-		// 	return "Unauthorized";
-		// if (num == Payment_Required)		// 407
-		// 	return "Payment required";
-		// if (num == Forbidden)				// 408
-		// 	return "Forbidden";
-		// if (num == Not_Found)				// 409
-		// 	return "Not found";
-		// if (num == Bad_Request)				// 410
-		// 	return "Bad request";
-		// if (num == Unauthorized)			// 411
-		// 	return "Unauthorized";
-		// if (num == Payment_Required)		// 412
-		// 	return "Payment required";
-		// if (num == Forbidden)				// 413
-		// 	return "Forbidden";
-		// if (num == Not_Found)				// 414
-		// 	return "Not found";
-		// if (num == Bad_Request)				// 415
-		// 	return "Bad request";
-		// if (num == Unauthorized)			// 416
-		// 	return "Unauthorized";
-		// if (num == Payment_Required)		// 417
-		// 	return "Payment required";
-		// if (num == Forbidden)				// 418	(RFC 2324, RFC 7168)
-		// 	return "Forbidden";
+		if (num == Misdirected_Request)		// 421
+			return "Misdirected Request";
+		if (num == Unprocessable_Entity)	// 422
+			return "Unprocessable Entity";
+		if (num == Locked)					// 423	(WebDAV; RFC 4918)
+			return "Locked";
+		if (num == Failed_Dependency)		// 424	(WebDAV; RFC 4918)
+			return "Failed Dependency";
+		if (num == Too_Early)				// 425
+			return "Too Early";
+		if (num == Upgrade_Required)		// 426
+			return "Upgrade Required";
 
-		// if (num == Not_Found)				// 421
-		// 	return "Not found";
-		// if (num == Payment_Required)		// 422
-		// 	return "Payment required";
-		// if (num == Forbidden)				// 423	(WebDAV; RFC 4918)
-		// 	return "Forbidden";
-		// if (num == Not_Found)				// 424	(WebDAV; RFC 4918)
-		// 	return "Not found";
-		// if (num == Bad_Request)				// 425
-		// 	return "Bad request";
-		// if (num == Unauthorized)			// 426
-		// 	return "Unauthorized";
-
-		// if (num == Forbidden)				// 428	(RFC 6585)
-		// 	return "Forbidden";
-		// if (num == Not_Found)				// 429	(RFC 6585)
-		// 	return "Not found";
+		if (num == Precondition_Required)	// 428	(RFC 6585)
+			return "Precondition Required";
+		if (num == Too_Many_Requests)		// 429	(RFC 6585)
+			return "Too Many Requests";
 		
-		// if (num == Forbidden)				// 431	(RFC 6585)
-		// 	return "Forbidden";
+		if (num == Request_Header_Fields_Too_Large)		// 431	(RFC 6585)
+			return "Request Header Fields Too Large";
 
-		// if (num == Not_Found)				// 451	(RFC 7725)
-		// 	return "Not found";
-	/*
-		405 Method Not Allowed
-		A request method is not supported for the requested resource; for example, a GET request on a form that requires data to be presented via POST, or a PUT request on a read-only resource.
-		406 Not Acceptable
-		The requested resource is capable of generating only content not acceptable according to the Accept headers sent in the request. See Content negotiation.
-		407 Proxy Authentication Required
-		The client must first authenticate itself with the proxy.
-		408 Request Timeout
-		The server timed out waiting for the request. According to HTTP specifications: "The client did not produce a request within the time that the server was prepared to wait. The client MAY repeat the request without modifications at any later time."
-		409 Conflict
-		Indicates that the request could not be processed because of conflict in the current state of the resource, such as an edit conflict between multiple simultaneous updates.
-		410 Gone
-		Indicates that the resource requested was previously in use but is no longer available and will not be available again. This should be used when a resource has been intentionally removed and the resource should be purged. Upon receiving a 410 status code, the client should not request the resource in the future. Clients such as search engines should remove the resource from their indices. Most use cases do not require clients and search engines to purge the resource, and a "404 Not Found" may be used instead.
-		411 Length Required
-		The request did not specify the length of its content, which is required by the requested resource.
-		412 Precondition Failed
-		The server does not meet one of the preconditions that the requester put on the request header fields.
-		413 Payload Too Large
-		The request is larger than the server is willing or able to process. Previously called "Request Entity Too Large" in RFC 2616.[19]
-		414 URI Too Long
-		The URI provided was too long for the server to process. Often the result of too much data being encoded as a query-string of a GET request, in which case it should be converted to a POST request. Called "Request-URI Too Long" previously in RFC 2616.[20]
-		415 Unsupported Media Type
-		The request entity has a media type which the server or resource does not support. For example, the client uploads an image as image/svg+xml, but the server requires that images use a different format.
-		416 Range Not Satisfiable
-		The client has asked for a portion of the file (byte serving), but the server cannot supply that portion. For example, if the client asked for a part of the file that lies beyond the end of the file. Called "Requested Range Not Satisfiable" previously RFC 2616.[21]
-		417 Expectation Failed
-		The server cannot meet the requirements of the Expect request-header field.[22]
-		418 I'm a teapot (RFC 2324, RFC 7168)
-		This code was defined in 1998 as one of the traditional IETF April Fools' jokes, in RFC 2324, Hyper Text Coffee Pot Control Protocol, and is not expected to be implemented by actual HTTP servers. The RFC specifies this code should be returned by teapots requested to brew coffee.[23] This HTTP status is used as an Easter egg in some websites, such as Google.com's "I'm a teapot" easter egg.[24][25][26] Sometimes, this status code is also used as a response to a blocked request, instead of the more appropriate 403 Forbidden.[27][28]
-		421 Misdirected Request
-		The request was directed at a server that is not able to produce a response (for example because of connection reuse).
-		422 Unprocessable Entity
-		The request was well-formed but was unable to be followed due to semantic errors.[9]
-		423 Locked (WebDAV; RFC 4918)
-		The resource that is being accessed is locked.[9]
-		424 Failed Dependency (WebDAV; RFC 4918)
-		The request failed because it depended on another request and that request failed (e.g., a PROPPATCH).[9]
-		425 Too Early (RFC 8470)
-		Indicates that the server is unwilling to risk processing a request that might be replayed.
-		426 Upgrade Required
-		The client should switch to a different protocol such as TLS/1.3, given in the Upgrade header field.
-		428 Precondition Required (RFC 6585)
-		The origin server requires the request to be conditional. Intended to prevent the 'lost update' problem, where a client GETs a resource's state, modifies it, and PUTs it back to the server, when meanwhile a third party has modified the state on the server, leading to a conflict.[29]
-		429 Too Many Requests (RFC 6585)
-		The user has sent too many requests in a given amount of time. Intended for use with rate-limiting schemes.[29]
-		431 Request Header Fields Too Large (RFC 6585)
-		The server is unwilling to process the request because either an individual header field, or all the header fields collectively, are too large.[29]
-		451 Unavailable For Legal Reasons (RFC 7725)
-		A server operator has received a legal demand to deny access to a resource or to a set of resources that includes the requested resource.[30] The code 451 was chosen as a reference to the novel Fahrenheit 451 (see the Acknowledgements in the RFC).
-	*/
+		if (num == Unavailable_For_Legal_Reasons)	// 451	(RFC 7725)
+			return "Unavailable For Legal Reasons";
+
+	//================================================================================
+
+	//		UNOFFICIAL CODES:
+
+	/*	The following codes are not specified by any standard.	*/
+
+	//================================================================================
+		if (num == Page_Expired)		// 419	(Laravel Framework)
+			return "Page Expired";
+		if (num == Method_Failure)		// 420	(Spring Framework)
+			return "Method Failure";
+
+		if (num == Request_Header_Fields_Too_Large_Spoty)	// 430	(Shopify)
+			return "Request Header Fields Too Large";
+
+		if (num == Blocked_By_Windows_Parental_Controls)	// 450	(Microsoft)
+			return "Blocked by Windows Parental Controls";
+
+		if (num == Invalid_Token)		// 498	(Esri)
+			return "Invalid Token";
+	/*	if (num == Token_Required)		// 499	(Esri)
+			return "Token Required";					*/
+	//================================================================================
+
+	//		INTERNET INFORMATION SERVICES:
+
+	/*	Microsoft's Internet Information Services (IIS) web server expands
+		the 4xx error space to signal errors with the client's request.		*/
+
+	//================================================================================
+		if (num == Login_Time_out)		// 440
+			return "Login Time-out";
+
+		if (num == Retry_With)		// 449
+			return "Retry With";
+
+	/*	if (num == Redirect)	// 451
+			return "Redirect";			*/
+	//================================================================================
+	
+	//		NGINX:
+
+	/*	The nginx web server software expands the 4xx error
+		space to signal issues with the client's request.	*/
+
+	//================================================================================
+		if (num == No_Response)		// 444
+			return "No Response";
+
+		if (num == Request_Header_Too_Large)			// 494
+			return "Request header too large";
+		if (num == SSL_Certificate_Error)				// 495
+			return "SSL Certificate Error";
+		if (num == SSL_Certificate_Required)			// 496
+			return "SSL Certificate Required";
+		if (num == HTTP_Request_Sent_To_HTTPS_Port)		// 497
+			return "HTTP Request Sent to HTTPS Port";
+
+		if (num == Client_Closed_Request)	// 499
+			return "Client Closed Request";
+	//================================================================================
+	
+	//		AWS ELASTIC LOAD BALANCER:
+
+	/*	Amazon's Elastic Load Balancing adds a few custom return codes	*/
+
+	//================================================================================
+		if (num == No_response)		// 460
+			return "No Response";
+
+		if (num == Too_Many_IP)							// 463
+			return "Request header too large";
+		if (num == Incompatible_protocol_versions)		// 464
+			return "Incompatible protocol versions";
+	//================================================================================
 
 		return "Client error responses";
 	}
@@ -303,46 +329,105 @@ std::string ft_reason_phrase(int *code) {
 	if (category == server_error_responses) {
 		Server_error_responses num = static_cast<Server_error_responses>(code[1]);
 
-		if (num == Internal_Server_Error)	// 500
+		if (num == Internal_Server_Error)			// 500
 			return "Internal server error";
-		if (num == Not_Implemented)			// 501
+		if (num == Not_Implemented)					// 501
 			return "Not implemented";
-		if (num == Bad_Gateway)				// 502
+		if (num == Bad_Gateway)						// 502
 			return "Bad Gateway";
-		if (num == Service_Unavailable)		// 503
+		if (num == Service_Unavailable)				// 503
 			return "Service Unavailable";
+		if (num == Gateway_Timeout)					// 504
+			return "Gateway Timeout";
+		if (num == HTTP_Version_Not_Supported)		// 505
+			return "HTTP Version Not Supported";
+		if (num == Variant_Also_Negotiates)			// 506	(RFC 2295)
+			return "Variant Also Negotiates";
+		if (num == Insufficient_Storage)			// 507	(WebDAV; RFC 4918)
+			return "Insufficient Storage";
+		if (num == Loop_Detected)					// 508	(WebDAV; RFC 5842)
+			return "Loop Detected";
 
-		// if (num == Internal_Server_Error)	// 504
-		// 	return "Internal server error";
-		// if (num == Not_Implemented)			// 505
-		// 	return "Not implemented";
-		// if (num == Processing)				// 506	(RFC 2295)
-		// 	return "Processing";
-		// if (num == Early_Hints)				// 507	(WebDAV; RFC 4918)
-		// 	return "Early hints";
-		// if (num == Early_Hints)				// 508	(WebDAV; RFC 5842)
-		// 	return "Early hints";
+		if (num == Not_Extended)						// 510	(RFC 2774)
+			return "Not Extended";
+		if (num == Network_Authentication_Required)		// 511	(RFC 6585)
+			return "Network Authentication Required";
 
-		// if (num == Processing)				// 510	(RFC 2774)
-		// 	return "Processing";
-		// if (num == Early_Hints)				// 511	(RFC 6585)
-		// 	return "Early hints";
-	/*
-		504 Gateway Timeout
-		The server was acting as a gateway or proxy and did not receive a timely response from the upstream server.
-		505 HTTP Version Not Supported
-		The server does not support the HTTP version used in the request.
-		506 Variant Also Negotiates (RFC 2295)
-		Transparent content negotiation for the request results in a circular reference.[32]
-		507 Insufficient Storage (WebDAV; RFC 4918)
-		The server is unable to store the representation needed to complete the request.[9]
-		508 Loop Detected (WebDAV; RFC 5842)
-		The server detected an infinite loop while processing the request (sent instead of 208 Already Reported).
-		510 Not Extended (RFC 2774)
-		Further extensions to the request are required for the server to fulfil it.[33]
-		511 Network Authentication Required (RFC 6585)
-		The client needs to authenticate to gain network access. Intended for use by intercepting proxies used to control access to the network (e.g., "captive portals" used to require agreement to Terms of Service before granting full Internet access via a Wi-Fi hotspot).
-	*/
+	//================================================================================
+
+	//		UNOFFICIAL CODES:
+
+	/*	The following codes are not specified by any standard.	*/
+
+	//================================================================================
+		if (num == Bandwidth_Limit_Exceeded)	// 509	(Apache Web Server/cPanel)
+			return "Bandwidth Limit Exceeded";
+
+		if (num == Site_Is_Overloaded)		// 529
+			return "Site is overloaded";
+		if (num == Site_Is_Frozen)			// 530
+			return "Site is frozen";
+
+		if (num == Network_Read_Timeout_Error)		// 598
+			return "Network read timeout error";
+		if (num == Network_Connect_Timeout_Error)	// 599
+			return "Network Connect Timeout Error";
+	//================================================================================
+	
+	//		UNOFFICIAL CODES:
+
+	/*	The following codes are not specified by any standard.	*/
+
+	//================================================================================
+		if (num == Bandwidth_Limit_Exceeded)	// 509	(Apache Web Server/cPanel)
+			return "Bandwidth Limit Exceeded";
+
+		if (num == Site_Is_Overloaded)		// 529
+			return "Site is overloaded";
+		if (num == Site_Is_Frozen)			// 530
+			return "Site is frozen";
+
+		if (num == Network_Read_Timeout_Error)		// 598
+			return "Network read timeout error";
+		if (num == Network_Connect_Timeout_Error)	// 599
+			return "Network Connect Timeout Error";
+	//================================================================================
+
+	//		CLOUDFLARE:
+
+	/*	Cloudflare's reverse proxy service expands the 5xx series
+		of errors space to signal issues with the origin server.	*/
+
+	//================================================================================
+		if (num == Web_Server_Returned_An_Unknown_Error)	// 520	(Apache Web Server/cPanel)
+			return "Web Server Returned an Unknown Error";
+		if (num == Web_Server_Is_Down)						// 521
+			return "Web Server Is Down";
+		if (num == Connection_Timed_Out)					// 522
+			return "Connection Timed Out";
+		if (num == Origin_Is_Unreachable)					// 523
+			return "Network read timeout error";
+		if (num == A_Timeout_Occurred)						// 524
+			return "A Timeout Occurred";
+		if (num ==  SSL_Handshake_Failed)					// 525
+			return "SSL Handshake Failed";
+		if (num == Invalid_SSL_Certificate)					// 526
+			return "Invalid SSL Certificate";
+		if (num == Railgun_Error)							// 527
+			return "Railgun Error";
+
+	/*	if (num == Cloudflare_1xxx)		// 530
+			return "";							*/
+	//================================================================================
+
+	//		AWS ELASTIC LOAD BALANCER:
+
+	/*	Amazon's Elastic Load Balancing adds a few custom return codes	*/
+
+	//================================================================================
+		if (num == unauthorized)	// 561
+			return "Unauthorized";
+	//================================================================================
 
 		return "Informational response";
 	}
