@@ -24,9 +24,10 @@ private:
     static void     mainLoop();
     static void     acceptConnections(std::map<int, Server*>::iterator &it);
     static void     readRequests(std::map<int, Server*>::iterator &it, fd_set *wFds);
-    static void     sendRequests(std::map<int, Server*>::iterator &it, fd_set *wFds);
+    static void     sendResponse(std::map<int, Server*>::iterator &it, fd_set *wFds);
     static bool     checkCont(std::map<int, Server *>::iterator &it, fd_set *wFds);
     static void     handleRequest(std::map<int, Server *>::iterator &it, fd_set *wFds);
+    static void     closeConnection(std::map<int, Server *>::iterator &it);
 public:
     static void     doIt(int args, char** argv);
     static void     exitHandler(int sig);

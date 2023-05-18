@@ -84,7 +84,7 @@ void MainClass::mainLoop()
             }
             continue;
         }
-        for (std::map<int, Server*>::iterator it = lsts.begin(); it != lsls.end(); it++)
+        for (std::map<int, Server*>::iterator it = lsts.begin(); it != lsts.end(); it++)
         {
             if (FD_ISSET(it->first, &readFds))
                 MainClass::acceptConnections(it);
@@ -94,19 +94,19 @@ void MainClass::mainLoop()
         while (itR != connections.end())
         {
             if (FD_ISSET(itR->first, &writeFds))
-                MainClass::sendResponse(it, &writeFds);
+                MainClass::sendResponse(itR, &writeFds);
             if (FD_ISSET(itR->first, &readFds))
-                MainClass::readRequests(it, &writeFds); //считываем запросы 2.4
+                MainClass::readRequests(itR, &writeFds); //считываем запросы 2.4
             else//it меняем в readRequest, так как там возможно удаление fd;
-                it++;
+                itR++;
         }
     }
 }
 
-void MainClass::sendRequests(std::map<int, Server *>::iterator &it, fd_set *wFds)
+void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *wFds)
 {
-    if (send(it->second->getRes().c_str, it->second->getRes().length(), 0) == -1) //ошибка отправки
-        Logger::putMsg(str::string(strerror(errno)), FILE_ERR, ERR);
+    if (send(it->first, it->second->getRes().c_str(), it->second->getRes().length(), 0) == -1) //ошибка отправки
+        Logger::putMsg(std::string(strerror(errno)), FILE_ERR, ERR);
     it->second->resClear();
     FD_CLR(it->first, wFds);
 }
@@ -117,30 +117,41 @@ void MainClass::readRequests(std::map<int, Server *>::iterator &it, fd_set *wFds
     char    buf[BUF_SIZE];
     Server* serv = it->second;
 
-    recvRes = recv(it->first;, buf, BUF_SIZE, 0);
+    recvRes = recv(it->first, buf, BUF_SIZE, 0);
     switch (recvRes)
     {
-        case SOCKET_ERROR: //ошибка чтения -1
+        case -1: //ошибка чтения
         {
-            Logger::putMsg(std::string("error while recv ") + std::string(strerror(errno)), fd, FILE_ERR, ERR);
+            Logger::putMsg(std::string("error while recv ") + std::string(strerror(errno)), it->first, FILE_ERR, ERR);
             MainClass::closeConnection(it);
-            break;
+            return;
         }
         case 0: //нечего читать
         {
-            if (!MainClass::checkCont(it)) //проверяем кейс если запрос уже был считан полностью но еще не обработан при res = BUF_SIZE
-                MainClass::closeConnection(it);
-            break;
+            if (MainClass::checkCont(it, wFds)) //проверяем кейс если запрос уже был считан полностью но еще не обработан при res = BUF_SIZE
+                break;
+            Logger::putMsg(std::string("User closed connection ", it->first));
+            MainClass::closeConnection(it);
+            return;
         }
         default:
         {
-            serv->addToReq(buf, recvRes);
+            serv->addToReq(buf);
             if (recvRes == BUF_SIZE) //возможно есть еще что считать
                 break;
             MainClass::handleRequest(it, wFds);//обработка запроса
         }
     }
     it++;
+}
+
+void MainClass::closeConnection(std::map<int, Server *>::iterator &it)
+{
+    int fd = it->first;
+
+    it++;
+    close(fd);
+    MainClass::allServers->removeConnection(fd);
 }
 
 void MainClass::acceptConnections(std::map<int, Server *>::iterator &it)
