@@ -14,10 +14,11 @@ Servers::~Servers()
 {
     std::map<int, Server *>::iterator it;
 
+    for (it = this->lst.begin(); it != this->lst.end(); it++)
+        delete it->second;
     for (it = this->connections.begin(); it != this->connections.end(); it++)
         delete it->second;
     this->fds.clear();
-    this->connections.clear();
     Servers::flgCreate = false;
     Logger::putMsg("delete obj of servers");
 }
@@ -56,6 +57,7 @@ void    Servers::addConnection(int fd, Server const &src, bool lstFlg)
     else
         this->lst.insert(std::pair<int, Server *>(fd, src.clone()));
     this->fds.insert(fd);
+    //std::cout << "add connection: " << fd << std::endl;
     Logger::putMsg(std::string("add connection "), fd);
 }
 

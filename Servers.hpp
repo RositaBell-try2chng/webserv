@@ -17,7 +17,7 @@ public:
     Servers();
     ~Servers();
 
-    std::map<int, Server *>&    getConnections(bool lstFlg);
+    std::map<int, Server *>&    getConnections(bool lstFlg = false);
     std::set<int>&              getFds();
     Server&                     getServer(int fd);
 

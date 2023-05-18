@@ -11,7 +11,11 @@
 
 int main(int argc, char **argv)
 {
+    signal(SIGTERM, MainClass::exitHandler);
+    Logger::putMsg(DELIMITER_START);
 	MainClass::doIt(argc, argv);
+    Logger::putMsg(DELIMITER_END);
+    MainClass::exitHandler(0);
 	system("leaks webserv");
 }
 

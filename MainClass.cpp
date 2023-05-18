@@ -45,24 +45,10 @@ void MainClass::doIt(int args, char **argv)
 
 void MainClass::mainLoop()
 {
-    std::map<int, Server*>  lsts = allServers->getConnections(true);
-    std::map<int, Server*>  connections = allServers->getConnections(false);
-    std::set<int>           fds = allServers->getFds();
-
     timeval                 timeout;
     fd_set                  readFds;
     fd_set                  writeFds;
     int                     selRes;
-
-//    {
-//        std::cout << "connections\n";
-//        for (std::map<int, Server*>::iterator it = connections.begin(); it != connections.end(); it++)
-//           std::cout << "fd is " << it->first << "\nserver host is " << it->second->getHost() << "\nport is " <<
-//                it->second->getPort() << std::endl;
-//        std::cout << "fds\n";
-//        for (std::set<int>::iterator it = fds.begin(); it != fds.end(); it++)
-//            std::cout << "fd is " << *it << std::endl;
-//    }
 
     timeout.tv_sec = 15;//fix me: возможно менять динамически когда появляется запрос к cgi и нужно ждать ответ
     timeout.tv_usec = 0;
@@ -70,52 +56,78 @@ void MainClass::mainLoop()
     {
         //fix me add 2.1 проверяем наличие готовых ответов от cgi. если есть - добавляем их в fd для записи
         FD_ZERO(&readFds);
-        for (std::set<int>::iterator it = fds.begin(); it != fds.end(); it++)
-            FD_SET(*it, &readFds);
-        if (fds.empty())
-            throw notEnoughFds();
-        maxFd = *max_element(fds.begin(), fds.end());
-        selRes = select(maxFd + 1, &readFds, &writeFds, NULL, &timeout);
-        if (selRes <= 0)
+        FD_ZERO(&writeFds);
+        maxFd = -1;
+        //добавляем использующиеся сокеты
+        for (std::map<int, Server*>::iterator it = allServers->getConnections().begin(); it != allServers->getConnections().end(); it++)
         {
-            if (selRes < 0) {
+            FD_SET(it->first, &readFds);
+            if (it->second->respReady()) //если ответ готов добавляем
+                FD_SET(it->first, &writeFds);
+            maxFd = it->first;
+        }
+        //добавляем слушающие сокеты
+        for (std::map<int, Server*>::iterator it = allServers->getConnections(true).begin(); it != allServers->getConnections(true).end(); it++)
+        {
+            FD_SET(it->first, &readFds);
+            if (maxFd < it->first)
+                maxFd = it->first;
+        }
+        //select ловим готовые
+        selRes = select(maxFd + 1, &readFds, &writeFds, NULL, &timeout);
+        if (selRes <= 0) //либо ошибка либо готовых пока нет// идем на новый заход
+        {
+            if (selRes < 0)//ошибка селекта
+            {
                 Logger::putMsg(strerror(errno), FILE_ERR, ERR);
                 std::cout << "bad select!!!\n";
             }
             continue;
         }
-        for (std::map<int, Server*>::iterator it = lsts.begin(); it != lsts.end(); it++)
-        {
-            if (FD_ISSET(it->first, &readFds))
-                MainClass::acceptConnections(it);
-        }
-        //fix me add 2.3 делаем сенд для всех готовых для записи фд.
-        std::map<int, Server*>::iterator itR = connections.begin();
-        while (itR != connections.end())
+        //проверяем новые подключения // есть -> идем на новый заход чтобы быстро разгрузить всю очередь
+//        if (acceptConnections(readFds))
+//            continue;
+        acceptConnections(&readFds);
+        //проверяем готовых для записи/чтения
+        std::map<int, Server*>::iterator itR = allServers->getConnections().begin();
+        while (itR != allServers->getConnections().end())
         {
             if (FD_ISSET(itR->first, &writeFds))
-                MainClass::sendResponse(itR, &writeFds);
+                MainClass::sendResponse(itR);
             if (FD_ISSET(itR->first, &readFds))
-                MainClass::readRequests(itR, &writeFds); //считываем запросы 2.4
+                MainClass::readRequests(itR); //считываем запросы 2.4
             else//it меняем в readRequest, так как там возможно удаление fd;
                 itR++;
         }
     }
 }
 
-void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *wFds)
+
+bool MainClass::acceptConnections(fd_set *readFds)
 {
-    if (send(it->first, it->second->getRes().c_str(), it->second->getRes().length(), 0) == -1) //ошибка отправки
-        Logger::putMsg(std::string(strerror(errno)), FILE_ERR, ERR);
-    it->second->resClear();
-    FD_CLR(it->first, wFds);
+    int     fd;
+    bool    flgConnection = false;
+
+    for (std::map<int, Server*>::iterator it = allServers->getConnections(true).begin(); it != allServers->getConnections(true).end(); it++)
+    {
+        if (FD_ISSET(it->first, readFds))
+        {
+            fd = accept(it->first, NULL, NULL);
+            if (fd < 0 || fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
+                Logger::putMsg(strerror(errno), FILE_ERR, ERR);
+            else
+                MainClass::allServers->addConnection(fd, *(it->second));
+            flgConnection = true;
+            //std::cout << "accept connection: " << fd << " from: " << it->first << std::endl;
+        }
+    }
+    return (flgConnection);
 }
 
-void MainClass::readRequests(std::map<int, Server *>::iterator &it, fd_set *wFds)
+void MainClass::readRequests(std::map<int, Server *>::iterator &it)
 {
     int     recvRes;
     char    buf[BUF_SIZE];
-    Server* serv = it->second;
 
     recvRes = recv(it->first, buf, BUF_SIZE, 0);
     switch (recvRes)
@@ -128,7 +140,7 @@ void MainClass::readRequests(std::map<int, Server *>::iterator &it, fd_set *wFds
         }
         case 0: //нечего читать
         {
-            if (MainClass::checkCont(it, wFds)) //проверяем кейс если запрос уже был считан полностью но еще не обработан при res = BUF_SIZE
+            if (MainClass::checkCont(it)) //проверяем кейс если запрос уже был считан полностью но еще не обработан при res == BUF_SIZE
                 break;
             Logger::putMsg(std::string("User closed connection ", it->first));
             MainClass::closeConnection(it);
@@ -136,13 +148,24 @@ void MainClass::readRequests(std::map<int, Server *>::iterator &it, fd_set *wFds
         }
         default:
         {
-            serv->addToReq(buf);
+            it->second->addToReq(buf);
             if (recvRes == BUF_SIZE) //возможно есть еще что считать
                 break;
-            MainClass::handleRequest(it, wFds);//обработка запроса
+            MainClass::handleRequest(it);//обработка запроса
         }
     }
     it++;
+}
+
+
+void MainClass::sendResponse(std::map<int, Server *>::iterator &it)
+{
+    int res;
+
+    res = send(it->first, it->second->getRes().c_str(), it->second->getRes().length(), 0);
+    if (res == -1)
+        Logger::putMsg(std::string(strerror(errno)), FILE_ERR, ERR);//ошибка отправки
+    it->second->resClear();
 }
 
 void MainClass::closeConnection(std::map<int, Server *>::iterator &it)
@@ -152,42 +175,32 @@ void MainClass::closeConnection(std::map<int, Server *>::iterator &it)
     it++;
     close(fd);
     MainClass::allServers->removeConnection(fd);
+    //std::cout << "close connection: " << fd << std::endl;
 }
 
-void MainClass::acceptConnections(std::map<int, Server *>::iterator &it)
-{
-    int fd;
-
-    fd = accept(it->first, NULL, NULL);
-    if (fd < 0 || fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
-        Logger::putMsg(strerror(errno), FILE_ERR, ERR);
-    else
-        MainClass::allServers->addConnection(fd, *(it->second));
-}
-
-void MainClass::handleRequest(std::map<int, Server *>::iterator &it, fd_set *wFds) //fix me: delete GAGs
+void MainClass::handleRequest(std::map<int, Server *>::iterator &it) //fix me: delete GAGs
 {
     Logger::putMsg(it->second->getReq(), FILE_REQ, REQ);
     it->second->setResponse(std::string(DEF_RESPONSE));
     it->second->reqClear();
-    if (it->second->respReady())
-        FD_SET(it->first, wFds);
 }
 
-bool MainClass::checkCont(std::map<int, Server *>::iterator &it, fd_set *wFds)
+bool MainClass::checkCont(std::map<int, Server *>::iterator &it)
 {
     if (it->second->getReq().empty())
         return (false);
-    MainClass::handleRequest(it, wFds);
+    MainClass::handleRequest(it);
     return (true);
 }
 
 void MainClass::exitHandler(int sig)
 {
-    if (sig != SIGTERM)
+    //fix me when addr already use - segmentation fault
+    if (sig != SIGTERM && sig != 0)
         return;
-    if (allServers)
-        delete allServers;
-    std::cout << "ExitHandler: SIGTERM received\n";
+    if (sig == SIGTERM)
+        std::cout << "ExitHandler: SIGTERM received\n";
+    else
+        std::cout << "EXCEPTION exit. check LOGS\n";
     exit(0);
 }

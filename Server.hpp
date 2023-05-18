@@ -3,10 +3,6 @@
 
 #include "webserv.hpp"
 
-#define BUF_SIZE 4096
-
-
-
 class Server
 {
 private:
