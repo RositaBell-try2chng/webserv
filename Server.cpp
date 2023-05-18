@@ -40,6 +40,12 @@ void Server::addToReq(const char *src)
 	this->request += std::string(src);
 }
 
+void Server::setResponse(const std::string &src)
+{
+	this->response = src;
+	this->setRespReady(true);
+}
+
 Server* Server::clone() const
 {
 	return (new Server(this->host, this->port));

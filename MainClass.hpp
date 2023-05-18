@@ -10,6 +10,8 @@
 
 # define BUF_SIZE 4096
 
+#define DEF_RESPONSE "HTTP/1.1 200 OK"
+
 class MainClass
 {
 private:
@@ -21,8 +23,10 @@ private:
     static Servers* allServers;
     static void     mainLoop();
     static void     acceptConnections(std::map<int, Server*>::iterator &it);
-    static void     readRequests(std::map<int, Server*>::iterator &it);
-    static bool     checkCont();
+    static void     readRequests(std::map<int, Server*>::iterator &it, fd_set *wFds);
+    static void     sendRequests(std::map<int, Server*>::iterator &it, fd_set *wFds);
+    static bool     checkCont(std::map<int, Server *>::iterator &it, fd_set *wFds);
+    static void     handleRequest(std::map<int, Server *>::iterator &it, fd_set *wFds);
 public:
     static void     doIt(int args, char** argv);
     static void     exitHandler(int sig);

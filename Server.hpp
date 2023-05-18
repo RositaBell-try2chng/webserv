@@ -5,8 +5,7 @@
 
 #define BUF_SIZE 4096
 
-#define ANSWER "HTTP/1.1 200 OK"
-#define ANSWER_LEN 15
+
 
 class Server
 {
@@ -36,6 +35,7 @@ public:
 	void				reqClear();
 	void				resClear();
 	void				addToReq(char const* src);
+	void				setResponse(std::string const& src);
 
 	Server*				clone() const;
 };

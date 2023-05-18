@@ -54,17 +54,17 @@ void MainClass::mainLoop()
     fd_set                  writeFds;
     int                     selRes;
 
-    {
-        std::cout << "connections\n";
-        for (std::map<int, Server*>::iterator it = connections.begin(); it != connections.end(); it++)
-           std::cout << "fd is " << it->first << "\nserver host is " << it->second->getHost() << "\nport is " <<
-                it->second->getPort() << std::endl;
-        std::cout << "fds\n";
-        for (std::set<int>::iterator it = fds.begin(); it != fds.end(); it++)
-            std::cout << "fd is " << *it << std::endl;
-    }
+//    {
+//        std::cout << "connections\n";
+//        for (std::map<int, Server*>::iterator it = connections.begin(); it != connections.end(); it++)
+//           std::cout << "fd is " << it->first << "\nserver host is " << it->second->getHost() << "\nport is " <<
+//                it->second->getPort() << std::endl;
+//        std::cout << "fds\n";
+//        for (std::set<int>::iterator it = fds.begin(); it != fds.end(); it++)
+//            std::cout << "fd is " << *it << std::endl;
+//    }
 
-    timeout.tv_sec = 15;
+    timeout.tv_sec = 15;//fix me: возможно менять динамически когда появляется запрос к cgi и нужно ждать ответ
     timeout.tv_usec = 0;
     while (true)
     {
@@ -84,23 +84,34 @@ void MainClass::mainLoop()
             }
             continue;
         }
-        //fix me add 2.3 делаем сенд для всех готовых для записи фд.
         for (std::map<int, Server*>::iterator it = lsts.begin(); it != lsls.end(); it++)
         {
             if (FD_ISSET(it->first, &readFds))
                 MainClass::acceptConnections(it);
         }
-
+        //fix me add 2.3 делаем сенд для всех готовых для записи фд.
         std::map<int, Server*>::iterator itR = connections.begin();
         while (itR != connections.end())
         {
+            if (FD_ISSET(itR->first, &writeFds))
+                MainClass::sendResponse(it, &writeFds);
             if (FD_ISSET(itR->first, &readFds))
-                MainClass::readRequests(it); //считываем запросы 2.4
+                MainClass::readRequests(it, &writeFds); //считываем запросы 2.4
+            else//it меняем в readRequest, так как там возможно удаление fd;
+                it++;
         }
     }
 }
 
-void MainClass::readRequests(std::map<int, Server *>::iterator &it)
+void MainClass::sendRequests(std::map<int, Server *>::iterator &it, fd_set *wFds)
+{
+    if (send(it->second->getRes().c_str, it->second->getRes().length(), 0) == -1) //ошибка отправки
+        Logger::putMsg(str::string(strerror(errno)), FILE_ERR, ERR);
+    it->second->resClear();
+    FD_CLR(it->first, wFds);
+}
+
+void MainClass::readRequests(std::map<int, Server *>::iterator &it, fd_set *wFds)
 {
     int     recvRes;
     char    buf[BUF_SIZE];
@@ -126,7 +137,7 @@ void MainClass::readRequests(std::map<int, Server *>::iterator &it)
             serv->addToReq(buf, recvRes);
             if (recvRes == BUF_SIZE) //возможно есть еще что считать
                 break;
-            MainClass::handleRequest(it);//обработка запроса
+            MainClass::handleRequest(it, wFds);//обработка запроса
         }
     }
     it++;
@@ -141,6 +152,23 @@ void MainClass::acceptConnections(std::map<int, Server *>::iterator &it)
         Logger::putMsg(strerror(errno), FILE_ERR, ERR);
     else
         MainClass::allServers->addConnection(fd, *(it->second));
+}
+
+void MainClass::handleRequest(std::map<int, Server *>::iterator &it, fd_set *wFds) //fix me: delete GAGs
+{
+    Logger::putMsg(it->second->getReq(), FILE_REQ, REQ);
+    it->second->setResponse(std::string(DEF_RESPONSE));
+    it->second->reqClear();
+    if (it->second->respReady())
+        FD_SET(it->first, wFds);
+}
+
+bool MainClass::checkCont(std::map<int, Server *>::iterator &it, fd_set *wFds)
+{
+    if (it->second->getReq().empty())
+        return (false);
+    MainClass::handleRequest(it, wFds);
+    return (true);
 }
 
 void MainClass::exitHandler(int sig)
