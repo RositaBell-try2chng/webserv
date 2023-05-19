@@ -11,14 +11,14 @@ class Servers
 private:
     std::map<int, Server *> lst;
     std::map<int, Server *> connections;
-    std::set<int>           fds;
+    //std::set<int>           fds;
     static bool             flgCreate;
 public:
     Servers();
     ~Servers();
 
     std::map<int, Server *>&    getConnections(bool lstFlg = false);
-    std::set<int>&              getFds();
+    //std::set<int>&              getFds();
     Server&                     getServer(int fd);
 
     void                    addConnection(int fd, Server const &src, bool lstFlg = false);

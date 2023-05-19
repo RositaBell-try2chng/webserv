@@ -61,7 +61,6 @@ void MainClass::mainLoop()
         //добавляем использующиеся сокеты
         for (std::map<int, Server*>::iterator it = allServers->getConnections().begin(); it != allServers->getConnections().end(); it++)
         {
-            FD_SET(it->first, &readFds);
             if (it->second->respReady()) //если ответ готов добавляем
                 FD_SET(it->first, &writeFds);
             maxFd = it->first;
@@ -92,11 +91,12 @@ void MainClass::mainLoop()
         std::map<int, Server*>::iterator itR = allServers->getConnections().begin();
         while (itR != allServers->getConnections().end())
         {
+            //only one read/write per client per select
             if (FD_ISSET(itR->first, &writeFds))
                 MainClass::sendResponse(itR);
-            if (FD_ISSET(itR->first, &readFds))
+            else if (FD_ISSET(itR->first, &readFds))
                 MainClass::readRequests(itR); //считываем запросы 2.4
-            else//it меняем в readRequest, так как там возможно удаление fd;
+            else//it меняем в readRequest и sendResponse.
                 itR++;
         }
     }
@@ -162,9 +162,18 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it)
 {
     int res;
 
+    if (it->second->getRes().empty()) // nothing to send
+    {
+        Logger::putMsg(std::string("NOTHING TO SEND"), FILE_ERR, ERR);
+        it->second->resClear();
+        return;
+    }
     res = send(it->first, it->second->getRes().c_str(), it->second->getRes().length(), 0);
-    if (res == -1)
+    if (res < 1)
+    {
         Logger::putMsg(std::string(strerror(errno)), FILE_ERR, ERR);//ошибка отправки
+        MainClass::closeConnection(it);
+    }
     it->second->resClear();
 }
 

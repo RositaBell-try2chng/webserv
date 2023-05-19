@@ -18,7 +18,7 @@ Servers::~Servers()
         delete it->second;
     for (it = this->connections.begin(); it != this->connections.end(); it++)
         delete it->second;
-    this->fds.clear();
+    //this->fds.clear();
     Servers::flgCreate = false;
     Logger::putMsg("delete obj of servers");
 }
@@ -30,7 +30,7 @@ std::map<int, Server *>&    Servers::getConnections(bool lstFlg)
     return (this->lst);
 }
 
-std::set<int>&  Servers::getFds() { return (this->fds);}
+//std::set<int>&  Servers::getFds() { return (this->fds);}
 
 Server& Servers::getServer(int fd)
 {
@@ -44,10 +44,16 @@ Server& Servers::getServer(int fd)
 
 void    Servers::addConnection(int fd, Server const &src, bool lstFlg)
 {
-    std::set<int>::iterator it;
+    std::map<int, Server*>::iterator    it;
 
-    it = this->fds.find(fd);
-    if (it != this->fds.end())
+    it = this->connections.find(fd);
+    if (it != this->connections.end())
+    {
+        Logger::putMsg("This fd already exists: ", fd, FILE_ERR, ERR);
+        return;
+    }
+    it = this->lst.find(fd);
+    if (it != this->lst.end())
     {
         Logger::putMsg("This fd already exists: ", fd, FILE_ERR, ERR);
         return;
@@ -56,7 +62,7 @@ void    Servers::addConnection(int fd, Server const &src, bool lstFlg)
         this->connections.insert(std::pair<int, Server *>(fd, src.clone()));
     else
         this->lst.insert(std::pair<int, Server *>(fd, src.clone()));
-    this->fds.insert(fd);
+    //this->fds.insert(fd);
     //std::cout << "add connection: " << fd << std::endl;
     Logger::putMsg(std::string("add connection "), fd);
 }
@@ -79,7 +85,7 @@ void    Servers::removeConnection(int fd, bool lstFlg)
         this->connections.erase(fd);
     else
         this->lst.erase(fd);
-    this->fds.erase(fd);
+    //this->fds.erase(fd);
     Logger::putMsg(std::string("remove connection "), fd);
 }
 
