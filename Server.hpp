@@ -32,6 +32,7 @@ public:
 	void				resClear();
 	void				addToReq(char const* src);
 	void				setResponse(std::string const& src);
+	void				resizeResponse(int res);
 
 	Server*				clone() const;
 };

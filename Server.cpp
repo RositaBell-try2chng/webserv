@@ -46,6 +46,13 @@ void Server::setResponse(const std::string &src)
 	this->setRespReady(true);
 }
 
+void Server::resizeResponse(int res)
+{
+	this->response.erase(0, res);
+	if (this->response.empty())
+		this->setRespReady(false);
+}
+
 Server* Server::clone() const
 {
 	return (new Server(this->host, this->port));

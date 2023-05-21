@@ -160,7 +160,8 @@ void MainClass::readRequests(std::map<int, Server *>::iterator &it)
 
 void MainClass::sendResponse(std::map<int, Server *>::iterator &it)
 {
-    int res;
+    int  res;
+    int  len;
 
     if (it->second->getRes().empty()) // nothing to send
     {
@@ -168,13 +169,28 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it)
         it->second->resClear();
         return;
     }
-    res = send(it->first, it->second->getRes().c_str(), it->second->getRes().length(), 0);
-    if (res < 1)
+    len = it->second->getRes().length();
+    res = send(it->first, it->second->getRes().c_str(), len, 0);
+    switch (res)
     {
-        Logger::putMsg(std::string(strerror(errno)), FILE_ERR, ERR);//ошибка отправки
-        MainClass::closeConnection(it);
+        case -1: //error
+        {
+            Logger::putMsg(std::string("error while send ") + std::string(strerror(errno)), it->first, FILE_ERR, ERR);
+            MainClass::closeConnection(it);
+            return;
+        }
+        case 0:
+        {
+            return;
+        }
+        default:
+        {
+            if (res < len) //если отправилось не все, убираем то что не послалось.
+                it->second->resizeResponse(res);
+            else
+                it->second->resClear();
+        }
     }
-    it->second->resClear();
 }
 
 void MainClass::closeConnection(std::map<int, Server *>::iterator &it)
