@@ -16,7 +16,6 @@ int main(int argc, char **argv)
 	MainClass::doIt(argc, argv);
     Logger::putMsg(DELIMITER_END);
     MainClass::exitHandler(0);
-	system("leaks webserv");
 }
 
 //

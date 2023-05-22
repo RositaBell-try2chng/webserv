@@ -36,3 +36,8 @@ const char* notEnoughFds::what() const throw()
 {
 	return ("Exception: fds is empty");
 }
+
+const char* badConfig::what() const throw()
+{
+	return ("Exception: BAD CONFIG");
+}

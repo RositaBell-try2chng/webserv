@@ -47,8 +47,8 @@ private:
 	pid_t		childPid;
 
 	static t_serv*	cloneServList(t_serv const *src);
-	static t_loc*	cloneLocList(t_loc *src);
-	void			clearLocation();
+	static t_loc*	cloneLocList(t_loc const *src);
+	void			clearLocation(t_loc **loc);
 	void			clearServ();
 public:
 	Server(std::string const& _host, std::string const& _port);

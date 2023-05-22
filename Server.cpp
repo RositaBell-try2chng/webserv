@@ -75,18 +75,17 @@ t_serv* Server::cloneServList(t_serv const *src)
 
 	t_serv	*res = new t_serv;
 	t_serv	*currRes = res;
-	t_serv	*curr = src;
 
-	while (curr)
+	while (src)
 	{
-		currRes->ServerName = curr->ServerName;
-		currRes->errPages = std::map(curr->errPages);
-		currRes->limitCLientBodySize = curr->limitCLientBodySize;
-		currRes->root = std::string(curr->root);
-		currRes->locList = Server::cloneLocList(curr->locList);
+		currRes->ServerName = src->ServerName;
+		currRes->errPages = std::map<int, std::string>(src->errPages);
+		currRes->limitCLientBodySize = src->limitCLientBodySize;
+		currRes->root = std::string(src->root);
+		currRes->locList = Server::cloneLocList(src->locList);
 		currRes->next = NULL;
-		curr = curr->next;
-		if (!curr)
+		src = src->next;
+		if (!src)
 			continue;
 		currRes->next = new t_serv;
 		currRes = currRes->next;
@@ -94,32 +93,32 @@ t_serv* Server::cloneServList(t_serv const *src)
 	return (res);
 }
 
-t_loc* Server::cloneLocList(t_loc *src)
+t_loc* Server::cloneLocList(t_loc const *src)
 {
 	if (!src)
 		return (NULL);
 
 	t_loc *res = new t_loc;
 	t_loc *currRes = res;
-	t_loc *curr = src;
 
-	while (curr)
+	while (src)
 	{
-		currRes->flgGet = curr->flgGet;
-		currRes->flgPost = curr->flgPost;
-		currRes->flgDelete = curr->flgDelete;
-		currRes->redirect = curr->redirect;
-		currRes->root = curr->root;
-		currRes->defFileIfDir = curr->defFileIfDir;
-		currRes->CGIs = curr->CGIs;
-		currRes->uploadPath = curr->uploadPath;
+		currRes->flgGet = src->flgGet;
+		currRes->flgPost = src->flgPost;
+		currRes->flgDelete = src->flgDelete;
+		currRes->redirect = src->redirect;
+		currRes->root = src->root;
+		currRes->defFileIfDir = src->defFileIfDir;
+		currRes->CGIs = src->CGIs;
+		currRes->uploadPath = src->uploadPath;
 		currRes->next = NULL;
-		curr = curr->next;
-		if (!curr)
+		src = src->next;
+		if (!src)
 			continue;
-		currRes->next = new t_serv;
+		currRes->next = new t_loc;
 		currRes = currRes->next;
 	}
+	return res;
 }
 
 void    Server::clearLocation(t_loc	**loc)

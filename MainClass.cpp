@@ -13,25 +13,15 @@ void MainClass::doIt(int args, char **argv)
     arg = NULL;
     flg = ConfParser::checkArgs(args, argv);
     if (flg)
-    {
         arg = argv[1];
-        std::cout << "Check args SUCCESS\n";
-    }
-    else
-        std::cout << "Check args SUCCESS with WARNING\n";
-
     try
     {
-        if (ConfParser::parseConf(arg, &MainClass::allServers))
-            std::cout << "parse config SUCCESS\n";
-        else
-            std::cerr << "parse config SUCCESS with WARNING. try Default config file\n";
+        ConfParser::parseConf(arg, &MainClass::allServers);
+        std::cout << "parse config SUCCESS\n";
     }
     catch (std::exception &e)
     {
         std::cerr << "PARSE CONFIG FAILED\n" << e.what() << std::endl;
-        if (MainClass::allServers)
-            delete MainClass::allServers;
         return;
     }
 
@@ -40,7 +30,7 @@ void MainClass::doIt(int args, char **argv)
         std::cerr << "NO SERVER CREATED, CHECK YOUR CONFIG\n";
         return;
     }
-    MainClass::mainLoop();
+    //MainClass::mainLoop();
 }
 
 void MainClass::mainLoop()
@@ -220,12 +210,12 @@ bool MainClass::checkCont(std::map<int, Server *>::iterator &it)
 
 void MainClass::exitHandler(int sig)
 {
-    //fix me when addr already use - segmentation fault
     if (sig != SIGTERM && sig != 0)
         return;
     if (sig == SIGTERM)
         std::cout << "ExitHandler: SIGTERM received\n";
     else
         std::cout << "EXCEPTION exit. check LOGS\n";
+    //system("leaks webserv");
     exit(0);
 }

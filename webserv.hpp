@@ -2,6 +2,8 @@
 # define WEBSERV_HPP
 
 # include <iostream>
+# include <sstream>
+# include <vector>
 # include <fstream>
 # include <sys/time.h>
 # include <sys/types.h>
