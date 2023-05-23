@@ -62,8 +62,6 @@ void    Servers::addConnection(int fd, Server const &src, bool lstFlg)
         this->connections.insert(std::pair<int, Server *>(fd, src.clone()));
     else
         this->lst.insert(std::pair<int, Server *>(fd, src.clone()));
-    //this->fds.insert(fd);
-    //std::cout << "add connection: " << fd << std::endl;
     Logger::putMsg(std::string("add connection "), fd);
 }
 
@@ -89,10 +87,12 @@ void    Servers::removeConnection(int fd, bool lstFlg)
     Logger::putMsg(std::string("remove connection "), fd);
 }
 
-void    Servers::createServer(std::string const &host, std::string const &port)
+void    Servers::createServer(std::string const &host, std::string const &port, std::map<std::string, std::string> &S, std::map <std::string, std::map<std::string, std::string>> &L, std::vector<std::string> &SN, std::vector<std::string> &E)
 {
     Server      tmp(host, port);
     t_listen    all;
+
+    tmp.setServList(S, L, SN, E);
 
     bzero(&all, sizeof(all));
     all.hints.ai_family = AF_INET;
@@ -112,4 +112,69 @@ void    Servers::createServer(std::string const &host, std::string const &port)
         throw exceptionErrno();
     this->addConnection(all.sockFd, tmp, true);
     freeaddrinfo(all.info);
+}
+
+bool Servers::addServers(std::map<std::string, string> &S, std::map <std::string, std::map<std::string, std::string>> &L, std::vector<std::string> &P, std::vector<std::string> &E)
+{
+    std::map<std::string, std::string>::iterator    it;
+    std::vector<std::string>::iterator              it2;
+    std::string host;
+    std::string port;
+    std::vector<std::string>                        servNames;
+    int                                             fd;
+
+    if (P.empty() || L.empty()) {
+        Logger::putMsg("HAVE NO PORTS OR LOCATIONS", FILE_ERR, ERR);
+        return (false);
+    }
+    it = S.find("host");
+    if (it == S.end())
+        host = std::string(DEF_HOST);
+    else {
+        host = it->second;
+        S.erase(it);
+    }
+    it = S.find("server_name");
+    if (it != S.end()) {
+        Servers::setServNames(it->second, servNames);
+        S.erase(it);
+    }
+    for (it2 = P.begin(); it2 != P.end(); it2++) {
+        port = *it2;
+        fd = checkExistsHostPort(host, port);
+        if (fd == -1) {
+            try {
+                this->createServer(host, port, S, L, servNames, E);
+            }
+            catch (std::exception &e) {
+                Logger::putMsg("Creating server failed:\n" + host + ':' + port, FILE_ERR, ERR);
+            }
+        }
+        else
+            Servers::addToConnection(fd, S, L, servNames);
+
+    }
+}
+
+void Servers::setServNames(std::string &src, std::vector<std::string> &Names)
+{
+    std::string name;
+    std::string::size_type  i = 0;
+    std::string::size_type  from;
+    std::string::size_type  len = src.length();
+
+    while (i < len)
+    {
+        //found
+        from = i;
+        while (i < len && !std::isspace(src[i]))
+            i++
+        //substr
+        name = src.substr(from, i - from);
+        if (Names.find(name) != Names.end())
+            Names.push_back(name);
+        //skip spaces
+        while (i < len && std::isspace(src[i]))
+            i++;
+    }
 }

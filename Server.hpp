@@ -71,6 +71,9 @@ public:
 	void				resizeResponse(int res);
 
 	Server*				clone() const;
+
+	void			setServList(std::map<std::string, std::string> &S, std::map <std::string, std::map<std::string, std::string>> &L, std::vector<std::string> &SN, std::vector<std::string> &E);
+	void			setLocList(std::map <std::string, std::map<std::string, std::string>> &L);
 };
 
 #endif

@@ -11,19 +11,20 @@ class Servers
 private:
     std::map<int, Server *> lst;
     std::map<int, Server *> connections;
-    //std::set<int>           fds;
     static bool             flgCreate;
+
+    static void             setServNames(std::string &src, std::vector<std::string> &Names);
 public:
     Servers();
     ~Servers();
 
     std::map<int, Server *>&    getConnections(bool lstFlg = false);
-    //std::set<int>&              getFds();
     Server&                     getServer(int fd);
 
     void                    addConnection(int fd, Server const &src, bool lstFlg = false);
     void                    removeConnection(int fd, bool lstFlg = false);
-    void                    createServer(std::string const &host, std::string const &port);
+    void                    createServer(std::string const &host, std::string const &port, std::map<std::string, std::string> &S, std::map <std::string, std::map<std::string, std::string>> &L);
+    bool                    addServers(std::map<std::string, std::string> &S, std::map <std::string, std::map<std::string, std::string>> &L, std::vector<std::string> &P, std::vector<std::string> &E);
 };
 
 #endif

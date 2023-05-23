@@ -152,3 +152,59 @@ void    Server::clearServ()
 	}
 	this->serv = NULL;
 }
+
+void Server::setServList(std::map<std::string, std::string> &S, std::map <std::string, std::map<std::string, std::string>> &L, std::vector<std::string> &SN, std::vector<std::string> &E)
+{
+	std::map<std::string, std::string>::iterator itS;
+	std::vector<std::string>::iterator it;
+	std::vector<std::string>::iterator itE;
+	t_serv*	cur;
+	size_t		limit;
+	std::string	root;
+	char		c;
+
+	for (itS = S.begin(); itS != S.end(); it++)
+	{
+		if (itS->first == "limitBodySize")
+		{
+			std::stringstream ss(itS->second);
+			ss >> limit;
+			if (ss.get(c)) {
+				Logger::putMsg("limitBodySize os corrupted and not set", FILE_ERR, ERR);
+				limit = -1;
+			}
+		}
+		else
+			root = it->second;
+	}
+
+	this->serv = new t_serv;
+	cur = this->serv;
+
+	for (it = SN.begin(); it != SN.end(); it++)
+	{
+		cur->ServerName = *it;
+		cur->root = root;
+		cur->limitCLientBodySize = limit;
+		//fill err pages map
+		for (itE = E.begin(); itE != E.end(); it++)
+		{
+			std::string line1;
+			std::string line2;
+
+			line1 = *itE;
+			ConfParser::splitLine(line1, line2);
+			if (line1.empty() || line2.empty())
+				continue;
+		}
+		//set location
+		cur->next = new t_serv;
+		cur = cur->next;
+		cur->next = NULL;
+	}
+}
+
+void Server::setLocList(std::map <std::string, std::map<std::string, std::string>> &L)
+{
+
+}

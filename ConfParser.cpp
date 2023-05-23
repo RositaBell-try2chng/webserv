@@ -125,16 +125,68 @@ bool ConfParser::parseForOneServ(std::string &src, Servers *allServers)
 {
     std::map <std::string, std::string> paramS;
     std::map <std::string, std::string> paramL;
+    std::map <std::string, std::map<std::string, std::string>>  locations;
     std::vector<std::string>            ports;
     std::vector<std::string>            errPages;
-    std::stringstream sStream;
-    std::string line;
-    std::string line2;
 
     while (ConfParser::getLocations(src, paramL))
         ConfParser::delSpaces(src);
     if (src.empty() || paramL.empty())
         return (false);
+    if (!ConfParser::fillServParam(paramS, ports, errPages))
+        return (false);
+    if (!ConfParser::fillLocations(paramL, locations))
+        return (false);
+    return (allServers->addServers(paramS, locations, ports, errPages));
+}
+
+bool ConfParser::fillLocations(std::map <string, string> &paramL, std::map <std::string, std::map<std::string, std::string>> &locations)
+{
+    std::map<std::string, std::string>::iterator    it;
+    std::map<std::string, std::string>              part2;
+    std::stringstream                               sStream;
+    std::string                                     line;
+    std::string                                     line2;
+    bool                                            flgCorrect;
+
+    for (it = paramL.begin(); it != paramL.end(); it++)
+    {
+        flgCorrect = true;
+        part2.clear();
+        sStream << it->second;
+        while (std::getline(sStream, line))
+        {
+            ConfParser::splitLine(line, line2);
+            if (line.empty() || line2.empty()) {
+                Logger::putMsg("BAD CONFIG IGNORED:\n" + line + ' ' + line2, FILE_ERR, ERR);
+                continue;
+            }
+            if (line != "acceptedMethods" && line != "root" && line != "dirListOn" && line != "defFileIfdir" && line != "CGIs" && line != "upload_path" && line != "return") {
+                Logger::putMsg("BAD PARAM of Location IGNORED:\n" + line, FILE_ERR, ERR);
+                continue;
+            }
+            if (part2.find(line) != part2.end()) {
+                flgCorrect = false;
+                break;
+            }
+            part2.insert(std::pair<std::string, std::string>(line, line2));
+        }
+        if (!flgCorrect || part2.empty()) {
+            Logger::putMsg("BAD CONFIG OF LOCATION:\n" + it->first, FILE_ERR, ERR);
+            continue;
+        }
+        locations.insert(std::pair<std::string, std::map<std::string, std::string>>(it->first, part2));
+    }
+    if (locations.empty())
+        return (false);
+}
+
+bool ConfParser::fillServParam(std::map <std::string, std::string> &paramS, std::vector <std::string> &ports, std::vector <std::string> &errPages)
+{
+    std::stringstream   sStream;
+    std::string         line;
+    std::string         line2;
+
     sStream << src;
     while (std::getline(sStream, line))
     {
@@ -143,10 +195,10 @@ bool ConfParser::parseForOneServ(std::string &src, Servers *allServers)
             Logger::putMsg("BAD CONFIG IGNORED:\n" + line + ' ' + line2, FILE_ERR, ERR);
             continue;
         }
-        if (line == "listen")
-            ports.insert(line2);
+        if (line == "listen" && ConfParser::checkPort(line2))
+            ports.push_back(line2);
         else if (line == "error_page")
-            errPages.insert(line2);
+            errPages.push_back(line2);
         else if (line == "host" || line == "server_name" || line == "limitBodySize" || line == "root")
         {
             if (paramS.find(line) != paramS.end())
@@ -162,10 +214,7 @@ bool ConfParser::parseForOneServ(std::string &src, Servers *allServers)
             paramS.insert(std::pair<std::string, std::string>(line, line2));
         }
         else
-        {
-            Logger::putMsg("BAD CONFIG IGNORED:\n" + line, FILE_ERR, ERR);
-            return (false);
-        }
+            Logger::putMsg("BAD CONFIG IGNORED:\n" + line + ' ' + line2, FILE_ERR, ERR);
     }
     return (true);
 }
@@ -176,10 +225,10 @@ void ConfParser::splitLine(std::string &src, std::string &dst)
     std::string::size_type len;
 
     len = src.length();
-    while (i < len && !std::isspase(src.[i]))
+    while (i < len && !std::isspace(src[i]))
         i++;
-    dst = std::substr(i, len - i);
-    src.erase(0, i);
+    dst = src.substr(i, len - i);
+    src.erase(i, len - i);
     ConfParser::delSpaces(src);
     ConfParser::delSpaces(dst);
 }
@@ -192,7 +241,6 @@ bool ConfParser::getLocations(std::string &src, std::map<std::string, std::strin
     std::string             part1;
     std::string             part2;
 
-    std::cout << "start\n";
     i = src.find("location");
     if (i == std::string::npos)
         return (false);
@@ -205,7 +253,6 @@ bool ConfParser::getLocations(std::string &src, std::map<std::string, std::strin
     part1 = src.substr(from, i - from);
     ConfParser::delSpaces(part1);
     from = i + 1;
-
     i = ConfParser::findCloseBracket(src, i, 1);
     part2 = src.substr(from, i - from);
     ConfParser::delSpaces(part2);
@@ -222,16 +269,13 @@ bool ConfParser::getLocations(std::string &src, std::map<std::string, std::strin
 std::string::size_type ConfParser::findCloseBracket(std::string &src, std::string::size_type i, int cnt)
 {
     //i--;
-    //std::cout << "\n\n====start====\n\n";
     while (cnt != 0 && ++i < src.length())
     {
-        //std::cout << "i is: " << i << " len is: " << src.length() << " cnt is: " << cnt << " src[i] is: " << src[i] << std::endl;
         if (src[i] == '{')
             cnt++;
         else if (src[i] == '}')
             cnt--;
     }
-    //std::cout << "\n\n====end====\n\n";
     if (i == src.length())
         throw badConfig();
     return (i);
@@ -279,7 +323,7 @@ bool ConfParser::checkCorrectHost(std::string &Host)
         part += Host[i];
         i++;
     }
-    if (part.empty())
+    if (part.empty() || part.length() > 3)
         return (false);
     while (part.length() < 3)
         part = '0' + part;
@@ -295,7 +339,7 @@ bool ConfParser::checkCorrectHost(std::string &Host)
             part += Host[i];
             i++;
         }
-        if (part.empty())
+        if (part.empty() || part.length() > 3)
             return (false);
         while (part.length() < 3)
             part = '0' + part;
@@ -303,6 +347,24 @@ bool ConfParser::checkCorrectHost(std::string &Host)
             return (false);
     }
     if (cnt != 3)
+        return (false);
+    return (true);
+}
+
+bool ConfParser::checkPort(std::string &Port)
+{
+    std::string::size_type  i;
+
+    if (Port.length() > 5)
+        return (false);
+    for (i = 0; i < Port.length(); i++)
+    {
+        if (!std::isdigit(Port[i]))
+            return (false);
+    }
+    while (Port.length() < 5)
+        Port = '0' + Port;
+    if (Port > "65535")
         return (false);
     return (true);
 }
