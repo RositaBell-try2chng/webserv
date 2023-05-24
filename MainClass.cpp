@@ -1,7 +1,6 @@
 # include "MainClass.hpp"
 
 //инициализируем static vars
-int         MainClass::stage = 0;
 int         MainClass::maxFd = 0;
 Servers*    MainClass::allServers = NULL;
 

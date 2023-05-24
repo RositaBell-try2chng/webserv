@@ -5,7 +5,7 @@
 # include <sstream>
 # include <vector>
 # include <fstream>
-# include <sys/time.h>
+# include <ctime>
 # include <sys/types.h>
 # include <sys/socket.h>
 # include <netdb.h>
@@ -17,13 +17,11 @@
 # include <fcntl.h>
 # include <algorithm>
 
-# define DEF_PORT "8080"
 # define DEF_HOST "127.0.0.1"
 
 # define BUF_SIZE 4096
-# define TIMEOUT 15
 
-#define DEF_RESPONSE "HTTP/1.1 200 OK\r\nContent-Length: 13\r\nConnection: close\r\n\r\nHello, world!"
+# define DEF_RESPONSE "HTTP/1.1 200 OK\r\nContent-Length: 13\r\nConnection: close\r\n\r\nHello, world!"
 
 //Mesages
 #define TOO_MANY_ARGS			"Too many args\nUse only first argument\n"

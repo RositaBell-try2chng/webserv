@@ -21,8 +21,8 @@ private:
     static bool                     parseForOneServ(std::string &dst, Servers *allServers);
 
     static bool                     getLocations(std::string &src, std::map<std::string, std::string> &dst);
-    static bool                     fillServParam(std::map<std::string, std::string> &paramS, std::vector<std::string> &ports, std::vector<std::string> &errPages);
-    static bool                     fillLocations(std::map <std::string, std::string> &paramL, std::map <std::string, std::map<std::string, std::string>>  &locations);
+    static bool                     fillServParam(std::string &src, std::map<std::string, std::string> &paramS, std::vector<std::string> &ports, std::vector<std::string> &errPages);
+    static bool                     fillLocations(std::map <std::string, std::string> &paramL, std::map <std::string, std::map<std::string, std::string> >  &locations);
 
     static bool                     checkCorrectHost(std::string &Host);
     static bool                     checkPort(std::string &Port);

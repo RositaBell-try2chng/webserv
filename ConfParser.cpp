@@ -76,7 +76,7 @@ void ConfParser::readAll(std::ifstream &in, std::string &conf)
 void ConfParser::deepParser(std::string &conf, Servers** allServers)
 {
     std::string             dst;
-    bool                    endFlg = false;
+    bool                    endFlg;
     bool                    correctFlg = false;
 
     *allServers = new Servers();
@@ -87,9 +87,9 @@ void ConfParser::deepParser(std::string &conf, Servers** allServers)
         throw badConfig();
     while (!endFlg)
     {
-
         endFlg = ConfParser::getNextServer(dst, conf); //cut server config
         ConfParser::delSpaces(conf);
+		ConfParser::delSpaces(dst);
         if (ConfParser::parseForOneServ(dst, *allServers))
             correctFlg = true;
         else
@@ -106,6 +106,8 @@ bool ConfParser::getNextServer(std::string &dst, std::string &src)
     std::string::size_type toErase;
 
     i = src.find("server");
+	while (i != std::string::npos && !(i == 0 || (std::isspace(src[i - 1]) && std::isspace(src[i + 6]))))
+		i = src.find("server");
     if (i == std::string::npos)
         return (true);
     fromErase = i;
@@ -125,22 +127,22 @@ bool ConfParser::parseForOneServ(std::string &src, Servers *allServers)
 {
     std::map <std::string, std::string> paramS;
     std::map <std::string, std::string> paramL;
-    std::map <std::string, std::map<std::string, std::string>>  locations;
+    std::map <std::string, std::map<std::string, std::string> >  locations;
     std::vector<std::string>            ports;
     std::vector<std::string>            errPages;
 
-    while (ConfParser::getLocations(src, paramL))
+    while (ConfParser::getLocations(src, paramL)) //отделяем параметры маршрутов
         ConfParser::delSpaces(src);
-    if (src.empty() || paramL.empty())
+    if (src.empty() || paramL.empty()) // нет параметров сервера или параметров маршрутизации
         return (false);
-    if (!ConfParser::fillServParam(paramS, ports, errPages))
+    if (!ConfParser::fillServParam(src, paramS, ports, errPages))
         return (false);
     if (!ConfParser::fillLocations(paramL, locations))
         return (false);
     return (allServers->addServers(paramS, locations, ports, errPages));
 }
 
-bool ConfParser::fillLocations(std::map <string, string> &paramL, std::map <std::string, std::map<std::string, std::string>> &locations)
+bool ConfParser::fillLocations(std::map <std::string, std::string> &paramL, std::map <std::string, std::map<std::string, std::string> > &locations)
 {
     std::map<std::string, std::string>::iterator    it;
     std::map<std::string, std::string>              part2;
@@ -175,13 +177,14 @@ bool ConfParser::fillLocations(std::map <string, string> &paramL, std::map <std:
             Logger::putMsg("BAD CONFIG OF LOCATION:\n" + it->first, FILE_ERR, ERR);
             continue;
         }
-        locations.insert(std::pair<std::string, std::map<std::string, std::string>>(it->first, part2));
+        locations.insert(std::pair<std::string, std::map<std::string, std::string> >(it->first, part2));
     }
     if (locations.empty())
-        return (false);
+		return (false);
+	return (true);
 }
 
-bool ConfParser::fillServParam(std::map <std::string, std::string> &paramS, std::vector <std::string> &ports, std::vector <std::string> &errPages)
+bool ConfParser::fillServParam(std::string &src, std::map <std::string, std::string> &paramS, std::vector <std::string> &ports, std::vector <std::string> &errPages)
 {
     std::stringstream   sStream;
     std::string         line;
@@ -242,6 +245,8 @@ bool ConfParser::getLocations(std::string &src, std::map<std::string, std::strin
     std::string             part2;
 
     i = src.find("location");
+	while (i != std::string::npos && !(i == 0 || (std::isspace(src[i - 1]) && std::isspace(src[i + 8]))))
+		i = src.find("location");
     if (i == std::string::npos)
         return (false);
     fromErase = i;
@@ -268,7 +273,6 @@ bool ConfParser::getLocations(std::string &src, std::map<std::string, std::strin
 
 std::string::size_type ConfParser::findCloseBracket(std::string &src, std::string::size_type i, int cnt)
 {
-    //i--;
     while (cnt != 0 && ++i < src.length())
     {
         if (src[i] == '{')
@@ -298,17 +302,17 @@ void ConfParser::delComment(std::string &str, char c)
 
 void ConfParser::delSpaces(std::string &str)
 {
-    std::string::size_type i = 0;
+    int i = 0;
 
-    while (i <= str.length() && std::isspace(str[i]))
+    while (i <= static_cast<int>(str.length()) && std::isspace(str[i]))
         i++;
     str.erase(0, i);
     if (str.empty())
         return;
-    i = str.length() - 1;
+    i = static_cast<int>(str.length() - 1);
     while (i >= 0 && std::isspace(str[i]))
         i--;
-    if (i != str.length() - 1)
+    if (i != static_cast<int>(str.length() - 1))
         str.erase(i + 1, str.length());
 }
 

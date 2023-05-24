@@ -9,13 +9,14 @@ typedef struct s_loc
 	bool    flgPost;
 	bool    flgDelete;
 
-	std::string redirect;
-	std::string root;
-	bool        dirListFlg;
-	std::string defFileIfDir;
-	std::string CGIs;
-	std::string uploadPath;
-	s_loc*      next;
+	std::string				location;
+	std::string				redirect;
+	std::string				root;
+	bool			        dirListFlg;
+	std::string		 		defFileIfDir;
+	std::set<std::string>	CGIs; //extensions of file
+	std::string				uploadPath;
+	s_loc*				    next;
 }   t_loc;
 
 typedef struct s_serv
@@ -48,8 +49,10 @@ private:
 
 	static t_serv*	cloneServList(t_serv const *src);
 	static t_loc*	cloneLocList(t_loc const *src);
-	void			clearLocation(t_loc **loc);
+	static void		clearLocation(t_loc **loc);
 	void			clearServ();
+	static void		setMethods(t_loc* cur, std::string &src);
+	static void		setCGIs(std::set<std::string> &dst, std::string &src);
 public:
 	Server(std::string const& _host, std::string const& _port);
 	~Server();
@@ -72,8 +75,8 @@ public:
 
 	Server*				clone() const;
 
-	void			setServList(std::map<std::string, std::string> &S, std::map <std::string, std::map<std::string, std::string>> &L, std::vector<std::string> &SN, std::vector<std::string> &E);
-	void			setLocList(std::map <std::string, std::map<std::string, std::string>> &L);
+	void			setServList(std::map<std::string, std::string> &S, std::map <std::string, std::map<std::string, std::string> > &L, std::vector<std::string> &SN, std::vector<std::string> &E);
+	static t_loc*	setLocList(t_serv *s, std::map <std::string, std::map<std::string, std::string> > &L);
 };
 
 #endif

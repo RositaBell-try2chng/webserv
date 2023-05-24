@@ -14,7 +14,6 @@ private:
     MainClass();
     ~MainClass();
 
-    static int      stage;
     static int      maxFd;
     static Servers* allServers;
     static void     mainLoop();

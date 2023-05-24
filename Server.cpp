@@ -153,14 +153,14 @@ void    Server::clearServ()
 	this->serv = NULL;
 }
 
-void Server::setServList(std::map<std::string, std::string> &S, std::map <std::string, std::map<std::string, std::string>> &L, std::vector<std::string> &SN, std::vector<std::string> &E)
+void Server::setServList(std::map<std::string, std::string> &S, std::map <std::string, std::map<std::string, std::string> > &L, std::vector<std::string> &SN, std::vector<std::string> &E)
 {
 	std::map<std::string, std::string>::iterator itS;
 	std::vector<std::string>::iterator it;
 	std::vector<std::string>::iterator itE;
-	t_serv*	cur;
-	size_t		limit;
-	std::string	root;
+	t_serv*		cur;
+	size_t		limit = -1;
+	std::string	root = std::string("./www/");
 	char		c;
 
 	for (itS = S.begin(); itS != S.end(); it++)
@@ -170,22 +170,41 @@ void Server::setServList(std::map<std::string, std::string> &S, std::map <std::s
 			std::stringstream ss(itS->second);
 			ss >> limit;
 			if (ss.get(c)) {
-				Logger::putMsg("limitBodySize os corrupted and not set", FILE_ERR, ERR);
+				Logger::putMsg("limitBodySize is corrupted and not set", FILE_ERR, ERR);
 				limit = -1;
 			}
 		}
+		else if (itS->first == "root")
+			root = itS->second;
 		else
-			root = it->second;
+			Logger::putMsg("unknown parameter ignored:\n" + itS->first, FILE_ERR, ERR);
 	}
 
-	this->serv = new t_serv;
-	cur = this->serv;
+	if (SN.empty())
+		SN.push_back("");
 
-	for (it = SN.begin(); it != SN.end(); it++)
+	if (!this->serv)
+	{
+		this->serv = new t_serv;
+		cur = this->serv;
+	}
+	else
+	{
+		cur = this->serv;
+
+		while (cur->next)
+			cur = cur->next;
+		cur->next = new t_serv;
+		cur = cur->next;
+	}
+
+	it = SN.begin();
+	while (it != SN.end())
 	{
 		cur->ServerName = *it;
 		cur->root = root;
 		cur->limitCLientBodySize = limit;
+		cur->next = NULL;
 		//fill err pages map
 		for (itE = E.begin(); itE != E.end(); it++)
 		{
@@ -196,15 +215,122 @@ void Server::setServList(std::map<std::string, std::string> &S, std::map <std::s
 			ConfParser::splitLine(line1, line2);
 			if (line1.empty() || line2.empty())
 				continue;
+			{
+				std::stringstream	ss;
+				char 				c2;
+				int					code;
+
+				ss << line1;
+				ss >> code;
+				if (ss.get(c2))
+					Logger::putMsg("BAD ERROR CODE:\n" + line1, FILE_ERR, ERR);
+				else if (cur->errPages.find(code) != cur->errPages.end())
+					Logger::putMsg("DOUBLE ERROR CODE:\n" + line1, FILE_ERR, ERR);
+				else
+					cur->errPages.insert(std::pair<int, std::string>(code, line2));
+			}
 		}
 		//set location
+		cur->locList = Server::setLocList(cur, L);
+		it++;
+		if (it == SN.end())
+			continue;
 		cur->next = new t_serv;
 		cur = cur->next;
-		cur->next = NULL;
 	}
 }
 
-void Server::setLocList(std::map <std::string, std::map<std::string, std::string>> &L)
+t_loc* Server::setLocList(t_serv* s, std::map <std::string, std::map<std::string, std::string> > &L)
 {
+	std::map <std::string, std::map<std::string, std::string> >::iterator it;
+	std::map <std::string, std::string>::iterator it2;
+	t_loc* res;
+	t_loc* cur;
 
+	if (L.empty())
+		return (NULL);
+	res = new t_loc;
+	cur = res;
+	it = L.begin();
+	while (it != L.end())
+	{
+		cur->next = NULL;
+		cur->location = it->first;
+		cur->root = s->root;
+		cur->dirListFlg = false;
+		cur->defFileIfDir = std::string("");
+		cur->uploadPath = std::string("");
+		cur->redirect = std::string("");
+		cur->flgGet = true;
+		cur->flgDelete = true;
+		cur->flgPost = true;
+		for (it2 = it->second.begin(); it2 != it->second.end(); it++)
+		{
+			if (it2->first == "acceptedMethods")
+				Server::setMethods(cur, it2->second);
+			else if (it2->first == "root")
+				cur->root = it2->second;
+			else if (it2->first == "dirListOn")
+			{
+				if (it2->second == "on")
+					cur->dirListFlg = true;
+				else if (it2->second != "off")
+					Logger::putMsg("BAD CONFIG dirListOn:\n" + it2->second, FILE_ERR, ERR);
+			}
+			else if (it2->first == "defFileIfdir")
+				cur->defFileIfDir = it2->second;
+			else if (it2->first == "CGIs")
+				Server::setCGIs(cur->CGIs, it2->second);
+			else if (it2->first == "upload_path")
+				cur->uploadPath = std::string(it2->second);
+			else if (it2->first == "return")
+				cur->redirect = std::string(it2->second);
+			else
+				Logger::putMsg("BAD LOCATION CONFIG:\n" + it2->first, FILE_ERR, ERR);
+		}
+		it++;
+		if (it == L.end())
+			continue;
+		cur->next = new t_loc;
+		cur = cur->next;
+	}
+	return (res);
+}
+
+void Server::setMethods(t_loc *cur, std::string &src)
+{
+	std::string::size_type i;
+
+	cur->flgGet = false;
+	cur->flgDelete = false;
+	cur->flgPost = false;
+
+	i = src.find("GET");
+	while (i != std::string::npos && !((i == 0 || std::isspace(src[i - 1])) && std::isspace(src[i + 3])))
+		i = src.find("GET");
+	if (i != std::string::npos)
+		cur->flgGet = true;
+
+	i = src.find("POST");
+	while (i != std::string::npos && !((i == 0 || std::isspace(src[i - 1])) && std::isspace(src[i + 4])))
+		i = src.find("POST");
+	if (i != std::string::npos)
+		cur->flgPost = true;
+
+	i = src.find("DELETE");
+	while (i != std::string::npos && !((i == 0 || std::isspace(src[i - 1])) && std::isspace(src[i + 6])))
+		i = src.find("DELETE");
+	if (i != std::string::npos)
+		cur->flgDelete = true;
+}
+
+void Server::setCGIs(std::set<std::string> &dst, std::string &src)
+{
+	std::string	line;
+
+	while (!src.empty())
+	{
+		ConfParser::splitLine(src, line);
+		dst.insert(line);
+	}
 }
