@@ -4,6 +4,44 @@
 int         MainClass::maxFd = 0;
 Servers*    MainClass::allServers = NULL;
 
+//fix me delete this
+void printAllServ(Servers* src)
+{
+	std::map<int, Server*>::iterator it;
+
+	for (it = src->getConnections(true).begin(); it != src->getConnections(true).end(); it++)
+	{
+		std::cout << "fd is: " << it->first << "; config is:\n";
+		std::cout << "host:port is: " << it->second->getHost() << ":" << it->second->getPort() << std::endl;
+		t_serv* cur;
+		cur = it->second->serv;
+		while (cur)
+		{
+			std::cout << "servername is: |" << cur->ServerName << "|" << std::endl;
+			std::cout << "limit cliend body size is: " << cur->limitCLientBodySize << std::endl;
+			std::cout << "root is: " << cur->root << std::endl;
+			std::cout << "err pages is:\n";
+			for (std::map<int, std::string>::iterator it2 = cur->errPages.begin(); it2 != cur->errPages.end(); it2++)
+				std::cout << "code is: " << it2->first << "; page is: " << it2->second << std::endl;
+			t_loc *cur2 = cur->locList;
+			while (cur2)
+			{
+				std::cout << "location is: |" << cur2->location << "|" << std::endl;
+				std::cout << "GET/POST/DELETE is :" << cur2->flgGet << "/" << cur2->flgPost << "/" << cur2->flgDelete << "\n";
+				std::cout << "redirect is: |" << cur2->redirect << "|\n";
+				std::cout << "root is: |" << cur2->root << "|\n";
+				std::cout << "dirListFlg is: |" << cur2->dirListFlg << "|\n";
+				std::cout << "defFileIfDir is: |" << cur2->defFileIfDir << "|\n";
+				std::cout << "uploadPath is: |" << cur2->uploadPath << "|\n";
+				for (std::set<std::string>::iterator it3 = cur2->CGIs.begin(); it3 != cur2->CGIs.end(); it3++)
+					std::cout << "CGIs extention is: |" << *it3 << "|\n";
+				cur2 = cur2->next;
+			}
+			cur = cur->next;
+		}
+	}
+}
+
 void MainClass::doIt(int args, char **argv)
 {
     bool        flg;
@@ -29,7 +67,9 @@ void MainClass::doIt(int args, char **argv)
         std::cerr << "NO SERVER CREATED, CHECK YOUR CONFIG\n";
         return;
     }
+	//std::cout << MainClass::allServers->getConnections(true).begin()->second->serv << std::endl;
     //MainClass::mainLoop();
+	printAllServ(MainClass::allServers);
 }
 
 void MainClass::mainLoop()

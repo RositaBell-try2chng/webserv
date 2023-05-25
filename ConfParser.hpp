@@ -25,7 +25,7 @@ private:
     static bool                     fillLocations(std::map <std::string, std::string> &paramL, std::map <std::string, std::map<std::string, std::string> >  &locations);
 
     static bool                     checkCorrectHost(std::string &Host);
-    static bool                     checkPort(std::string &Port);
+    static bool                     checkPort(std::string Port, std::vector<std::string> &ports);
 public:
     static bool checkArgs(int args, char **argv);
     static void parseConf(char* arg, Servers** allServers);

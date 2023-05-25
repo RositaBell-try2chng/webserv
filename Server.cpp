@@ -21,7 +21,6 @@ Server::Server(const std::string& _host, const std::string& _port)
 	this->cgiConnectionFlg = false;
 	this->childPid = 0;
 	this->serv = NULL;
-	this->serv->locList = NULL;
 }
 
 //getters
@@ -108,6 +107,7 @@ t_loc* Server::cloneLocList(t_loc const *src)
 
 	while (src)
 	{
+		currRes->location = src->location;
 		currRes->flgGet = src->flgGet;
 		currRes->flgPost = src->flgPost;
 		currRes->flgDelete = src->flgDelete;
@@ -116,6 +116,7 @@ t_loc* Server::cloneLocList(t_loc const *src)
 		currRes->defFileIfDir = src->defFileIfDir;
 		currRes->CGIs = src->CGIs;
 		currRes->uploadPath = src->uploadPath;
+		currRes->dirListFlg = src->dirListFlg;
 		currRes->next = NULL;
 		src = src->next;
 		if (!src)
@@ -158,23 +159,28 @@ void    Server::clearServ()
 	this->serv = NULL;
 }
 
+//fix me delete reference????
 void Server::setServList(std::map<std::string, std::string> &S, std::map <std::string, std::map<std::string, std::string> > &L, std::vector<std::string> &SN, std::vector<std::string> &E)
 {
 	std::map<std::string, std::string>::iterator itS;
 	std::vector<std::string>::iterator it;
 	std::vector<std::string>::iterator itE;
 	t_serv*		cur;
-	size_t		limit = -1;
+	ssize_t		limit = -1;
 	std::string	root = std::string("./www/");
-	char		c;
-
-	for (itS = S.begin(); itS != S.end(); it++)
+	for (itS = S.begin(); itS != S.end(); itS++)
 	{
 		if (itS->first == "limitBodySize")
 		{
+			size_t i;
 			std::stringstream ss(itS->second);
 			ss >> limit;
-			if (ss.get(c)) {
+			for (i = 0; i < itS->second.length(); i++)
+			{
+				if (!std::isdigit(itS->second[i]))
+					break;
+			}
+			if (limit < 1 || i < itS->second.length()) {
 				Logger::putMsg("limitBodySize is corrupted and not set", FILE_ERR, ERR);
 				limit = -1;
 			}
@@ -184,10 +190,8 @@ void Server::setServList(std::map<std::string, std::string> &S, std::map <std::s
 		else
 			Logger::putMsg("unknown parameter ignored:\n" + itS->first, FILE_ERR, ERR);
 	}
-
 	if (SN.empty())
 		SN.push_back("");
-
 	if (!this->serv)
 	{
 		this->serv = new t_serv;
@@ -196,7 +200,6 @@ void Server::setServList(std::map<std::string, std::string> &S, std::map <std::s
 	else
 	{
 		cur = this->serv;
-
 		while (cur->next)
 			cur = cur->next;
 		cur->next = new t_serv;
@@ -211,7 +214,7 @@ void Server::setServList(std::map<std::string, std::string> &S, std::map <std::s
 		cur->limitCLientBodySize = limit;
 		cur->next = NULL;
 		//fill err pages map
-		for (itE = E.begin(); itE != E.end(); it++)
+		for (itE = E.begin(); itE != E.end(); itE++)
 		{
 			std::string line1;
 			std::string line2;
@@ -227,6 +230,7 @@ void Server::setServList(std::map<std::string, std::string> &S, std::map <std::s
 
 				ss << line1;
 				ss >> code;
+
 				if (ss.get(c2))
 					Logger::putMsg("BAD ERROR CODE:\n" + line1, FILE_ERR, ERR);
 				else if (cur->errPages.find(code) != cur->errPages.end())
@@ -245,7 +249,7 @@ void Server::setServList(std::map<std::string, std::string> &S, std::map <std::s
 	}
 }
 
-t_loc* Server::setLocList(t_serv* s, std::map <std::string, std::map<std::string, std::string> > &L)
+t_loc* Server::setLocList(t_serv* s, std::map <std::string, std::map<std::string, std::string> > L)
 {
 	std::map <std::string, std::map<std::string, std::string> >::iterator it;
 	std::map <std::string, std::string>::iterator it2;
@@ -269,7 +273,7 @@ t_loc* Server::setLocList(t_serv* s, std::map <std::string, std::map<std::string
 		cur->flgGet = true;
 		cur->flgDelete = true;
 		cur->flgPost = true;
-		for (it2 = it->second.begin(); it2 != it->second.end(); it++)
+		for (it2 = it->second.begin(); it2 != it->second.end(); it2++)
 		{
 			if (it2->first == "acceptedMethods")
 				Server::setMethods(cur, it2->second);
@@ -311,20 +315,20 @@ void Server::setMethods(t_loc *cur, std::string &src)
 	cur->flgPost = false;
 
 	i = src.find("GET");
-	while (i != std::string::npos && !((i == 0 || std::isspace(src[i - 1])) && std::isspace(src[i + 3])))
-		i = src.find("GET");
+	while (i != std::string::npos && !((i == 0 || std::isspace(src[i - 1])) && (i + 3 == src.length() || std::isspace(src[i + 3]))))
+		i = src.find("GET", i + 3);
 	if (i != std::string::npos)
 		cur->flgGet = true;
 
 	i = src.find("POST");
-	while (i != std::string::npos && !((i == 0 || std::isspace(src[i - 1])) && std::isspace(src[i + 4])))
-		i = src.find("POST");
+	while (i != std::string::npos && !((i == 0 || std::isspace(src[i - 1])) && (i + 4 == src.length() || std::isspace(src[i + 4]))))
+		i = src.find("POST", i + 4);
 	if (i != std::string::npos)
 		cur->flgPost = true;
 
 	i = src.find("DELETE");
-	while (i != std::string::npos && !((i == 0 || std::isspace(src[i - 1])) && std::isspace(src[i + 6])))
-		i = src.find("DELETE");
+	while (i != std::string::npos && !((i == 0 || std::isspace(src[i - 1])) && (i + 6 == src.length() || std::isspace(src[i + 6]))))
+		i = src.find("DELETE", i + 6);
 	if (i != std::string::npos)
 		cur->flgDelete = true;
 }
@@ -336,6 +340,7 @@ void Server::setCGIs(std::set<std::string> &dst, std::string &src)
 	while (!src.empty())
 	{
 		ConfParser::splitLine(src, line);
-		dst.insert(line);
+		dst.insert(src);
+		src = line;
 	}
 }

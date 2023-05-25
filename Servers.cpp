@@ -80,7 +80,6 @@ void    Servers::removeConnection(int fd, bool lstFlg)
         this->connections.erase(fd);
     else
         this->lst.erase(fd);
-    //this->fds.erase(fd);
     Logger::putMsg(std::string("remove connection "), fd);
 }
 
@@ -90,8 +89,8 @@ void    Servers::createServer(std::string const &host, std::string const &port, 
     t_listen    all;
 
     tmp.setServList(S, L, SN, E);
-
     bzero(&all, sizeof(all));
+
     all.hints.ai_family = AF_INET;
     all.hints.ai_socktype = SOCK_STREAM;
     all.hints.ai_flags = AI_PASSIVE;
@@ -109,6 +108,7 @@ void    Servers::createServer(std::string const &host, std::string const &port, 
         throw exceptionErrno();
     this->addConnection(all.sockFd, tmp, true);
     freeaddrinfo(all.info);
+
 }
 
 bool Servers::addServers(std::map<std::string, std::string> &S, std::map <std::string, std::map<std::string, std::string> > &L, std::vector<std::string> &P, std::vector<std::string> &E)
@@ -218,8 +218,10 @@ void Servers::setServNames(std::string &src, std::vector<std::string> &Names)
             i++;
         //substr
         name = src.substr(from, i - from);
-        if (std::find(Names.begin(), Names.end(), name) != Names.end())
+        if (std::find(Names.begin(), Names.end(), name) == Names.end())
             Names.push_back(name);
+		else
+			Logger::putMsg("BAD CONFIG: DOUBLE SERVER NAME:\n" + name, FILE_ERR, ERR);
         //skip spaces
         while (i < len && std::isspace(src[i]))
             i++;

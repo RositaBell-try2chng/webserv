@@ -23,7 +23,7 @@ typedef struct s_serv
 {
 	std::string                 ServerName;
 	std::map<int, std::string>  errPages;
-	size_t                      limitCLientBodySize;
+	ssize_t                      limitCLientBodySize;
 	std::string                 root;
 	t_loc*                      locList;
 	s_serv*                     next;
@@ -76,7 +76,7 @@ public:
 	Server*				clone() const;
 
 	void			setServList(std::map<std::string, std::string> &S, std::map <std::string, std::map<std::string, std::string> > &L, std::vector<std::string> &SN, std::vector<std::string> &E);
-	static t_loc*	setLocList(t_serv *s, std::map <std::string, std::map<std::string, std::string> > &L);
+	static t_loc*	setLocList(t_serv *s, std::map <std::string, std::map<std::string, std::string> > L);
 };
 
 #endif

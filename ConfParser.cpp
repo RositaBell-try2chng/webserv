@@ -107,7 +107,7 @@ bool ConfParser::getNextServer(std::string &dst, std::string &src)
 
     i = src.find("server");
 	while (i != std::string::npos && !(i == 0 || (std::isspace(src[i - 1]) && std::isspace(src[i + 6]))))
-		i = src.find("server");
+		i = src.find("server", i + 1);
     if (i == std::string::npos)
         return (true);
     fromErase = i;
@@ -177,7 +177,7 @@ bool ConfParser::fillLocations(std::map <std::string, std::string> &paramL, std:
             Logger::putMsg("BAD CONFIG OF LOCATION:\n" + it->first, FILE_ERR, ERR);
             continue;
         }
-        locations.insert(std::pair<std::string, std::map<std::string, std::string> >(it->first, part2));
+		locations.insert(std::pair<std::string, std::map<std::string, std::string> >(it->first, part2));
     }
     if (locations.empty())
 		return (false);
@@ -198,7 +198,7 @@ bool ConfParser::fillServParam(std::string &src, std::map <std::string, std::str
             Logger::putMsg("BAD CONFIG IGNORED:\n" + line + ' ' + line2, FILE_ERR, ERR);
             continue;
         }
-        if (line == "listen" && ConfParser::checkPort(line2))
+        if (line == "listen" && ConfParser::checkPort(line2, ports))
             ports.push_back(line2);
         else if (line == "error_page")
             errPages.push_back(line2);
@@ -246,7 +246,7 @@ bool ConfParser::getLocations(std::string &src, std::map<std::string, std::strin
 
     i = src.find("location");
 	while (i != std::string::npos && !(i == 0 || (std::isspace(src[i - 1]) && std::isspace(src[i + 8]))))
-		i = src.find("location");
+		i = src.find("location", i + 1);
     if (i == std::string::npos)
         return (false);
     fromErase = i;
@@ -355,12 +355,17 @@ bool ConfParser::checkCorrectHost(std::string &Host)
     return (true);
 }
 
-bool ConfParser::checkPort(std::string &Port)
+bool ConfParser::checkPort(std::string Port, std::vector<std::string> &ports)
 {
     std::string::size_type  i;
 
     if (Port.length() > 5)
-        return (false);
+		return (false);
+	if (std::find(ports.begin(), ports.end(), Port) != ports.end())
+	{
+		Logger::putMsg("BAD CONFIG:\nUse port " + Port + " multiple times", FILE_ERR, ERR);
+		throw badConfig();
+	}
     for (i = 0; i < Port.length(); i++)
     {
         if (!std::isdigit(Port[i]))
