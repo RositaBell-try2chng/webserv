@@ -71,7 +71,7 @@ public:
 	void				resClear();
 	void				addToReq(char const* src);
 	void				setResponse(std::string const& src);
-	void				resizeResponse(int res);
+	void				resizeResponse(ssize_t res);
 
 	Server*				clone() const;
 

@@ -115,7 +115,7 @@ bool MainClass::acceptConnections(fd_set *readFds)
 
 void MainClass::readRequests(std::map<int, Server *>::iterator &it)
 {
-    int     recvRes;
+    ssize_t	recvRes;
     char    buf[BUF_SIZE];
 
     recvRes = recv(it->first, buf, BUF_SIZE, 0);
@@ -149,8 +149,8 @@ void MainClass::readRequests(std::map<int, Server *>::iterator &it)
 
 void MainClass::sendResponse(std::map<int, Server *>::iterator &it)
 {
-    int  res;
-    int  len;
+    ssize_t	res;
+	size_t	len;
 
     if (it->second->getRes().empty()) // nothing to send
     {
@@ -174,7 +174,7 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it)
         }
         default:
         {
-            if (res < len) //если отправилось не все, убираем то что не послалось.
+            if (static_cast<size_t>(res) < len) //если отправилось не все, убираем то что не послалось.
                 it->second->resizeResponse(res);
             else
                 it->second->resClear();

@@ -54,7 +54,7 @@ void Server::setResponse(const std::string &src)
 	this->setRespReady(true);
 }
 
-void Server::resizeResponse(int res)
+void Server::resizeResponse(ssize_t res)
 {
 	this->response.erase(0, res);
 	if (this->response.empty())
@@ -63,7 +63,9 @@ void Server::resizeResponse(int res)
 
 Server*	Server::clone() const
 {
-	Server* res = new Server(this->host, this->port);
+	Server *res;
+
+	res = new Server(this->host, this->port);
 	res->serv = Server::cloneServList(this->serv);
 	return (res);
 }
@@ -73,7 +75,9 @@ t_serv* Server::cloneServList(t_serv const *src)
 	if (!src)
 		return (NULL);
 
-	t_serv	*res = new t_serv;
+	t_serv *res;
+	res = new t_serv;
+
 	t_serv	*currRes = res;
 
 	while (src)
@@ -98,7 +102,8 @@ t_loc* Server::cloneLocList(t_loc const *src)
 	if (!src)
 		return (NULL);
 
-	t_loc *res = new t_loc;
+	t_loc *res;
+	res = new t_loc;
 	t_loc *currRes = res;
 
 	while (src)
