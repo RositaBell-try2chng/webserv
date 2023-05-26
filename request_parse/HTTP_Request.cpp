@@ -102,13 +102,21 @@ int	ft_set_url(HTTP_Request *req, std::string url) {
 
 int	ft_make_hdr(HTTP_Request *req, std::string raw) {
 
-	int	i = 0;
-	int	end = raw.size() - 1;
+	int len = raw.size();
 
+	if (len > 4096) {
+		Logger::putMsg("Request header is too large", FILE_WREQ, WREQ);
+		req->answ_code[0] = 4;
+		req->answ_code[0] = 31;
+		return 0;
+	}
 
+	int	end = len - 1;
 
 	std::string	key;
 	std::string	value;
+
+	int	i = 0;
 
 // Key
 	for (; i != end && raw[i] != ':'; ++i) {
@@ -142,17 +150,28 @@ int	ft_make_hdr(HTTP_Request *req, std::string raw) {
 
 	req->headers.insert(hdr);
 
-	return 1;
+	return len;
 }
 
 bool ft_set_hdrs(HTTP_Request *req, std::vector<std::string> req_str_arr, int end) {
 
 	int i = 1;
+	int total_len = 0;
+	int curr_len;
 
 // Heasers
-	for (; req_str_arr[i].compare("\r") && i != end; ++i)
-		if (ft_make_hdr(req, req_str_arr[i]))
-
+	for (; req_str_arr[i].compare("\r") && i != end; ++i) {
+		curr_len = ft_make_hdr(req, req_str_arr[i]);
+		if (!curr_len)
+			return ;
+		total_len += curr_len;
+		if (total_len > 8096) {
+			Logger::putMsg("Request headers are too large", FILE_WREQ, WREQ);
+			req->answ_code[0] = 4;
+			req->answ_code[0] = 31;
+			return 0;
+		}
+	}
 
 	if (req->headers.find("Host") == req->headers.end()) {
 		Logger::putMsg("Request hasn't \"Host\" header", FILE_WREQ, WREQ);
@@ -185,6 +204,13 @@ void ft_set_body(HTTP_Request *req, std::vector<std::string> req_str_arr, int i,
 void HTTP_Request::ft_strtoreq(Server &srv, HTTP_Request *req) {
 
 	std::string	raw = srv.getReq();
+
+	if (raw.size() > 100000) {
+		Logger::putMsg("Request is too large", FILE_WREQ, WREQ);
+		req->answ_code[0] = 4;
+		req->answ_code[0] = 13;
+		return ;
+	}
 
 	std::vector<std::string> req_str_arr;
 
