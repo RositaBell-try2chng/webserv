@@ -88,7 +88,9 @@ void    Servers::createServer(std::string const &host, std::string const &port, 
     Server      tmp(host, port);
     t_listen    all;
 
-    tmp.setServList(S, L, SN, E);
+//	try {tmp.setServList(S, L, SN, E);}
+//    catch (std::exception &e) {std::cout << e.what() << std::endl;}
+	tmp.setServList(S, L, SN, E);
     bzero(&all, sizeof(all));
 
     all.hints.ai_family = AF_INET;
@@ -105,30 +107,30 @@ void    Servers::createServer(std::string const &host, std::string const &port, 
 		fcntl(all.sockFd, F_SETFL, O_NONBLOCK) == -1 || \
 		bind(all.sockFd, all.info->ai_addr, all.info->ai_addrlen) < 0 || \
 		listen(all.sockFd, 20) < 0)
-        throw exceptionErrno();
+	{
+		freeaddrinfo(all.info);
+		throw exceptionErrno();
+	}
     this->addConnection(all.sockFd, tmp, true);
     freeaddrinfo(all.info);
-
 }
 
-bool Servers::addServers(std::map<std::string, std::string> &S, std::map <std::string, std::map<std::string, std::string> > &L, std::vector<std::string> &P, std::vector<std::string> &E)
+void Servers::addServers(std::map<std::string, std::string> &S, std::map <std::string, std::map<std::string, std::string> > &L, std::vector<std::string> &P,
+					  std::vector<std::string> &E)
 {
     std::map<std::string, std::string>::iterator    it;
     std::vector<std::string>::iterator              it2;
-    std::string host;
+    std::string host(DEF_HOST);
     std::string port;
     std::vector<std::string>                        servNames;
     int                                             fd;
-	bool											res = false;
 
     if (P.empty() || L.empty()) {
         Logger::putMsg("HAVE NO PORTS OR LOCATIONS", FILE_ERR, ERR);
-        return (false);
+        throw badConfig();
     }
     it = S.find("host");
-    if (it == S.end())
-        host = std::string(DEF_HOST);
-    else {
+    if (it != S.end()) {
         host = it->second;
         S.erase(it);
     }
@@ -137,32 +139,33 @@ bool Servers::addServers(std::map<std::string, std::string> &S, std::map <std::s
         Servers::setServNames(it->second, servNames);
         S.erase(it);
     }
-    for (it2 = P.begin(); it2 != P.end(); it2++) {
+    for (it2 = P.begin(); it2 != P.end(); it2++)
+	{
         port = *it2;
         fd = this->checkExistsHostPort(host, port);
-		if (fd == -1) {
+		if (fd == -1)
+		{
             try {
                 this->createServer(host, port, S, L, servNames, E);
-				res = true;
+				std::cout << "Server on " << host << ":" << port << " created successfully\n";
             }
             catch (std::exception &e) {
-                Logger::putMsg("Creating server failed:\n" + host + ':' + port, FILE_ERR, ERR);
+                Logger::putMsg("Creating server failed:\n" + host + ':' + port + ".\n" + e.what(), FILE_ERR, ERR);
+				std::cout << "Server on " << host << ":" << port << " created failed\n";
             }
         }
 		else if (!servNames.empty())
-		{
-			if (this->addToConnection(fd, S, L, servNames, E))
-				res = true;
-		}
+			this->addToConnection(fd, S, L, servNames, E);
 		else
 		{
-			Logger::putMsg("SERVER ALREADY EXISTS", FILE_ERR, ERR);
+			Logger::putMsg("SERVER ALREADY EXISTS ON:\n" + host + ':' + port, FILE_ERR, ERR);
+			throw badConfig();
 		}
     }
-	return (res);
 }
 
-bool Servers::addToConnection(int fd, std::map<std::string, std::string> &S, std::map<std::string, std::map<std::string, std::string> > &L, std::vector<std::string> &SN, std::vector<std::string> &E)
+void Servers::addToConnection(int fd, std::map<std::string, std::string> &S, std::map<std::string, std::map<std::string, std::string> > &L, std::vector<std::string> &SN,
+						   std::vector<std::string> &E)
 {
 	std::vector<std::string>::iterator it;
 	Server *dst;
@@ -186,9 +189,11 @@ bool Servers::addToConnection(int fd, std::map<std::string, std::string> &S, std
 			it++;
 	}
 	if (SN.empty())
-		return (false);
+	{
+		Logger::putMsg("HAVE NO UNIQ SERVER NAME", FILE_ERR, ERR);
+		throw badConfig();
+	}
 	dst->setServList(S, L, SN, E);
-	return (true);
 }
 
 int Servers::checkExistsHostPort(const std::string &H, const std::string &P)

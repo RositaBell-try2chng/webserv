@@ -136,6 +136,7 @@ void    Server::clearLocation(t_loc	**loc)
 	while (current)
 	{
 		tmp = current;
+		std::cout << current << std::endl;
 		current = current->next;
 		delete tmp;
 	}
@@ -164,10 +165,10 @@ void Server::setServList(std::map<std::string, std::string> &S, std::map <std::s
 {
 	std::map<std::string, std::string>::iterator itS;
 	std::vector<std::string>::iterator it;
-	std::vector<std::string>::iterator itE;
 	t_serv*		cur;
 	ssize_t		limit = -1;
-	std::string	root = std::string("./www/");
+	std::string	root("./www/");
+
 	for (itS = S.begin(); itS != S.end(); itS++)
 	{
 		if (itS->first == "limitBodySize")
@@ -182,13 +183,16 @@ void Server::setServList(std::map<std::string, std::string> &S, std::map <std::s
 			}
 			if (limit < 1 || i < itS->second.length()) {
 				Logger::putMsg("limitBodySize is corrupted and not set", FILE_ERR, ERR);
-				limit = -1;
+				MainClass::exitHandler(0);
 			}
 		}
 		else if (itS->first == "root")
 			root = itS->second;
 		else
+		{
 			Logger::putMsg("unknown parameter ignored:\n" + itS->first, FILE_ERR, ERR);
+			MainClass::exitHandler(0);
+		}
 	}
 	if (SN.empty())
 		SN.push_back("");
@@ -212,33 +216,10 @@ void Server::setServList(std::map<std::string, std::string> &S, std::map <std::s
 		cur->ServerName = *it;
 		cur->root = root;
 		cur->limitCLientBodySize = limit;
+		cur->locList = NULL;
 		cur->next = NULL;
 		//fill err pages map
-		for (itE = E.begin(); itE != E.end(); itE++)
-		{
-			std::string line1;
-			std::string line2;
-
-			line1 = *itE;
-			ConfParser::splitLine(line1, line2);
-			if (line1.empty() || line2.empty())
-				continue;
-			{
-				std::stringstream	ss;
-				char 				c2;
-				int					code;
-
-				ss << line1;
-				ss >> code;
-
-				if (ss.get(c2))
-					Logger::putMsg("BAD ERROR CODE:\n" + line1, FILE_ERR, ERR);
-				else if (cur->errPages.find(code) != cur->errPages.end())
-					Logger::putMsg("DOUBLE ERROR CODE:\n" + line1, FILE_ERR, ERR);
-				else
-					cur->errPages.insert(std::pair<int, std::string>(code, line2));
-			}
-		}
+		this->fillErrorPages(E, cur);
 		//set location
 		cur->locList = Server::setLocList(cur, L);
 		it++;
@@ -246,6 +227,52 @@ void Server::setServList(std::map<std::string, std::string> &S, std::map <std::s
 			continue;
 		cur->next = new t_serv;
 		cur = cur->next;
+	}
+}
+
+void Server::fillErrorPages(std::vector<std::string> &E, t_serv *cur)
+{
+	std::vector<std::string>::iterator itE;
+
+	for (itE = E.begin(); itE != E.end(); itE++)
+	{
+		std::string line1;
+		std::string line2;
+
+		line1 = *itE;
+		ConfParser::splitLine(line1, line2);
+		if (line2.empty() || line1.empty())
+		{
+			Logger::putMsg("BAD CONFIG for 'error page':\n" + line1 + ' ' + line2, FILE_ERR, ERR);
+			MainClass::exitHandler(0);
+		}
+		for (size_t i = 0; i < line1.length(); i++)
+		{
+			if (!std::isdigit(line1[i]))
+			{
+				Logger::putMsg("BAD CONFIG for 'error page':\n" + line1 + ' ' + line2, FILE_ERR, ERR);
+				MainClass::exitHandler(0);
+			}
+		}
+		{
+			std::stringstream	ss(line1);
+			int					code;
+			ss >> code;
+
+			//fix me: use real codes
+			if (!(code <= 505 && code >= 400))
+			{
+				Logger::putMsg("BAD ERROR CODE:\n" + line1, FILE_ERR, ERR);
+				MainClass::exitHandler(0);
+			}
+			if (cur->errPages.find(code) != cur->errPages.end())
+			{
+				Logger::putMsg("DOUBLE ERROR CODE:\n" + line1, FILE_ERR, ERR);
+				MainClass::exitHandler(0);
+			}
+			else
+				cur->errPages.insert(std::pair<int, std::string>(code, line2));
+		}
 	}
 }
 
@@ -269,7 +296,6 @@ t_loc* Server::setLocList(t_serv* s, std::map <std::string, std::map<std::string
 		cur->dirListFlg = false;
 		cur->defFileIfDir = std::string("");
 		cur->uploadPath = std::string("");
-		cur->redirect = std::string("");
 		cur->flgGet = true;
 		cur->flgDelete = true;
 		cur->flgPost = true;
@@ -284,7 +310,10 @@ t_loc* Server::setLocList(t_serv* s, std::map <std::string, std::map<std::string
 				if (it2->second == "on")
 					cur->dirListFlg = true;
 				else if (it2->second != "off")
+				{
 					Logger::putMsg("BAD CONFIG dirListOn:\n" + it2->second, FILE_ERR, ERR);
+					MainClass::exitHandler(0);
+				}
 			}
 			else if (it2->first == "defFileIfdir")
 				cur->defFileIfDir = it2->second;
@@ -293,9 +322,12 @@ t_loc* Server::setLocList(t_serv* s, std::map <std::string, std::map<std::string
 			else if (it2->first == "upload_path")
 				cur->uploadPath = std::string(it2->second);
 			else if (it2->first == "return")
-				cur->redirect = std::string(it2->second);
+				Server::setRedirect(cur, it2->second);
 			else
+			{
 				Logger::putMsg("BAD LOCATION CONFIG:\n" + it2->first, FILE_ERR, ERR);
+				MainClass::exitHandler(0);
+			}
 		}
 		it++;
 		if (it == L.end())
@@ -304,6 +336,42 @@ t_loc* Server::setLocList(t_serv* s, std::map <std::string, std::map<std::string
 		cur = cur->next;
 	}
 	return (res);
+}
+
+void Server::setRedirect(t_loc *cur, std::string line1)
+{
+	std::string line2;
+	int 		code;
+
+	if (!cur->redirect.empty())
+	{
+		Logger::putMsg("BAD CONFIG DOUBLE 'return':\n" + line1 + " " + line2, FILE_ERR, ERR);
+		MainClass::exitHandler(0);
+	}
+	ConfParser::splitLine(line1, line2);
+	if (line1.empty() || line2.empty())
+	{
+		Logger::putMsg("BAD CONFIG 'return':\n" + line1 + " " + line2, FILE_ERR, ERR);
+		MainClass::exitHandler(0);
+	}
+	for (size_t i = 0; i < line1.length(); i++)
+	{
+		if (!std::isdigit(line1[i]))
+		{
+			Logger::putMsg("BAD CONFIG 'return':\n" + line1 + " " + line2, FILE_ERR, ERR);
+			MainClass::exitHandler(0);
+		}
+	}
+	std::stringstream ss(line1);
+
+	ss >> code;
+	//fix me: use exist codes
+	if (!(code <= 305 && code >= 300))
+	{
+		Logger::putMsg("BAD CONFIG 'return':\n" + line1 + " " + line2, FILE_ERR, ERR);
+		MainClass::exitHandler(0);
+	}
+	cur->redirect.insert(std::pair<int, std::string>(code, line2));
 }
 
 void Server::setMethods(t_loc *cur, std::string &src)
@@ -318,19 +386,34 @@ void Server::setMethods(t_loc *cur, std::string &src)
 	while (i != std::string::npos && !((i == 0 || std::isspace(src[i - 1])) && (i + 3 == src.length() || std::isspace(src[i + 3]))))
 		i = src.find("GET", i + 3);
 	if (i != std::string::npos)
+	{
 		cur->flgGet = true;
+		src.erase(i, 3);
+	}
 
 	i = src.find("POST");
 	while (i != std::string::npos && !((i == 0 || std::isspace(src[i - 1])) && (i + 4 == src.length() || std::isspace(src[i + 4]))))
 		i = src.find("POST", i + 4);
 	if (i != std::string::npos)
+	{
 		cur->flgPost = true;
+		src.erase(i, 4);
+	}
 
 	i = src.find("DELETE");
 	while (i != std::string::npos && !((i == 0 || std::isspace(src[i - 1])) && (i + 6 == src.length() || std::isspace(src[i + 6]))))
 		i = src.find("DELETE", i + 6);
 	if (i != std::string::npos)
+	{
 		cur->flgDelete = true;
+		src.erase(i, 6);
+	}
+
+	ConfParser::delSpaces(src);
+	if (src.empty())
+		return;
+	Logger::putMsg("BAD CONFIG:\ntoo many symbols at accepted methods:\n" + src, FILE_ERR, ERR);
+	MainClass::exitHandler(0);
 }
 
 void Server::setCGIs(std::set<std::string> &dst, std::string &src)

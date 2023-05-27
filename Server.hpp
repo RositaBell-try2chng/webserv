@@ -2,6 +2,9 @@
 # define SERVER_HPP
 
 # include "webserv.hpp"
+# include "MainClass.hpp"
+
+class Servers;
 
 typedef struct s_loc
 {
@@ -9,21 +12,21 @@ typedef struct s_loc
 	bool    flgPost;
 	bool    flgDelete;
 
-	std::string				location;
-	std::string				redirect;
-	std::string				root;
-	bool			        dirListFlg;
-	std::string		 		defFileIfDir;
-	std::set<std::string>	CGIs; //extensions of file
-	std::string				uploadPath;
-	s_loc*				    next;
+	std::string					location;
+	std::map<int, std::string>	redirect;
+	std::string					root;
+	bool			        	dirListFlg;
+	std::string		 			defFileIfDir;
+	std::set<std::string>		CGIs; //extensions of file
+	std::string					uploadPath;
+	s_loc*				    	next;
 }   t_loc;
 
 typedef struct s_serv
 {
 	std::string                 ServerName;
 	std::map<int, std::string>  errPages;
-	ssize_t                      limitCLientBodySize;
+	ssize_t                     limitCLientBodySize;
 	std::string                 root;
 	t_loc*                      locList;
 	s_serv*                     next;
@@ -53,6 +56,8 @@ private:
 	void			clearServ();
 	static void		setMethods(t_loc* cur, std::string &src);
 	static void		setCGIs(std::set<std::string> &dst, std::string &src);
+	static void		fillErrorPages(std::vector<std::string> &E, t_serv *cur);
+	static void		setRedirect(t_loc *cur, std::string src);
 public:
 	Server(std::string const& _host, std::string const& _port);
 	~Server();

@@ -39,13 +39,7 @@ typedef struct	s_listen
 	struct addrinfo			*info;
 } t_listen;
 
-//typedef struct	s_use
-//{
-//	int						resRecv;
-//	int 					sockFd;
-//	struct sockaddr_storage	addr;
-//	socklen_t				addrSize;
-//	char					buf[1000];
-//} t_use;
+class Server;
+class Servers;
 
 #endif

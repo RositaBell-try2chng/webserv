@@ -18,7 +18,7 @@ void printAllServ(Servers* src)
 		while (cur)
 		{
 			std::cout << "servername is: |" << cur->ServerName << "|" << std::endl;
-			std::cout << "limit cliend body size is: " << cur->limitCLientBodySize << std::endl;
+			std::cout << "limit client body size is: " << cur->limitCLientBodySize << std::endl;
 			std::cout << "root is: " << cur->root << std::endl;
 			std::cout << "err pages is:\n";
 			for (std::map<int, std::string>::iterator it2 = cur->errPages.begin(); it2 != cur->errPages.end(); it2++)
@@ -28,7 +28,8 @@ void printAllServ(Servers* src)
 			{
 				std::cout << "location is: |" << cur2->location << "|" << std::endl;
 				std::cout << "GET/POST/DELETE is :" << cur2->flgGet << "/" << cur2->flgPost << "/" << cur2->flgDelete << "\n";
-				std::cout << "redirect is: |" << cur2->redirect << "|\n";
+				for (std::map<int, std::string>::iterator itR = cur2->redirect.begin(); itR != cur2->redirect.end(); itR++)
+					std::cout << "redirect is: " << itR->first << " - " << itR->second << std::endl;
 				std::cout << "root is: |" << cur2->root << "|\n";
 				std::cout << "dirListFlg is: |" << cur2->dirListFlg << "|\n";
 				std::cout << "defFileIfDir is: |" << cur2->defFileIfDir << "|\n";

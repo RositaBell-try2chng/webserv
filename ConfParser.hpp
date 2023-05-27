@@ -18,7 +18,7 @@ private:
     static void                     skipSpaces(std::string &src, std::string::size_type &i);
     static std::string::size_type   findCloseBracket(std::string &src, std::string::size_type i, int cnt);
 
-    static bool                     parseForOneServ(std::string &dst, Servers *allServers);
+    static void                     parseForOneServ(std::string &dst, Servers *allServers);
 
     static bool                     getLocations(std::string &src, std::map<std::string, std::string> &dst);
     static bool                     fillServParam(std::string &src, std::map<std::string, std::string> &paramS, std::vector<std::string> &ports, std::vector<std::string> &errPages);

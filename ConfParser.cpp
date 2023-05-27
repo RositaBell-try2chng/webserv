@@ -77,26 +77,28 @@ void ConfParser::deepParser(std::string &conf, Servers** allServers)
 {
     std::string             dst;
     bool                    endFlg;
-    bool                    correctFlg = false;
 
-    *allServers = new Servers();
-    if (conf.empty())
-        throw badConfig();
+	if (conf.empty())
+		throw badConfig();
     endFlg = ConfParser::getNextServer(dst, conf);
-    if (endFlg)
-        throw badConfig();
+	if (endFlg)
+	{
+		Logger::putMsg("BAD CONFIG:\nHAVE NO servers.", FILE_ERR, ERR);
+		throw badConfig();
+	}
+	*allServers = new Servers();
     while (!endFlg)
     {
         endFlg = ConfParser::getNextServer(dst, conf); //cut server config
         ConfParser::delSpaces(conf);
 		ConfParser::delSpaces(dst);
-        if (ConfParser::parseForOneServ(dst, *allServers))
-            correctFlg = true;
-        else
-            Logger::putMsg(std::string("BAD CONFIG:\n") + dst, FILE_ERR, ERR);
+        ConfParser::parseForOneServ(dst, *allServers);
     }
-    if (!correctFlg)
-        throw badConfig();
+	if (!conf.empty())
+	{
+		Logger::putMsg("BAD CONFIG:\nsomething out of server:\n" + conf, FILE_ERR, ERR);
+		throw badConfig();
+	}
 }
 
 bool ConfParser::getNextServer(std::string &dst, std::string &src)
@@ -114,7 +116,10 @@ bool ConfParser::getNextServer(std::string &dst, std::string &src)
     i += 6;
     skipSpaces(src, i);
     if (i == src.length() || src[i] != '{')
-        throw badConfig();
+	{
+		Logger::putMsg("BAD CONFIG:\n" + src, FILE_ERR, ERR);
+		throw badConfig();
+	}
     i++;
     skipSpaces(src, i);
     toErase = findCloseBracket(src, i, 1) + 1;
@@ -123,7 +128,7 @@ bool ConfParser::getNextServer(std::string &dst, std::string &src)
     return (false);
 }
 
-bool ConfParser::parseForOneServ(std::string &src, Servers *allServers)
+void ConfParser::parseForOneServ(std::string &src, Servers *allServers)
 {
     std::map <std::string, std::string> paramS;
     std::map <std::string, std::string> paramL;
@@ -131,15 +136,23 @@ bool ConfParser::parseForOneServ(std::string &src, Servers *allServers)
     std::vector<std::string>            ports;
     std::vector<std::string>            errPages;
 
-    while (ConfParser::getLocations(src, paramL)) //отделяем параметры маршрутов
+    while (ConfParser::getLocations(src, paramL)) //отделяем параметры маршрутов location
         ConfParser::delSpaces(src);
-    if (src.empty() || paramL.empty()) // нет параметров сервера или параметров маршрутизации
-        return (false);
+    if (src.empty() ) // нет параметров сервера
+	{
+		Logger::putMsg("BAD CONFIG:\nEmpty server parameters", FILE_ERR, ERR);
+		throw badConfig();
+	}
+	if (paramL.empty()) //нет параметров маршрутизации для сервера
+	{
+		Logger::putMsg("BAD CONFIG:\nServer have no locations", FILE_ERR, ERR);
+		throw badConfig();
+	}
     if (!ConfParser::fillServParam(src, paramS, ports, errPages))
-        return (false);
+		throw badConfig();
     if (!ConfParser::fillLocations(paramL, locations))
-        return (false);
-    return (allServers->addServers(paramS, locations, ports, errPages));
+		throw badConfig();
+    allServers->addServers(paramS, locations, ports, errPages);
 }
 
 bool ConfParser::fillLocations(std::map <std::string, std::string> &paramL, std::map <std::string, std::map<std::string, std::string> > &locations)
@@ -149,33 +162,31 @@ bool ConfParser::fillLocations(std::map <std::string, std::string> &paramL, std:
     std::stringstream                               sStream;
     std::string                                     line;
     std::string                                     line2;
-    bool                                            flgCorrect;
 
     for (it = paramL.begin(); it != paramL.end(); it++)
     {
-        flgCorrect = true;
         part2.clear();
         sStream << it->second;
         while (std::getline(sStream, line))
         {
             ConfParser::splitLine(line, line2);
             if (line.empty() || line2.empty()) {
-                Logger::putMsg("BAD CONFIG IGNORED:\n" + line + ' ' + line2, FILE_ERR, ERR);
-                continue;
+				Logger::putMsg("BAD CONFIG:\nline have no enough words:\n" + line + ' ' + line2, FILE_ERR, ERR);
+				return (false);
             }
             if (line != "acceptedMethods" && line != "root" && line != "dirListOn" && line != "defFileIfdir" && line != "CGIs" && line != "upload_path" && line != "return") {
-                Logger::putMsg("BAD PARAM of Location IGNORED:\n" + line, FILE_ERR, ERR);
-                continue;
+                Logger::putMsg("BAD PARAM:\n" + line, FILE_ERR, ERR);
+				return (false);
             }
             if (part2.find(line) != part2.end()) {
-                flgCorrect = false;
-                break;
+				Logger::putMsg("DOUBLE PARAM:\n" + line, FILE_ERR, ERR);
+				return (false);
             }
             part2.insert(std::pair<std::string, std::string>(line, line2));
         }
-        if (!flgCorrect || part2.empty()) {
+        if (part2.empty()) {
             Logger::putMsg("BAD CONFIG OF LOCATION:\n" + it->first, FILE_ERR, ERR);
-            continue;
+			return (false);
         }
 		locations.insert(std::pair<std::string, std::map<std::string, std::string> >(it->first, part2));
     }
@@ -195,8 +206,8 @@ bool ConfParser::fillServParam(std::string &src, std::map <std::string, std::str
     {
         ConfParser::splitLine(line, line2);
         if (line.empty() || line2.empty()) {
-            Logger::putMsg("BAD CONFIG IGNORED:\n" + line + ' ' + line2, FILE_ERR, ERR);
-            continue;
+            Logger::putMsg("BAD CONFIG:\nline have no enough words:\n" + line + ' ' + line2, FILE_ERR, ERR);
+			return (false);
         }
         if (line == "listen" && ConfParser::checkPort(line2, ports))
             ports.push_back(line2);
@@ -217,7 +228,10 @@ bool ConfParser::fillServParam(std::string &src, std::map <std::string, std::str
             paramS.insert(std::pair<std::string, std::string>(line, line2));
         }
         else
-            Logger::putMsg("BAD CONFIG IGNORED:\n" + line + ' ' + line2, FILE_ERR, ERR);
+		{
+			Logger::putMsg("BAD CONFIG:\n" + line + ' ' + line2, FILE_ERR, ERR);
+			return (false);
+		}
     }
     return (true);
 }
@@ -246,7 +260,7 @@ bool ConfParser::getLocations(std::string &src, std::map<std::string, std::strin
 
     i = src.find("location");
 	while (i != std::string::npos && !(i == 0 || (std::isspace(src[i - 1]) && std::isspace(src[i + 8]))))
-		i = src.find("location", i + 1);
+		i = src.find("location", i + 8);
     if (i == std::string::npos)
         return (false);
     fromErase = i;
@@ -254,17 +268,33 @@ bool ConfParser::getLocations(std::string &src, std::map<std::string, std::strin
     ConfParser::skipSpaces(src, i);
     from = i;
     while (i < src.length() && src[i] != '{')
-        i++;
+		i++;
+	if (i == src.length())
+	{
+		Logger::putMsg("BAD CONFIG:\nHAVE NO { after 'location'.\n" + src.substr(fromErase, i - fromErase), FILE_ERR, ERR);
+		throw badConfig();
+	}
     part1 = src.substr(from, i - from);
     ConfParser::delSpaces(part1);
     from = i + 1;
     i = ConfParser::findCloseBracket(src, i, 1);
     part2 = src.substr(from, i - from);
     ConfParser::delSpaces(part2);
-    if (part1.empty() || part2.empty())
-        Logger::putMsg("BAD CONFIG IGNORED:\n" + part1 + '\n' + part2, FILE_ERR, ERR);
+    if (part1.empty())
+	{
+		Logger::putMsg("BAD CONFIG:\nlocation is empty:\n" + src.substr(fromErase, from - fromErase), FILE_ERR, ERR);
+		throw badConfig();
+	}
+	else if (part2.empty())
+	{
+		Logger::putMsg("BAD CONFIG:\nlocation config is empty:\n" + src.substr(fromErase, i + 1 - fromErase), FILE_ERR, ERR);
+		throw badConfig();
+	}
     else if (dst.find(part1) != dst.end())
-        Logger::putMsg("DOUBLE LOCATION IGNORED:\n" + part1, FILE_ERR, ERR);
+	{
+		Logger::putMsg("BAD CONFIG:\nDOUBLE LOCATION:\n" + part1, FILE_ERR, ERR);
+		throw badConfig();
+	}
     else
         dst.insert(std::pair<std::string, std::string>(part1, part2));
     src.erase(fromErase, i - fromErase + 1);
@@ -281,7 +311,10 @@ std::string::size_type ConfParser::findCloseBracket(std::string &src, std::strin
             cnt--;
     }
     if (i == src.length())
-        throw badConfig();
+	{
+		Logger::putMsg("BAD CONFIG:\nBAD BRACKETS: {}", FILE_ERR, ERR);
+		throw badConfig();
+	}
     return (i);
 }
 
