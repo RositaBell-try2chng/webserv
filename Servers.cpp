@@ -88,8 +88,6 @@ void    Servers::createServer(std::string const &host, std::string const &port, 
     Server      tmp(host, port);
     t_listen    all;
 
-//	try {tmp.setServList(S, L, SN, E);}
-//    catch (std::exception &e) {std::cout << e.what() << std::endl;}
 	tmp.setServList(S, L, SN, E);
     bzero(&all, sizeof(all));
 

@@ -136,7 +136,6 @@ void    Server::clearLocation(t_loc	**loc)
 	while (current)
 	{
 		tmp = current;
-		std::cout << current << std::endl;
 		current = current->next;
 		delete tmp;
 	}

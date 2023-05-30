@@ -63,14 +63,14 @@ void MainClass::doIt(int args, char **argv)
         return;
     }
 
-    if (!MainClass::allServers)
+    if (!MainClass::allServers || MainClass::allServers->getConnections(true).empty())
     {
         std::cerr << "NO SERVER CREATED, CHECK YOUR CONFIG\n";
         return;
     }
-	//std::cout << MainClass::allServers->getConnections(true).begin()->second->serv << std::endl;
-    //MainClass::mainLoop();
-	printAllServ(MainClass::allServers);
+    std::cout << "Server has been launched!\n";
+    MainClass::mainLoop();
+	//printAllServ(MainClass::allServers);
 }
 
 void MainClass::mainLoop()
@@ -93,6 +93,8 @@ void MainClass::mainLoop()
         {
             if (it->second->respReady()) //если ответ готов добавляем
                 FD_SET(it->first, &writeFds);
+            else
+                FD_SET(it->first, &readFds);
             maxFd = it->first;
         }
         //добавляем слушающие сокеты
@@ -114,7 +116,7 @@ void MainClass::mainLoop()
             continue;
         }
         //проверяем новые подключения // есть -> идем на новый заход чтобы быстро разгрузить всю очередь
-//        if (acceptConnections(readFds))
+//        if (acceptConnections(&readFds))
 //            continue;
         acceptConnections(&readFds);
         //проверяем готовых для записи/чтения
@@ -142,13 +144,14 @@ bool MainClass::acceptConnections(fd_set *readFds)
     {
         if (FD_ISSET(it->first, readFds))
         {
+            std::cout << "accept from " << it->first << " to ";
             fd = accept(it->first, NULL, NULL);
+            std::cout << fd << std::endl;
             if (fd < 0 || fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
                 Logger::putMsg(strerror(errno), FILE_ERR, ERR);
             else
                 MainClass::allServers->addConnection(fd, *(it->second));
             flgConnection = true;
-            //std::cout << "accept connection: " << fd << " from: " << it->first << std::endl;
         }
     }
     return (flgConnection);
@@ -159,6 +162,7 @@ void MainClass::readRequests(std::map<int, Server *>::iterator &it)
     ssize_t	recvRes;
     char    buf[BUF_SIZE];
 
+    std::cout << "RECV request from: " << it->first << std::endl;
     recvRes = recv(it->first, buf, BUF_SIZE, 0);
     switch (recvRes)
     {
@@ -193,10 +197,12 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it)
     ssize_t	res;
 	size_t	len;
 
+    std::cout << "SEND response to: " << it->first << std::endl;
     if (it->second->getRes().empty()) // nothing to send
     {
         Logger::putMsg(std::string("NOTHING TO SEND"), FILE_ERR, ERR);
         it->second->resClear();
+        it++;
         return;
     }
     len = it->second->getRes().length();
@@ -211,6 +217,7 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it)
         }
         case 0:
         {
+            it++;
             return;
         }
         default:
@@ -219,6 +226,7 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it)
                 it->second->resizeResponse(res);
             else
                 it->second->resClear();
+            it++;
         }
     }
 }
@@ -230,7 +238,7 @@ void MainClass::closeConnection(std::map<int, Server *>::iterator &it)
     it++;
     close(fd);
     MainClass::allServers->removeConnection(fd);
-    //std::cout << "close connection: " << fd << std::endl;
+    std::cout << "close connection: " << fd << std::endl;
 }
 
 void MainClass::handleRequest(std::map<int, Server *>::iterator &it) //fix me: delete GAGs
@@ -256,6 +264,6 @@ void MainClass::exitHandler(int sig)
         std::cout << "ExitHandler: SIGTERM received\n";
     else
         std::cout << "EXCEPTION exit. check LOGS\n";
-    //system("leaks webserv");
+    system("leaks webserv");
     exit(0);
 }
