@@ -65,7 +65,8 @@ public:
 	Server(std::string const& _host, std::string const& _port);
 	~Server();
 
-	t_serv*				serv;//public because need to change in another class
+	t_serv*					serv;//public because need to change in another class
+
 	std::string 	const&	getHost();
 	std::string 	const&	getPort();
 
@@ -78,7 +79,11 @@ public:
 	bool				respReady(); // get responseReadyFlg
 	bool				cgiFlg(); // get cgiConnection
 	pid_t				getChPid(); // get childPid
+
+
 	void				setRespReady(bool flg);
+	void				setAnsw_struct(HTTP_Answer const &src);
+	void				setReq_struct(HTTP_Request const &src);
 
 	void				reqClear();
 	void				resClear();

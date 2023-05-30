@@ -31,9 +31,32 @@ const std::string & Server::getRes() { return (this->response); }
 bool Server::respReady() { return (this->responseReadyFlg); }
 bool Server::cgiFlg() { return (this->cgiConnectionFlg); }
 pid_t Server::getChPid() { return (this->childPid); }
+HTTP_Answer		const& Server::getAnsw_struct() { return (this->answ_struct); }
+HTTP_Request	const& Server::getReq_struct() { return (this->req_struct); }
 
 //setters
 void Server::setRespReady(bool flg) {this->responseReadyFlg = flg;}
+
+void Server::setAnsw_struct(HTTP_Answer const &src)
+{
+	this->answ_struct.body = src.body;
+	this->answ_struct.headers = std::map(src.headers);
+	this->answ_struct.reason_phrase = src.reason_phrase;
+	this->answ_struct.status_code = src.status_code;
+	this->answ_struct.version = src.status_code;
+}
+
+void Server::setReq_struct(HTTP_Request const &src)
+{
+	this->req_struct.version = src.version;
+	this->req_struct.headers = src.headers;
+	this->req_struct.body = src.body;
+	this->req_struct.answ_code[0] = src.answ_code[0];
+	this->req_struct.answ_code[1] = src.answ_code[1];
+	this->req_struct.method = src.method;
+	this->req_struct.uri = src.uri;
+}
+
 
 void Server::reqClear() { this->request.clear(); }
 void Server::resClear()
@@ -426,3 +449,4 @@ void Server::setCGIs(std::set<std::string> &dst, std::string &src)
 		src = line;
 	}
 }
+
