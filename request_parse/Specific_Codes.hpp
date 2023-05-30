@@ -15,6 +15,7 @@ enum Status_Categories {	informational_responses = 1,
 //=======================================================================
 //=======================================================================
 
+// 	1 X X
 enum Informational_responses {	Continue,
 								Switching_Protocols,
 								Processing,
@@ -25,6 +26,7 @@ enum Informational_responses {	Continue,
 								Heuristic_Expiration,
 								Miscellaneous_Warning = 99	};
 
+// 	2 X X
 enum Successful_responses {	OK,
 							Created,
 							Accepted,

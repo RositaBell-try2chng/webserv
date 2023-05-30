@@ -159,7 +159,7 @@ bool ft_set_hdrs(HTTP_Request *req, std::vector<std::string> req_str_arr, int en
 	int total_len = 0;
 	int curr_len;
 
-// Heasers
+// Headers
 	for (; req_str_arr[i].compare("\r") && i != end; ++i) {
 		curr_len = ft_make_hdr(req, req_str_arr[i]);
 		if (!curr_len)
@@ -199,6 +199,8 @@ void ft_set_body(HTTP_Request *req, std::vector<std::string> req_str_arr, int i,
 
 		req->body.append(req_str_arr[i]);
 	}
+
+	// work with body
 }
 
 void HTTP_Request::ft_strtoreq(Server &srv, HTTP_Request *req) {
