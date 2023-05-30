@@ -7,6 +7,8 @@
 # include "Server.hpp"
 # include "Exceptions.hpp"
 # include "ConfParser.hpp"
+# include "request_parse/HTTP_Request.hpp"
+# include "request_parse/HTTP_Answer.hpp"
 
 class MainClass
 {

@@ -203,15 +203,17 @@ void ft_set_body(HTTP_Request *req, std::vector<std::string> req_str_arr, int i,
 	// work with body
 }
 
-void HTTP_Request::ft_strtoreq(Server &srv, HTTP_Request *req) {
+HTTP_Request HTTP_Request::ft_strtoreq(Server &srv) {
+
+	HTTP_Request req;
 
 	std::string	raw = srv.getReq();
 
 	if (raw.size() > 100000) {
 		Logger::putMsg("Request is too large", FILE_WREQ, WREQ);
-		req->answ_code[0] = 4;
-		req->answ_code[0] = 13;
-		return ;
+		req.answ_code[0] = 4;
+		req.answ_code[0] = 13;
+		return req;
 	}
 
 	std::vector<std::string> req_str_arr;
@@ -220,15 +222,16 @@ void HTTP_Request::ft_strtoreq(Server &srv, HTTP_Request *req) {
 	req_str_arr = ft_tokenisation(raw);
 
 // URL (Method, URI, HTTP-version)
-	if (!ft_set_url(req, req_str_arr[0]))
-		return ;
+	if (!ft_set_url(&req, req_str_arr[0]))
+		return req;
 
 // Headers
 	int	end = req_str_arr.size() - 1;
-	int i = ft_set_hdrs(req, req_str_arr, end);
+	int i = ft_set_hdrs(&req, req_str_arr, end);
 	if (!i)
-		return ;
+		return req;
 		
 // Body
-	ft_set_body(req, req_str_arr, i, end, srv.serv->limitCLientBodySize);
+	ft_set_body(&req, req_str_arr, i, end, srv.serv->limitCLientBodySize);
+	return req;
 }

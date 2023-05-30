@@ -42,9 +42,12 @@ private:
 	std::string	port;
 
 	//req/resp
-	std::string	request;
-	std::string response;
-	bool		responseReadyFlg;
+	std::string		request;
+	HTTP_Request	req_struct;
+
+	std::string		response;
+	HTTP_Answer		answ_struct;
+	bool			responseReadyFlg;
 
 	//cgi status
 	bool		cgiConnectionFlg;
@@ -63,10 +66,15 @@ public:
 	~Server();
 
 	t_serv*				serv;//public because need to change in another class
-	std::string const&	getHost();
-	std::string const&	getPort();
-	std::string	const&	getReq();
-	std::string	const&	getRes();
+	std::string 	const&	getHost();
+	std::string 	const&	getPort();
+
+	std::string		const&	getReq();
+	HTTP_Request	const&	getReq_struct();
+
+	std::string		const&	getRes();
+	HTTP_Answer		const&	getAnsw_struct();
+
 	bool				respReady(); // get responseReadyFlg
 	bool				cgiFlg(); // get cgiConnection
 	pid_t				getChPid(); // get childPid
@@ -76,6 +84,8 @@ public:
 	void				resClear();
 	void				addToReq(char const* src);
 	void				setResponse(std::string const& src);
+	void				setAnsw_struct(HTTP_Answer const& answ);
+	void				setReq_struct(HTTP_Request const& req);
 	void				resizeResponse(ssize_t res);
 
 	Server*				clone() const;

@@ -33,7 +33,7 @@ struct HTTP_Request
 		};
 
 		// Get "raw" request and parse into a structure
-		static void ft_strtoreq(Server &srv, HTTP_Request *req);
+		static HTTP_Request ft_strtoreq(Server &srv);
 
 };
 

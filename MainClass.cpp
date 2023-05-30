@@ -244,7 +244,9 @@ void MainClass::closeConnection(std::map<int, Server *>::iterator &it)
 void MainClass::handleRequest(std::map<int, Server *>::iterator &it) //fix me: delete GAGs
 {
     Logger::putMsg(it->second->getReq(), FILE_REQ, REQ);
-    it->second->setResponse(std::string(DEF_RESPONSE));
+    it->second->setReq_struct(HTTP_Request::ft_strtoreq(*it->second));
+    it->second->setAnsw_struct(HTTP_Answer::ft_reqtoansw(it->second->getReq_struct()));
+    it->second->setResponse(HTTP_Answer::ft_answtostr(it->second->getAnsw_struct()));
     it->second->reqClear();
 }
 
