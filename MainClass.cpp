@@ -241,13 +241,48 @@ void MainClass::closeConnection(std::map<int, Server *>::iterator &it)
     std::cout << "close connection: " << fd << std::endl;
 }
 
-void MainClass::handleRequest(std::map<int, Server *>::iterator &it) //fix me: delete GAGs
+void MainClass::handleRequest(std::map<int, Server *>::iterator &it)
 {
     Logger::putMsg(it->second->getReq(), FILE_REQ, REQ);
     it->second->setReq_struct(HTTP_Request::ft_strtoreq(*it->second));
     it->second->setAnsw_struct(HTTP_Answer::ft_reqtoansw(it->second->getReq_struct()));
-    it->second->setResponse(HTTP_Answer::ft_answtostr(it->second->getAnsw_struct()));
+    if (it->second->getCGIsFlg())
+        MainClass::startCGI(*it->second);//implement
+    if (!it->second->respReady())
+        it->second->setResponse(HTTP_Answer::ft_answtostr(it->second->getAnsw_struct()));
     it->second->reqClear();
+}
+
+void MainClass::startCGI(Server &src)
+{
+    int fds[2];
+
+    if (pipe(fds) != 0)
+    {
+        MainClass::CGIsFailed(src);
+        return;
+    }
+    src->setChPid(fork());
+    switch (src->getChPid())
+    {
+        case -1: {MainClass::CGIsFailed(src); return;}
+        case 0: {MainClass::parentCGI(src); break;}
+        default: {MainClass::childCGI(src); break;}
+    }
+}
+
+void MainClass::CGIsFailed(Server &src)
+{
+    HTTP_Answer res;
+
+    res.version = std::string("HTTP/1.1");
+    res.status_code = std::string("500");
+    res.reason_phrase = std::string("Internal server error");
+    res.headers.insert(std::pair<std::string, std::string>(std::string("Content-Length"), std::string("18")));
+    res.headers.insert(std::pair<std::string, std::string>(std::string("Connection"), std::string("close")));
+    res.body = std::string("CGI launch Failed!");
+    Logger::putMsg("CGI failed:\n" + strerror(errno), FILE_ERR, ERR);
+    src->setResponse(HTTP_Answer::ft_answtostr(res));
 }
 
 bool MainClass::checkCont(std::map<int, Server *>::iterator &it)

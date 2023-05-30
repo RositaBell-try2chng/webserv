@@ -53,14 +53,17 @@ private:
 	bool		cgiConnectionFlg;
 	pid_t		childPid;
 
-	static t_serv*	cloneServList(t_serv const *src);
-	static t_loc*	cloneLocList(t_loc const *src);
-	static void		clearLocation(t_loc **loc);
-	void			clearServ();
 	static void		setMethods(t_loc* cur, std::string &src);
 	static void		setCGIs(std::set<std::string> &dst, std::string &src);
 	static void		fillErrorPages(std::vector<std::string> &E, t_serv *cur);
 	static void		setRedirect(t_loc *cur, std::string src);
+
+//clears
+	
+	static t_serv*	cloneServList(t_serv const *src);
+	static t_loc*	cloneLocList(t_loc const *src);
+	static void		clearLocation(t_loc **loc);
+	void			clearServ();
 public:
 	Server(std::string const& _host, std::string const& _port);
 	~Server();
@@ -77,16 +80,22 @@ public:
 	HTTP_Answer		const&	getAnsw_struct();
 
 	bool				respReady(); // get responseReadyFlg
-	bool				cgiFlg(); // get cgiConnection
+	bool				getCGIsFlg(); // get cgiConnection
 	pid_t				getChPid(); // get childPid
 
 
 	void				setRespReady(bool flg);
+	void				setCGIsFlg(bool flg);
 	void				setAnsw_struct(HTTP_Answer const &src);
 	void				setReq_struct(HTTP_Request const &src);
+	void				setChPid(pid_t pid);
 
+//clears
 	void				reqClear();
 	void				resClear();
+	void				clearAnsw_struct();
+	void				clearReq_struct();
+
 	void				addToReq(char const* src);
 	void				setResponse(std::string const& src);
 	void				setAnsw_struct(HTTP_Answer const& answ);

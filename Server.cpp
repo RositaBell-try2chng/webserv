@@ -29,13 +29,14 @@ const std::string & Server::getPort() { return (this->port); }
 const std::string & Server::getReq() { return (this->request); }
 const std::string & Server::getRes() { return (this->response); }
 bool Server::respReady() { return (this->responseReadyFlg); }
-bool Server::cgiFlg() { return (this->cgiConnectionFlg); }
+bool Server::getCGIsFlg() { return (this->cgiConnectionFlg); }
 pid_t Server::getChPid() { return (this->childPid); }
 HTTP_Answer		const& Server::getAnsw_struct() { return (this->answ_struct); }
 HTTP_Request	const& Server::getReq_struct() { return (this->req_struct); }
 
 //setters
 void Server::setRespReady(bool flg) {this->responseReadyFlg = flg;}
+void Server::setCGIsFlg(bool flg) {this->cgiConnectionFlg = flg;}
 
 void Server::setAnsw_struct(HTTP_Answer const &src)
 {
@@ -57,6 +58,27 @@ void Server::setReq_struct(HTTP_Request const &src)
 	this->req_struct.uri = src.uri;
 }
 
+void Server::setChPid(pid_t pid) {this->childPid = pid;}
+
+void Server::clearAnsw_struct()
+{
+	this->answ_struct.body.clear();
+	this->answ_struct.headers.clear();
+	this->answ_struct.reason_phrase.clear();
+	this->answ_struct.status_code.clear();
+	this->answ_struct.version.clear();
+}
+
+void Server::clearReq_struct()
+{
+	this->req_struct.version.clear();
+	this->req_struct.headers.clear();
+	this->req_struct.body.clear();
+	this->req_struct.answ_code[0] = -1;
+	this->req_struct.answ_code[1] = -1;
+	this->req_struct.method.clear();
+	this->req_struct.uri.clear();
+}
 
 void Server::reqClear() { this->request.clear(); }
 void Server::resClear()
