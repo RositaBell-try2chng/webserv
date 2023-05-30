@@ -49,7 +49,7 @@ int main(int argc, char **argv)
 //// ============================================================================================================================================
 //
 //	std::string str_answ;
-//	HTTP_Answer	answ;
+//	
 //	str_answ = HTTP_Answer::ft_reqtoansw(req, &answ);
 //
 //// ft_reqtoansw TESTS

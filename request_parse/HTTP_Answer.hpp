@@ -40,7 +40,7 @@ struct HTTP_Answer {
 		static std::string ft_answtostr(HTTP_Answer answ);
 
 		// Creates answer depends on request
-		static std::string ft_reqtoansw(HTTP_Request req, HTTP_Answer *answ);
+		static HTTP_Answer ft_reqtoansw(HTTP_Request req);
 };
 
 #endif

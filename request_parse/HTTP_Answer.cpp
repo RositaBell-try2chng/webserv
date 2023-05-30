@@ -39,14 +39,16 @@ void HTTP_Answer::ft_pars_status_code(int *integ_code, std::string *str_code) {
 	str_code->push_back(static_cast<char>(integ_code[1] % 10 + 48));
 }
 
-std::string HTTP_Answer::ft_reqtoansw(HTTP_Request req, HTTP_Answer *answ) {
+HTTP_Answer HTTP_Answer::ft_reqtoansw(HTTP_Request req) {
 
+	HTTP_Answer	answ;
+	
 	//version equal to request.version
-	answ->version = req.version;
+	answ.version = req.version;
 
 	if (req.answ_code[0] < 4) {
 		if (!req.method.compare("GET")) 
-			ft_get_answ(req, answ);
+			ft_get_answ(req, &answ);
 		// else if (!req.method.compare("POST"))
 		// 	ft_post_answ(req, answ);
 		// else if (!req.method.compare("DELETE"))
@@ -58,8 +60,8 @@ std::string HTTP_Answer::ft_reqtoansw(HTTP_Request req, HTTP_Answer *answ) {
 		}
 	}
 
-	ft_pars_status_code(req.answ_code, &(answ->status_code));
-	answ->reason_phrase = ::ft_reason_phrase(req.answ_code);
+	ft_pars_status_code(req.answ_code, &(answ.status_code));
+	answ.reason_phrase = ::ft_reason_phrase(req.answ_code);
 
-	return (ft_answtostr(*answ));
+	return (answ);
 };
