@@ -3,6 +3,8 @@
 
 # include "webserv.hpp"
 # include "MainClass.hpp"
+# include "./request_parse/HTTP_Request.hpp"
+# include "./request_parse/HTTP_Answer.hpp"
 
 class Servers;
 
@@ -98,8 +100,6 @@ public:
 
 	void				addToReq(char const* src);
 	void				setResponse(std::string const& src);
-	void				setAnsw_struct(HTTP_Answer const& answ);
-	void				setReq_struct(HTTP_Request const& req);
 	void				resizeResponse(ssize_t res);
 
 	Server*				clone() const;

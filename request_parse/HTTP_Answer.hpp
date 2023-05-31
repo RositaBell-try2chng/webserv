@@ -7,6 +7,7 @@
 # include "HTTP_Request.hpp"
 # include "Specific_Codes.hpp"
 # include <map>
+struct HTTP_Request;
 
 struct HTTP_Answer {
 

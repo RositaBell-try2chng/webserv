@@ -41,7 +41,7 @@ void Server::setCGIsFlg(bool flg) {this->cgiConnectionFlg = flg;}
 void Server::setAnsw_struct(HTTP_Answer const &src)
 {
 	this->answ_struct.body = src.body;
-	this->answ_struct.headers = std::map(src.headers);
+	this->answ_struct.headers = std::map<std::string, std::string>(src.headers);
 	this->answ_struct.reason_phrase = src.reason_phrase;
 	this->answ_struct.status_code = src.status_code;
 	this->answ_struct.version = src.status_code;

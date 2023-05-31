@@ -163,7 +163,7 @@ bool ft_set_hdrs(HTTP_Request *req, std::vector<std::string> req_str_arr, int en
 	for (; req_str_arr[i].compare("\r") && i != end; ++i) {
 		curr_len = ft_make_hdr(req, req_str_arr[i]);
 		if (!curr_len)
-			return ;
+			return 0;
 		total_len += curr_len;
 		if (total_len > 8096) {
 			Logger::putMsg("Request headers are too large", FILE_WREQ, WREQ);
@@ -203,11 +203,9 @@ void ft_set_body(HTTP_Request *req, std::vector<std::string> req_str_arr, int i,
 	// work with body
 }
 
-HTTP_Request HTTP_Request::ft_strtoreq(Server &srv) {
+HTTP_Request HTTP_Request::ft_strtoreq(std::string raw, int limitCLientBodySize) {
 
 	HTTP_Request req;
-
-	std::string	raw = srv.getReq();
 
 	if (raw.size() > 100000) {
 		Logger::putMsg("Request is too large", FILE_WREQ, WREQ);
@@ -232,6 +230,6 @@ HTTP_Request HTTP_Request::ft_strtoreq(Server &srv) {
 		return req;
 		
 // Body
-	ft_set_body(&req, req_str_arr, i, end, srv.serv->limitCLientBodySize);
+	ft_set_body(&req, req_str_arr, i, end, limitCLientBodySize);
 	return req;
 }

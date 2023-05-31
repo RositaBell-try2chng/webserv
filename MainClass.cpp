@@ -244,10 +244,10 @@ void MainClass::closeConnection(std::map<int, Server *>::iterator &it)
 void MainClass::handleRequest(std::map<int, Server *>::iterator &it)
 {
     Logger::putMsg(it->second->getReq(), FILE_REQ, REQ);
-    it->second->setReq_struct(HTTP_Request::ft_strtoreq(*it->second));
+    it->second->setReq_struct(HTTP_Request::ft_strtoreq(it->second->getReq(), it->second->serv->limitCLientBodySize));
     it->second->setAnsw_struct(HTTP_Answer::ft_reqtoansw(it->second->getReq_struct()));
-    if (it->second->getCGIsFlg())
-        MainClass::startCGI(*it->second);
+    // if (it->second->getCGIsFlg())
+    //     MainClass::startCGI(*it->second);//implement
     if (!it->second->respReady())
         it->second->setResponse(HTTP_Answer::ft_answtostr(it->second->getAnsw_struct()));
     it->second->reqClear();

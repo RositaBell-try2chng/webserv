@@ -25,9 +25,9 @@ private:
     static bool     checkCont(std::map<int, Server *>::iterator &it);
     static void     handleRequest(std::map<int, Server *>::iterator &it);
     static void     closeConnection(std::map<int, Server *>::iterator &it);
-    static void     startCGI(Server &src);
-    static void     CGIsFailed(Server &src);
 public:
+    static std::set<int>    readsCGI;
+    static std::set<int>    writeCGI;
     static void     doIt(int args, char** argv);
     static void     exitHandler(int sig);
 };
