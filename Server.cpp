@@ -336,7 +336,7 @@ t_loc* Server::setLocList(t_serv* s, std::map <std::string, std::map<std::string
 	{
 		cur->next = NULL;
 		cur->location = it->first;
-		cur->root = s->root;
+		cur->root = std::string("");
 		cur->dirListFlg = false;
 		cur->defFileIfDir = std::string("");
 		cur->uploadPath = std::string("");

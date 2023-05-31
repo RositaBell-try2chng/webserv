@@ -43,7 +43,7 @@ void printAllServ(Servers* src)
 	}
 }
 
-void MainClass::doIt(int args, char **argv)
+void MainClass::doIt(int args, char **argv, char **env)
 {
     bool        flg;
     char*       arg;
@@ -69,6 +69,7 @@ void MainClass::doIt(int args, char **argv)
         return;
     }
     std::cout << "Server has been launched!\n";
+    MainClass::envCGI = env;
     MainClass::mainLoop();
 	//printAllServ(MainClass::allServers);
 }
@@ -244,12 +245,13 @@ void MainClass::closeConnection(std::map<int, Server *>::iterator &it)
 void MainClass::handleRequest(std::map<int, Server *>::iterator &it)
 {
     Logger::putMsg(it->second->getReq(), FILE_REQ, REQ);
-    it->second->setReq_struct(HTTP_Request::ft_strtoreq(it->second->getReq(), it->second->serv->limitCLientBodySize));
-    it->second->setAnsw_struct(HTTP_Answer::ft_reqtoansw(it->second->getReq_struct()));
+//    it->second->setReq_struct(HTTP_Request::ft_strtoreq(it->second->getReq(), it->second->serv->limitCLientBodySize));
+//    it->second->setAnsw_struct(HTTP_Answer::ft_reqtoansw(it->second->getReq_struct()));
     // if (it->second->getCGIsFlg())
-    //     MainClass::startCGI(*it->second);//implement
-    if (!it->second->respReady())
-        it->second->setResponse(HTTP_Answer::ft_answtostr(it->second->getAnsw_struct()));
+    //     MainClass::startCGI(*makeit->second);//implement
+//    if (!it->second->respReady())
+//        it->second->setResponse(HTTP_Answer::ft_answtostr(it->second->getAnsw_struct()));
+    it->second->setResponse(DEF_RESPONSE);
     it->second->reqClear();
 }
 

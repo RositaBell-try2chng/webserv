@@ -9,11 +9,11 @@
 #include "./request_parse/HTTP_Answer.hpp"
 
 
-int main(int argc, char **argv)
+int main(int argc, char **argv, char **env)
 {
     signal(SIGTERM, MainClass::exitHandler);
     Logger::putMsg(DELIMITER_START);
-	MainClass::doIt(argc, argv);
+	MainClass::doIt(argc, argv, env);
     Logger::putMsg(DELIMITER_END);
     MainClass::exitHandler(0);
 }

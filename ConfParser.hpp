@@ -24,13 +24,13 @@ private:
     static bool                     fillServParam(std::string &src, std::map<std::string, std::string> &paramS, std::vector<std::string> &ports, std::vector<std::string> &errPages);
     static bool                     fillLocations(std::map <std::string, std::string> &paramL, std::map <std::string, std::map<std::string, std::string> >  &locations);
 
-    static bool                     checkCorrectHost(std::string &Host);
     static bool                     checkPort(std::string Port, std::vector<std::string> &ports);
 public:
     static bool checkArgs(int args, char **argv);
     static void parseConf(char* arg, Servers** allServers);
     static void splitLine(std::string &src, std::string &dst);
     static void delSpaces(std::string &str);
+    static bool checkCorrectHost(std::string &Host);
 };
 
 #endif

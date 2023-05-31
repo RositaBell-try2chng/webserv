@@ -174,7 +174,12 @@ bool ConfParser::fillLocations(std::map <std::string, std::string> &paramL, std:
 				Logger::putMsg("BAD CONFIG:\nline have no enough words:\n" + line + ' ' + line2, FILE_ERR, ERR);
 				return (false);
             }
-            if (line != "acceptedMethods" && line != "root" && line != "dirListOn" && line != "defFileIfdir" && line != "CGIs" && line != "upload_path" && line != "return") {
+            if (line == "root")
+            {
+                if (line2[line2.length() - 1] != '/')
+                    line2.push_back('/');
+            }
+            if (line != "acceptedMethods" && line != "dirListOn" && line != "defFileIfdir" && line != "CGIs" && line != "upload_path" && line != "return") {
                 Logger::putMsg("BAD PARAM:\n" + line, FILE_ERR, ERR);
 				return (false);
             }
@@ -215,6 +220,8 @@ bool ConfParser::fillServParam(std::string &src, std::map <std::string, std::str
             errPages.push_back(line2);
         else if (line == "host" || line == "server_name" || line == "limitBodySize" || line == "root")
         {
+            if (line == "root" && line2[line2.length() - 1)] != '/')
+                line2.push_back('/');
             if (paramS.find(line) != paramS.end())
             {
                 Logger::putMsg("DOUBLE " + line + " PARAM: " + line2, FILE_ERR, ERR);
@@ -276,6 +283,11 @@ bool ConfParser::getLocations(std::string &src, std::map<std::string, std::strin
 	}
     part1 = src.substr(from, i - from);
     ConfParser::delSpaces(part1);
+    if (part1[part1.length() - 1] != '/')
+    {
+        Logger::putMsg("BAD CONFIG:\nHAVE NO / in end of location.\n" + part1, FILE_ERR, ERR);
+		throw badConfig();
+    }
     from = i + 1;
     i = ConfParser::findCloseBracket(src, i, 1);
     part2 = src.substr(from, i - from);
