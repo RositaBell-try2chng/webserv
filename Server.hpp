@@ -3,6 +3,8 @@
 
 # include "webserv.hpp"
 # include "MainClass.hpp"
+# include "./request_parse/HTTP_Request.hpp"
+# include "./request_parse/HTTP_Answer.hpp"
 
 class Servers;
 
