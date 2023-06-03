@@ -422,3 +422,26 @@ bool ConfParser::checkPort(std::string Port, std::vector<std::string> &ports)
         return (false);
     return (true);
 }
+
+ssize_t ConfParser::strToSSize_t(std::string const &src, ssize_t limit)
+{
+    size_t              i;
+    std::stringstream   ss(src);
+    ssize_t             res;
+
+    for (i = 0; i < src.length(); i++)
+    {
+        if (!std::isdigit(src[i]))
+        {
+            Logger::putMsg("BAD STR in strToSSize_t:\n" + src, FILE_ERR, ERR);
+            return (-1);
+        }
+    }
+    ss >> res;
+    if (res > limit)
+    {
+        Logger::putMsg("BAD STR in strToSSize_t:\ntoo large value:\n" + src, FILE_ERR, ERR);
+        return (-1);
+    }
+    return (res);
+}

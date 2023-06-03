@@ -5,8 +5,10 @@
 # include "MainClass.hpp"
 # include "./request_parse/HTTP_Request.hpp"
 # include "./request_parse/HTTP_Answer.hpp"
+# include "CGI.hpp"
 
 class Servers;
+class CGI;
 
 typedef struct s_loc
 {
@@ -42,6 +44,7 @@ private:
 	//conf
 	std::string	host;
 	std::string	port;
+	ssize_t     maxLimitBodiSize;
 
 	//req/resp
 	std::string		request;
@@ -49,11 +52,10 @@ private:
 
 	std::string		response;
 	HTTP_Answer		answ_struct;
-	bool			responseReadyFlg;
+	int				Stage;
 
-	//cgi status
-	bool		cgiConnectionFlg;
-	pid_t		childPid;
+	//CGIs
+	std::map<pid_t, CGI *>	CGIs;???
 
 	static void		setMethods(t_loc* cur, std::string &src);
 	static void		setCGIs(std::set<std::string> &dst, std::string &src);
@@ -82,15 +84,17 @@ public:
 	HTTP_Answer		const&	getAnsw_struct();
 
 	bool				respReady(); // get responseReadyFlg
-	bool				getCGIsFlg(); // get cgiConnection
+	int					getStage(); // get cgiConnection
 	pid_t				getChPid(); // get childPid
+	ssize_t				getMaxBodySize();
 
 
 	void				setRespReady(bool flg);
-	void				setCGIsFlg(bool flg);
+	void				setStage(int n);
 	void				setAnsw_struct(HTTP_Answer const &src);
 	void				setReq_struct(HTTP_Request const &src);
 	void				setChPid(pid_t pid);
+	void				setMaxBodySize(ssize_t n);
 
 //clears
 	void				reqClear();

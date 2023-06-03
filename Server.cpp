@@ -21,6 +21,7 @@ Server::Server(const std::string& _host, const std::string& _port)
 	this->cgiConnectionFlg = false;
 	this->childPid = 0;
 	this->serv = NULL;
+	this->stage = 0;
 }
 
 //getters
@@ -28,15 +29,17 @@ const std::string & Server::getHost() { return (this->host); }
 const std::string & Server::getPort() { return (this->port); }
 const std::string & Server::getReq() { return (this->request); }
 const std::string & Server::getRes() { return (this->response); }
-bool Server::respReady() { return (this->responseReadyFlg); }
-bool Server::getCGIsFlg() { return (this->cgiConnectionFlg); }
-pid_t Server::getChPid() { return (this->childPid); }
+int					Server::getStage() { return (this->Stage); }
+bool				Server::getCGIsFlg() { return (this->cgiConnectionFlg); }
+pid_t				Server::getChPid() { return (this->childPid); }
+ssize_t				Server::getMaxBodySize() { return (this->maxLimitBodiSize); }
 HTTP_Answer		const& Server::getAnsw_struct() { return (this->answ_struct); }
 HTTP_Request	const& Server::getReq_struct() { return (this->req_struct); }
 
 //setters
-void Server::setRespReady(bool flg) {this->responseReadyFlg = flg;}
+void Server::setStage(int n) {this->responseReadyFlg = n;}
 void Server::setCGIsFlg(bool flg) {this->cgiConnectionFlg = flg;}
+void Server::setMaxBodySize(ssize_t n) {this->maxLimitBodiSize = n;}
 
 void Server::setAnsw_struct(HTTP_Answer const &src)
 {
@@ -111,6 +114,7 @@ Server*	Server::clone() const
 
 	res = new Server(this->host, this->port);
 	res->serv = Server::cloneServList(this->serv);
+	res->maxLimitBodiSize = this->maxLimitBodiSize;
 	return (res);
 }
 

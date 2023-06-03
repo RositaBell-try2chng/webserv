@@ -245,7 +245,7 @@ void MainClass::closeConnection(std::map<int, Server *>::iterator &it)
 void MainClass::handleRequest(std::map<int, Server *>::iterator &it)
 {
     Logger::putMsg(it->second->getReq(), FILE_REQ, REQ);
-//    it->second->setReq_struct(HTTP_Request::ft_strtoreq(it->second->getReq(), it->second->serv->limitCLientBodySize));
+//    it->second->setReq_struct(HTTP_Request::ft_strtoreq(it->second->getReq(), it->second->serv->getMaxBodySize()));
 //    it->second->setAnsw_struct(HTTP_Answer::ft_reqtoansw(it->second->getReq_struct()));
     // if (it->second->getCGIsFlg())
     //     MainClass::startCGI(*makeit->second);//implement

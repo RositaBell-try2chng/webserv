@@ -87,6 +87,8 @@ void    Servers::createServer(std::string const &host, std::string const &port, 
 {
     Server      tmp(host, port);
     t_listen    all;
+    std::map<std::string, std::string>::iterator it;
+    ssize_t     SizeMax;
 
 	tmp.setServList(S, L, SN, E);
     bzero(&all, sizeof(all));
@@ -109,6 +111,18 @@ void    Servers::createServer(std::string const &host, std::string const &port, 
 		freeaddrinfo(all.info);
 		throw exceptionErrno();
 	}
+    it = S.find("limitBodySize");
+    if (it == S.end())
+        tmp.setMaxBodySize(-1);
+    else
+    {
+        SizeMax = ConfParser::strToSSize_t(it->second, 100000);
+        if (SizeMax == -1)
+            throw badConfig();
+        else
+            tmp.setMaxBodySize(SizeMax);
+    }
+        
     this->addConnection(all.sockFd, tmp, true);
     freeaddrinfo(all.info);
 }
@@ -165,11 +179,22 @@ void Servers::addServers(std::map<std::string, std::string> &S, std::map <std::s
 void Servers::addToConnection(int fd, std::map<std::string, std::string> &S, std::map<std::string, std::map<std::string, std::string> > &L, std::vector<std::string> &SN,
 						   std::vector<std::string> &E)
 {
-	std::vector<std::string>::iterator it;
-	Server *dst;
-	t_serv *cur;
+    std::map<std::string, std::string>::iterator    it2;
+    ssize_t                                         SizeMax;
+	std::vector<std::string>::iterator              it;
+	Server                                          *dst;
+	t_serv                                          *cur;
 
 	dst = this->lst.find(fd)->second;
+    it2 = S.find("limitBodySize");
+    if (it2 != S.end())
+    {
+        SizeMax = ConfParser::strToSSize_t(it->second, 100000);
+        if (SizeMax == -1)
+            throw badConfig();
+        else if (SizeMax > dst->getMaxBodySize())
+            dst->setMaxBodySize(SizeMax);
+    }
 	it = SN.begin();
 	while (it != SN.end())
 	{

@@ -26,11 +26,12 @@ private:
 
     static bool                     checkPort(std::string Port, std::vector<std::string> &ports);
 public:
-    static bool checkArgs(int args, char **argv);
-    static void parseConf(char* arg, Servers** allServers);
-    static void splitLine(std::string &src, std::string &dst);
-    static void delSpaces(std::string &str);
-    static bool checkCorrectHost(std::string &Host);
+    static bool     checkArgs(int args, char **argv);
+    static void     parseConf(char* arg, Servers** allServers);
+    static void     splitLine(std::string &src, std::string &dst);
+    static void     delSpaces(std::string &str);
+    static bool     checkCorrectHost(std::string &Host);
+    static ssize_t  strToSSize_t(std::string const& src, ssize_t limit);
 };
 
 #endif
