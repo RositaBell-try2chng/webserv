@@ -476,3 +476,27 @@ void Server::setCGIs(std::set<std::string> &dst, std::string &src)
 	}
 }
 
+std::string const&	Server::getChunk() { return (this->chunk); }
+size_t		const&	Server::getSizeChunk() { return (this->chunkSize); }
+
+bool	addToChunk(std::string &src)
+{
+	std::stringstream sSRC(src);
+	std::stringstream sLine;
+	std::string line;
+	size_t size;
+
+	std::getline(sSrc, line);
+	if (line.empty())
+		return (false);
+	if (line == "0")
+		return (this->endOfChunks());
+	ConfParser::delSpaces(line);
+	sLine << line;
+	sLine >> size;
+	line.clear();
+	sLine >> line;
+	if (size == 0 || !line.empty())
+		return (false);
+	
+}

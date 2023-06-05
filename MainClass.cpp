@@ -79,52 +79,106 @@ void MainClass::mainLoop()
     timeval                 timeout;
     fd_set                  readFds;
     fd_set                  writeFds;
-    int                     selRes;
 
     timeout.tv_sec = 15;//fix me: возможно менять динамически когда появляется запрос к cgi и нужно ждать ответ
     timeout.tv_usec = 0;
     while (true)
     {
-        //fix me add 2.1 проверяем наличие готовых ответов от cgi. если есть - добавляем их в fd для записи
+        //2.0 clean sets
         FD_ZERO(&readFds);
         FD_ZERO(&writeFds);
         maxFd = -1;
         //добавляем использующиеся сокеты
         for (std::map<int, Server*>::iterator it = allServers->getConnections().begin(); it != allServers->getConnections().end(); it++)
         {
-            if (it->second->respReady()) //если ответ готов добавляем
-                FD_SET(it->first, &writeFds);
-            else
-                FD_SET(it->first, &readFds);
-            maxFd = it->first;
-        }
-        //добавляем слушающие сокеты
-        for (std::map<int, Server*>::iterator it = allServers->getConnections(true).begin(); it != allServers->getConnections(true).end(); it++)
-        {
-            FD_SET(it->first, &readFds);
-            if (maxFd < it->first)
-                maxFd = it->first;
-        }
-        //select ловим готовые
-        selRes = select(maxFd + 1, &readFds, &writeFds, NULL, &timeout);
-        if (selRes <= 0) //либо ошибка либо готовых пока нет// идем на новый заход
-        {
-            if (selRes < 0)//ошибка селекта
+            switch (it->second->getStage())
             {
-                Logger::putMsg(strerror(errno), FILE_ERR, ERR);
-                std::cout << "bad select!!!\n";
+                case 0: { MainClass::addToSet(it->first, maxFd, &readFds); break; }
+                case 1: { MainClass::addToSet(it->first, maxFd, &readFds); break; }
+                case 2: { MainClass::addToSet(it->first, maxFd, &readFds); break; }
+                case 3: { MainClass::addToSet(it->first, maxFd, &readFds); break; }
+                case 4: { MainClass::addToSet(it->first, maxFd, &readFds); break; }
+                case 10:  { MainClass::addToSet(it->first, maxFd, &writeFds); break; }
+                case 11: { MainClass::addToSet(it->first, maxFd, &writeFds); break; }
+                case 12: { MainClass::addToSet(it->first, maxFd, &writeFds); break; }
+                case 20: {break;} //fix me: add fdPipeOut if need
+                case 21: {break;} //nothing to do
+                case 22: {break;} //nothing to do
+                case 23: {break;} //fix me: add fdPipeIN
+                default:
+                {
+                    if (it->second->getStage() >= 30 && it->second->getStage() < 40)
+                        ;
+                    else
+                        std::cout << it->first << "has incorrect stage!\n";
+                    break;
+                }
             }
-            continue;
         }
-        //проверяем новые подключения // есть -> идем на новый заход чтобы быстро разгрузить всю очередь
-//        if (acceptConnections(&readFds))
-//            continue;
+        //2.1.2 add listen fds
+        for (std::map<int, Server*>::iterator it = allServers->getConnections(true).begin(); it != allServers->getConnections(true).end(); it++)
+            MainClass::addToSet(it->first, maxFd, &readFds);
+        //select ловим готовые
+        switch (select(maxFd + 1, &readFds, &writeFds, NULL, &timeout))
+        {
+            case -1: { //select error
+                Logger::putMsg(strerror(errno), FILE_ERR, ERR); 
+                std::cout << "bad select!!!\n";
+                continue; //fix me: need to continue or exit from server?
+            }
+            case 0: {continue;} //timeout. try another select
+            default: {break;} //have somthing to do
+        }
         acceptConnections(&readFds);
         //проверяем готовых для записи/чтения
         std::map<int, Server*>::iterator itR = allServers->getConnections().begin();
         while (itR != allServers->getConnections().end())
         {
+            switch (it->second->getStage())
+            {
+                case 0: { 
+                    if (FD_ISSET(itR->first, &readFds))
+                        MainClass::readFirstRequest(itR);
+                    break;
+                }
+                case 1: {
+                    if (FD_ISSET(itR->first, &readFds))
+                        MainClass::readFirstRequest(itR);
+                    break;
+                }
+                case 2: {
+                    if (FD_ISSET(itR->first, &readFds))
+                        MainClass::readNextPartRequest(itR);
+                    break;
+                }
+                case 3: {
+                    if (FD_ISSET(itR->first, &readFds))
+                        MainClass::readNextChunkRequest(itR);
+                    break;
+                }
+                case 4: {
+                    if (FD_ISSET(itR->first, &readFds))
+                        MainClass::readNextChunkPartRequest(itR);
+                    break;
+                }
+                case 10: { break; }
+                case 11: { break; }
+                case 12: { break; }
+                case 20: {break;} //fix me: add fdPipeOut if need
+                case 21: {break;} //nothing to do
+                case 22: {break;} //nothing to do
+                case 23: {break;} //fix me: add fdPipeIN
+                default:
+                {
+                    if (it->second->getStage() >= 30 && it->second->getStage() < 40)
+                        ;
+                    else
+                        std::cout << it->first << "has incorrect stage!\n";
+                    break;
+                }
+            }
             //only one read/write per client per select
+            //fix me: add checking FD_PIPE IN/OUT
             if (FD_ISSET(itR->first, &writeFds))
                 MainClass::sendResponse(itR);
             else if (FD_ISSET(itR->first, &readFds))
@@ -175,23 +229,94 @@ void MainClass::readRequests(std::map<int, Server *>::iterator &it)
         }
         case 0: //нечего читать
         {
-            if (MainClass::checkCont(it)) //проверяем кейс если запрос уже был считан полностью но еще не обработан при res == BUF_SIZE
-                break;
             Logger::putMsg(std::string("User closed connection ", it->first));
             MainClass::closeConnection(it);
             return;
         }
+        case BUF_SIZE:
+        {
+            it->second->addToReq(buf);
+            it->second->setStage(2);
+            break;
+        }
         default:
         {
             it->second->addToReq(buf);
-            if (recvRes == BUF_SIZE) //возможно есть еще что считать
-                break;
-            MainClass::handleRequest(it);//обработка запроса
+            it->second->setStage(30);
+            MainClass::handleRequest(it);
         }
     }
     it++;
 }
 
+void MainClass::readNextPartRequest(std::map<int, Server *>::iterator &it)
+{
+    ssize_t	recvRes;
+    char    buf[BUF_SIZE];
+
+    std::cout << "RECV next part request from: " << it->first << std::endl;
+    recvRes = recv(it->first, buf, BUF_SIZE, 0);
+    switch (recvRes)
+    {
+        case -1: //error recv
+        {
+            Logger::putMsg(std::string("error while recv ") + std::string(strerror(errno)), it->first, FILE_ERR, ERR);
+            MainClass::closeConnection(it);
+            return;
+        }
+        case 0: //nothing to read
+        {
+            it->second->setStage(30);
+            MainClass::handleRequest(it);
+        }
+        case BUF_SIZE:
+        {
+            it->second->addToReq(buf);
+            break;
+        }
+        default:
+        {
+            it->second->addToReq(buf);
+            it->second->setStage(30);
+            MainClass::handleRequest(it);
+        }
+    }
+    it++;
+}
+
+void MainClass::readNextChunkRequest(std::map<int, Server *>::iterator &it)
+{
+    ssize_t	recvRes;
+    char    buf[BUF_SIZE];
+
+    std::cout << "RECV next chunk request from: " << it->first << std::endl;
+    recvRes = recv(it->first, buf, BUF_SIZE, 0);
+    switch (recvRes)
+    {
+        case -1: //error recv
+        {
+            Logger::putMsg(std::string("error while recv ") + std::string(strerror(errno)), it->first, FILE_ERR, ERR);
+            MainClass::closeConnection(it);
+            return;
+        }
+        case 0: //nothing to read
+        {
+            Logger::putMsg(std::string("Waiting next chunk"), FILE_ERR, ERR);
+            //fix me: check timeout
+            return;
+        }
+        case BUF_SIZE:
+        {
+            
+        }
+        default:
+        {
+            if ()
+
+        }
+    }
+    it++;
+}
 
 void MainClass::sendResponse(std::map<int, Server *>::iterator &it)
 {
@@ -244,7 +369,7 @@ void MainClass::closeConnection(std::map<int, Server *>::iterator &it)
 
 void MainClass::handleRequest(std::map<int, Server *>::iterator &it)
 {
-    Logger::putMsg(it->second->getReq(), FILE_REQ, REQ);
+   // Logger::putMsg(it->second->getReq(), FILE_REQ, REQ);
 //    it->second->setReq_struct(HTTP_Request::ft_strtoreq(it->second->getReq(), it->second->serv->getMaxBodySize()));
 //    it->second->setAnsw_struct(HTTP_Answer::ft_reqtoansw(it->second->getReq_struct()));
     // if (it->second->getCGIsFlg())
@@ -273,4 +398,11 @@ void MainClass::exitHandler(int sig)
         std::cout << "EXCEPTION exit. check LOGS\n";
     system("leaks webserv");
     exit(0);
+}
+
+void addToSet(int fd, int &maxFd, fd_set *dst)
+{
+    FD_SET(fd, dst);
+    if (fd > maxFd)
+        maxFd = fd;
 }

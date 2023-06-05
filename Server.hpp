@@ -49,13 +49,15 @@ private:
 	//req/resp
 	std::string		request;
 	HTTP_Request	req_struct;
+	size_t			chunkSize;
+	std::string		chunk;
 
 	std::string		response;
 	HTTP_Answer		answ_struct;
 	int				Stage;
 
 	//CGIs
-	std::map<pid_t, CGI *>	CGIs;???
+	std::map<pid_t, CGI *>	CGIs;//fix me???
 
 	static void		setMethods(t_loc* cur, std::string &src);
 	static void		setCGIs(std::set<std::string> &dst, std::string &src);
@@ -79,13 +81,13 @@ public:
 
 	std::string		const&	getReq();
 	HTTP_Request	const&	getReq_struct();
+	std::string		const&	getChunk();
+	size_t			const&	getSizeChunk();
 
 	std::string		const&	getRes();
 	HTTP_Answer		const&	getAnsw_struct();
 
-	bool				respReady(); // get responseReadyFlg
-	int					getStage(); // get cgiConnection
-	pid_t				getChPid(); // get childPid
+	int					getStage();
 	ssize_t				getMaxBodySize();
 
 
@@ -95,6 +97,7 @@ public:
 	void				setReq_struct(HTTP_Request const &src);
 	void				setChPid(pid_t pid);
 	void				setMaxBodySize(ssize_t n);
+	bool				addToChunk(std::string &src);//imp
 
 //clears
 	void				reqClear();

@@ -20,7 +20,9 @@ private:
     static Servers* allServers;
     static void     mainLoop();
     static bool     acceptConnections(fd_set *readFd);
-    static void     readRequests(std::map<int, Server*>::iterator &it);
+    static void     readFirstRequests(std::map<int, Server*>::iterator &it);
+    static void     readNextPartRequest(std::map<int, Server*>::iterator &it);
+    static void     readNextChunkRequest(std::map<int, Server*>::iterator &it);
     static void     sendResponse(std::map<int, Server*>::iterator &it);
     static bool     checkCont(std::map<int, Server *>::iterator &it);
     static void     handleRequest(std::map<int, Server *>::iterator &it);
@@ -31,6 +33,7 @@ public:
     static std::set<int>    writeCGI;
     static void     doIt(int args, char** argv, char** env);
     static void     exitHandler(int sig);
+    static void     addToSet(int fd, int &maxFd, fd_set *dst);
 };
 
 #endif
