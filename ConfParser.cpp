@@ -445,3 +445,16 @@ ssize_t ConfParser::strToSSize_t(std::string const &src, ssize_t limit)
     }
     return (res);
 }
+
+std::string ConfParser::toString(std::string::size_type src)
+{
+    char c;
+
+    if (src < 10)
+    {
+        c = src + '0';
+        return (std::string(&c, 1));
+    }
+    c = (src % 10) + '0';
+    return(ConfParser::toString(src / 10) + std::string(&c, 1));
+}

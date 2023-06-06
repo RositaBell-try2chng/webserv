@@ -95,9 +95,6 @@ void MainClass::mainLoop()
             {
                 case 0: { MainClass::addToSet(it->first, maxFd, &readFds); break; }
                 case 1: { MainClass::addToSet(it->first, maxFd, &readFds); break; }
-                case 2: { MainClass::addToSet(it->first, maxFd, &readFds); break; }
-                case 3: { MainClass::addToSet(it->first, maxFd, &readFds); break; }
-                case 4: { MainClass::addToSet(it->first, maxFd, &readFds); break; }
                 case 10:  { MainClass::addToSet(it->first, maxFd, &writeFds); break; }
                 case 11: { MainClass::addToSet(it->first, maxFd, &writeFds); break; }
                 case 12: { MainClass::addToSet(it->first, maxFd, &writeFds); break; }
@@ -138,27 +135,12 @@ void MainClass::mainLoop()
             {
                 case 0: { 
                     if (FD_ISSET(itR->first, &readFds))
-                        MainClass::readFirstRequest(itR);
+                        MainClass::readRequest(itR);
                     break;
                 }
                 case 1: {
                     if (FD_ISSET(itR->first, &readFds))
-                        MainClass::readFirstRequest(itR);
-                    break;
-                }
-                case 2: {
-                    if (FD_ISSET(itR->first, &readFds))
-                        MainClass::readNextPartRequest(itR);
-                    break;
-                }
-                case 3: {
-                    if (FD_ISSET(itR->first, &readFds))
                         MainClass::readNextChunkRequest(itR);
-                    break;
-                }
-                case 4: {
-                    if (FD_ISSET(itR->first, &readFds))
-                        MainClass::readNextChunkPartRequest(itR);
                     break;
                 }
                 case 10: { break; }
@@ -212,7 +194,7 @@ bool MainClass::acceptConnections(fd_set *readFds)
     return (flgConnection);
 }
 
-void MainClass::readRequests(std::map<int, Server *>::iterator &it)
+void MainClass::readRequest(std::map<int, Server *>::iterator &it)
 {
     ssize_t	recvRes;
     char    buf[BUF_SIZE];
@@ -233,12 +215,6 @@ void MainClass::readRequests(std::map<int, Server *>::iterator &it)
             MainClass::closeConnection(it);
             return;
         }
-        case BUF_SIZE:
-        {
-            it->second->addToReq(buf);
-            it->second->setStage(2);
-            break;
-        }
         default:
         {
             it->second->addToReq(buf);
@@ -249,42 +225,7 @@ void MainClass::readRequests(std::map<int, Server *>::iterator &it)
     it++;
 }
 
-void MainClass::readNextPartRequest(std::map<int, Server *>::iterator &it)
-{
-    ssize_t	recvRes;
-    char    buf[BUF_SIZE];
-
-    std::cout << "RECV next part request from: " << it->first << std::endl;
-    recvRes = recv(it->first, buf, BUF_SIZE, 0);
-    switch (recvRes)
-    {
-        case -1: //error recv
-        {
-            Logger::putMsg(std::string("error while recv ") + std::string(strerror(errno)), it->first, FILE_ERR, ERR);
-            MainClass::closeConnection(it);
-            return;
-        }
-        case 0: //nothing to read
-        {
-            it->second->setStage(30);
-            MainClass::handleRequest(it);
-        }
-        case BUF_SIZE:
-        {
-            it->second->addToReq(buf);
-            break;
-        }
-        default:
-        {
-            it->second->addToReq(buf);
-            it->second->setStage(30);
-            MainClass::handleRequest(it);
-        }
-    }
-    it++;
-}
-
-void MainClass::readNextChunkRequest(std::map<int, Server *>::iterator &it)
+void MainClass::readNextChunk(std::map<int, Server *>::iterator &it)
 {
     ssize_t	recvRes;
     char    buf[BUF_SIZE];
@@ -301,18 +242,25 @@ void MainClass::readNextChunkRequest(std::map<int, Server *>::iterator &it)
         }
         case 0: //nothing to read
         {
-            Logger::putMsg(std::string("Waiting next chunk"), FILE_ERR, ERR);
-            //fix me: check timeout
+            if (MainClass::checkTimout(it->second))//fix me: implement this
+            {
+                Logger::putMsg(std::string("waiting chunk timeout"), it->first, FILE_ERR, ERR);
+                MainClass::closeConnection(it);
+                return;
+            }
+            else
+                Logger::putMsg(std::string("Waiting next chunk"), it->first);
             return;
-        }
-        case BUF_SIZE:
-        {
-            
         }
         default:
         {
-            if ()
-
+            buf[recvRes] = 0;
+            if (!this->addToChunk(std::string(buf)))
+            {
+                Logger::putMsg(std::string("incorrect chunk: ") + std::string(buf), it->first, FILE_ERR, ERR);
+                MainClass::closeConnection(it);
+                return;
+            }
         }
     }
     it++;
@@ -320,10 +268,27 @@ void MainClass::readNextChunkRequest(std::map<int, Server *>::iterator &it)
 
 void MainClass::sendResponse(std::map<int, Server *>::iterator &it)
 {
-    ssize_t	res;
-	size_t	len;
-
     std::cout << "SEND response to: " << it->first << std::endl;
+    switch (this->getStage())
+    {
+        case 10: {MainClass::firstSend(it); break;}
+        case 11: {MainClass::sendNextChunk(it, true); break;}
+        case 12: {MainClass::sendNextChunk(it, false); break;}
+        default: {Logger::putMsg(std::string("BAD STAGE IN SEND"), FILE_ERR, ERR); break;}
+    }
+    itHead = it->second->getAnsw_struct.headers.find("Transfer-Encoding");
+    if (itHead != it->second->getAnsw_struct.headers.end() && itHead->second == "chunked")
+    {
+        std::string toSend;
+
+        
+
+        
+    }
+}
+
+void MainClass::firstSend(std::map<int, Server *>::iterator &it)
+{
     if (it->second->getRes().empty()) // nothing to send
     {
         Logger::putMsg(std::string("NOTHING TO SEND"), FILE_ERR, ERR);
@@ -331,9 +296,7 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it)
         it++;
         return;
     }
-    len = it->second->getRes().length();
-    res = send(it->first, it->second->getRes().c_str(), len, 0);
-    switch (res)
+    switch (send(it->first, it->second->getRes().c_str(), it->second->getRes().length(), 0))
     {
         case -1: //error
         {
@@ -344,14 +307,58 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it)
         case 0:
         {
             it++;
+            //fix me: check cnt of trying or timeout
             return;
         }
         default:
         {
-            if (static_cast<size_t>(res) < len) //если отправилось не все, убираем то что не послалось.
-                it->second->resizeResponse(res);
-            else
-                it->second->resClear();
+            it->second->resClear();
+            it++;
+        }
+    }
+}
+
+void MainClass::sendNextChunk(std::map<int, Server *>::iterator &it, bool firstFlg)
+{
+    std::string toSend;
+
+    if (firstFlg)
+    {
+        std::map<std::string, std::string>::iterator    itHead;
+
+        toSend = it->second->getAnsw_struct.version + ' ' + it->second->getAnsw_struct.status_code + ' ' + it->second->getAnsw_struct.reason_phrase + "\r\n\r\n";
+        for (itHead = it->second->getAnsw_struct.headers.begin(); itHead != it->second->getAnsw_struct.headers.end(); itHead++)
+            toSend += itHead->first + ": " + itHead->second + "\r\n";
+        toSend += "\r\n";
+        it->second->setStage(12);
+    }
+    switch (it->second->getAnsw_struct.body.length())
+    {
+        case 0: {toSend += "0"; it->second->resClear(); break;}
+        case 400: {
+            toSend += "400\r\n" + it->second->getAnsw_struct.body.substring(0, 400);
+            it->second->getAnsw_struct.body.erase(0, 400);
+            break;
+        }
+        default: {
+            toSend += ConfParser::toString(it->second->getAnsw_struct.body.length()) + "\r\n" + it->second->getAnsw_struct.body;
+            it->second->getAnsw_struct.body.clear();
+            break;
+        }
+    }
+    
+        
+    switch (send(it->first, it->second->getRes().c_str(), it->second->getRes().length(), 0))
+    {
+        case -1: //error
+        {
+            Logger::putMsg(std::string("error while send ") + std::string(strerror(errno)), it->first, FILE_ERR, ERR);
+            MainClass::closeConnection(it);
+            return;
+        }
+        default:
+        {
+            if ()
             it++;
         }
     }

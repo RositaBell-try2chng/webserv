@@ -48,9 +48,8 @@ private:
 
 	//req/resp
 	std::string		request;
+	//std::string	nextRequest; fix me: need???  if something exists after length body / chunk with size 0;
 	HTTP_Request	req_struct;
-	size_t			chunkSize;
-	std::string		chunk;
 
 	std::string		response;
 	HTTP_Answer		answ_struct;
@@ -81,8 +80,6 @@ public:
 
 	std::string		const&	getReq();
 	HTTP_Request	const&	getReq_struct();
-	std::string		const&	getChunk();
-	size_t			const&	getSizeChunk();
 
 	std::string		const&	getRes();
 	HTTP_Answer		const&	getAnsw_struct();
@@ -97,7 +94,7 @@ public:
 	void				setReq_struct(HTTP_Request const &src);
 	void				setChPid(pid_t pid);
 	void				setMaxBodySize(ssize_t n);
-	bool				addToChunk(std::string &src);//imp
+	bool				addToChunk(std::string src);
 
 //clears
 	void				reqClear();

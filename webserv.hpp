@@ -19,7 +19,7 @@
 
 # define DEF_HOST "127.0.0.1"
 
-# define BUF_SIZE 4096
+# define BUF_SIZE 16384
 
 # define DEF_RESPONSE "HTTP/1.1 200 OK\r\nContent-Length: 13\r\nConnection: close\r\n\r\nHello, world!"
 

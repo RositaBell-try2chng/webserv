@@ -87,7 +87,7 @@ void Server::reqClear() { this->request.clear(); }
 void Server::resClear()
 {
 	this->response.clear();
-	this->responseReadyFlg = false;
+	this->Stage = 0;
 }
 
 void Server::addToReq(const char *src)
@@ -98,7 +98,7 @@ void Server::addToReq(const char *src)
 void Server::setResponse(const std::string &src)
 {
 	this->response = src;
-	this->setRespReady(true);
+	this->Stage = 10;
 }
 
 void Server::resizeResponse(ssize_t res)
@@ -208,7 +208,6 @@ void    Server::clearServ()
 	this->serv = NULL;
 }
 
-//fix me delete reference????
 void Server::setServList(std::map<std::string, std::string> &S, std::map <std::string, std::map<std::string, std::string> > &L, std::vector<std::string> &SN, std::vector<std::string> &E)
 {
 	std::map<std::string, std::string>::iterator itS;
@@ -479,24 +478,51 @@ void Server::setCGIs(std::set<std::string> &dst, std::string &src)
 std::string const&	Server::getChunk() { return (this->chunk); }
 size_t		const&	Server::getSizeChunk() { return (this->chunkSize); }
 
-bool	addToChunk(std::string &src)
+bool	addToChunk(std::string src)
 {
-	std::stringstream sSRC(src);
-	std::stringstream sLine;
-	std::string line;
-	size_t size;
-
-	std::getline(sSrc, line);
-	if (line.empty())
-		return (false);
-	if (line == "0")
-		return (this->endOfChunks());
-	ConfParser::delSpaces(line);
-	sLine << line;
-	sLine >> size;
-	line.clear();
-	sLine >> line;
-	if (size == 0 || !line.empty())
-		return (false);
+	ssize_t		size;
 	
+	while (!src.empty())
+	{
+		size = cutSize(src);
+		if (size < 0)
+			return (false);
+		if (size == 0)
+		{
+			this->setStage(30);
+			return (true);
+		}
+		this->addToReq(src.substring(0, size));
+		src.erase(0, size);
+		if (!src.empty())
+		{
+			if (src.find("\r\n") != 0) //bad delimiter for chunk
+				return (false);
+			src.erase(0, 2);
+		}
+	}
+	return (true);
+}
+
+ssize_t	Server::cutSize(stc::string &src)
+{
+	std::string::size_type	i;
+	std::stringstream		ss;
+	std::string				line;
+	ssize_t					res;
+
+	i = src.find("\r\n");
+	if (i == std::string::npos)
+		return (-1);
+	line = src.substring(0, i);
+	if (line == "0")
+		return (0);
+	ss << line;
+	ss >> res;
+	line.clear();
+	ss >> line;
+	if (res <= 0 || !line.empty())
+		return (-1);
+	src.erase(0, i + 2); // i + \r\n
+	return (res);
 }

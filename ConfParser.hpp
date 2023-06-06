@@ -32,6 +32,7 @@ public:
     static void     delSpaces(std::string &str);
     static bool     checkCorrectHost(std::string &Host);
     static ssize_t  strToSSize_t(std::string const& src, ssize_t limit);
+    static std::string toString(std::string::size_type src);
 };
 
 #endif
