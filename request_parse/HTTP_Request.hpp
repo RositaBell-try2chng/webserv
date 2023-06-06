@@ -11,15 +11,29 @@ struct HTTP_Request
 {
 	private:
 
+		
 
 	public:
+
+		struct ContentType
+		{
+			bool media_type = false;
+
+			std::string 						type;
+			std::string 						subtype;
+			std::map<std::string, std::string>	options;
+		};
 
 		std::string							method;
 		std::string							uri;
 		std::string							version;
 
 		std::map<std::string, std::string>	headers;
-		
+
+		short int	flg_connection;	// 0 - close, 1 - keep alive, 2 - upgrade HTTP version
+		int			content_lngth;	// length of request body in bytes						
+		ContentType	content_type;	// media type of the body of the request
+
 		std::string							body;
 
 		int									answ_code[2];

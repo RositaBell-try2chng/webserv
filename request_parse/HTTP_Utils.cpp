@@ -1,6 +1,26 @@
 #include "HTTP_Utils.hpp"
 #include "../Logger.hpp"
 
+std::pair<std::string, std::string> ft_strtopair(std::string str, char dlmtr){
+
+	std::string		key;
+	std::string		value;
+
+	int	end = str.size() - 1;
+	int	i;
+
+	// Key
+	for (i = 0; i != end && str[i] != dlmtr; ++i)
+		key.push_back(str[i]);
+
+
+	// Value
+	for (++i; i != end; ++i)
+		value.push_back(str[i]);
+
+	return std::make_pair(key, value);
+}
+
 int ft_strtohdrs(std::string raw, int i, int end,
 		std::map<std::string, std::string> *hdrs,
 		std::string *body) {

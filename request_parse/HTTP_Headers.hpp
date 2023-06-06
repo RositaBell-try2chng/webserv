@@ -3,14 +3,15 @@
 
 # include "../webserv.hpp"
 # include "../Logger.hpp"
+# include "HTTP_Utils.hpp"
 # include "HTTP_Request.hpp"
 # include <map>
 
 enum Basic_Headers {    Host,
-                        Something_one,
-                        Something_two,
-                        Something_three,
-                        Something_four,
+                        Connection,
+                        Content_Length,
+                        Content_Type,
+                        Date,
                         Something_five,
                         Something_six       };
 
