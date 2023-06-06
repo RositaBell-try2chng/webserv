@@ -24,15 +24,34 @@ struct HTTP_Request
 			std::map<std::string, std::string>	options;
 		};
 
+		struct Date
+		{
+			std::string	txt_day_of_week;
+			short int	day_of_week;
+
+			short int	day;
+			std::string	txt_month;
+			short int	month;
+			short int	year;
+
+			short int	sec;
+			short int	min;
+			short int	hrs;
+		};
+
 		std::string							method;
 		std::string							uri;
 		std::string							version;
 
 		std::map<std::string, std::string>	headers;
 
-		short int	flg_connection;	// 0 - close, 1 - keep alive, 2 - upgrade HTTP version
+		std::string	host;
+		short int	port;
+		short int	flg_cnnctn = 1;	// 0 - close, 1 - keep alive, 2 - upgrade HTTP version
 		int			content_lngth;	// length of request body in bytes						
 		ContentType	content_type;	// media type of the body of the request
+		Date		date;			// the date and time at which the message was originated
+		short int	flg_te = 0;		// 0 - full, 1 - chunked
 
 		std::string							body;
 

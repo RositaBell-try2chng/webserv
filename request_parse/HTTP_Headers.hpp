@@ -7,16 +7,63 @@
 # include "HTTP_Request.hpp"
 # include <map>
 
-enum Basic_Headers {    Host,
-                        Connection,
-                        Content_Length,
-                        Content_Type,
-                        Date,
-                        Something_five,
-                        Something_six       };
+
+# define MONDAY		"Mon"
+# define TUESDAY	"Tue"
+# define WEDNESDAY	"Wed"
+# define THURSDAY	"Thu"
+# define FRIDAY		"Fri"
+# define SATURDAY	"Sat"
+# define SUNDAY		"Sun"
+
+enum Weekday	{	Monday = 1,
+					Tuesday,
+					Wednesday,
+					Thursday,
+					Friday,
+					Saturday,
+					Sunday,
+					Neverday	};
+
+
+# define JANUARY	"Jan"
+# define FEBRUARY	"Feb"
+# define MARCH		"Mar"
+# define APRIL		"Apr"
+# define MAY		"May"
+# define JUNE		"Jun"
+# define JULY		"Jul"
+# define AUGUST		"Aug"
+# define SEPTEMBER	"Sep"
+# define OCTOBER	"Oct"
+# define NOVEMBER	"Nov"
+# define DECEMBER	"Dec"
+
+enum Month	{	January = 1,
+				February,
+				March,
+				April,
+				May,
+				June,
+				July,
+				August,
+				September,
+				October,
+				November,
+				December,
+				Nevermonth	};
+
+
+enum Basic_Headers	{	Host,
+						Connection,
+						Content_Length,
+						Content_Type,
+						Date,
+						Transfer_Encoding,
+						Something_six	};
+
 
 int     ft_if_basic_hdr(std::string key);
-
 void    ft_headers_parse(std::map<std::string, std::string> hdrs, HTTP_Request req);
 
 #endif
