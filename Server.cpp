@@ -17,11 +17,8 @@ Server::Server(const std::string& _host, const std::string& _port)
 	this->port = _port;
 	this->request = std::string();
 	this->response = std::string();
-	this->responseReadyFlg = false;
-	this->cgiConnectionFlg = false;
-	this->childPid = 0;
 	this->serv = NULL;
-	this->stage = 0;
+	this->Stage = 0;
 }
 
 //getters
@@ -30,15 +27,13 @@ const std::string & Server::getPort() { return (this->port); }
 const std::string & Server::getReq() { return (this->request); }
 const std::string & Server::getRes() { return (this->response); }
 int					Server::getStage() { return (this->Stage); }
-bool				Server::getCGIsFlg() { return (this->cgiConnectionFlg); }
-pid_t				Server::getChPid() { return (this->childPid); }
+const std::string &Server::getChunkToSend() {return this->chunkToSend;}
 ssize_t				Server::getMaxBodySize() { return (this->maxLimitBodiSize); }
-HTTP_Answer		const& Server::getAnsw_struct() { return (this->answ_struct); }
-HTTP_Request	const& Server::getReq_struct() { return (this->req_struct); }
+HTTP_Answer		&Server::getAnsw_struct() { return (this->answ_struct); }
+HTTP_Request	&Server::getReq_struct() { return (this->req_struct); }
 
 //setters
-void Server::setStage(int n) {this->responseReadyFlg = n;}
-void Server::setCGIsFlg(bool flg) {this->cgiConnectionFlg = flg;}
+void Server::setStage(int n) {this->Stage = n;}
 void Server::setMaxBodySize(ssize_t n) {this->maxLimitBodiSize = n;}
 
 void Server::setAnsw_struct(HTTP_Answer const &src)
@@ -60,8 +55,6 @@ void Server::setReq_struct(HTTP_Request const &src)
 	this->req_struct.method = src.method;
 	this->req_struct.uri = src.uri;
 }
-
-void Server::setChPid(pid_t pid) {this->childPid = pid;}
 
 void Server::clearAnsw_struct()
 {
@@ -99,13 +92,6 @@ void Server::setResponse(const std::string &src)
 {
 	this->response = src;
 	this->Stage = 10;
-}
-
-void Server::resizeResponse(ssize_t res)
-{
-	this->response.erase(0, res);
-	if (this->response.empty())
-		this->setRespReady(false);
 }
 
 Server*	Server::clone() const
@@ -463,6 +449,8 @@ void Server::setMethods(t_loc *cur, std::string &src)
 	MainClass::exitHandler(0);
 }
 
+void Server::setChunkToSend(const std::string &src) {this->chunkToSend = src;}
+
 void Server::setCGIs(std::set<std::string> &dst, std::string &src)
 {
 	std::string	line;
@@ -475,16 +463,13 @@ void Server::setCGIs(std::set<std::string> &dst, std::string &src)
 	}
 }
 
-std::string const&	Server::getChunk() { return (this->chunk); }
-size_t		const&	Server::getSizeChunk() { return (this->chunkSize); }
-
-bool	addToChunk(std::string src)
+bool	Server::addToChunk(std::string src)
 {
 	ssize_t		size;
 	
 	while (!src.empty())
 	{
-		size = cutSize(src);
+		size = Server::cutSize(src);
 		if (size < 0)
 			return (false);
 		if (size == 0)
@@ -492,7 +477,7 @@ bool	addToChunk(std::string src)
 			this->setStage(30);
 			return (true);
 		}
-		this->addToReq(src.substring(0, size));
+		this->addToReq(src.substr(0, size).c_str());
 		src.erase(0, size);
 		if (!src.empty())
 		{
@@ -504,7 +489,7 @@ bool	addToChunk(std::string src)
 	return (true);
 }
 
-ssize_t	Server::cutSize(stc::string &src)
+ssize_t	Server::cutSize(std::string &src)
 {
 	std::string::size_type	i;
 	std::stringstream		ss;
@@ -514,7 +499,7 @@ ssize_t	Server::cutSize(stc::string &src)
 	i = src.find("\r\n");
 	if (i == std::string::npos)
 		return (-1);
-	line = src.substring(0, i);
+	line = src.substr(0, i);
 	if (line == "0")
 		return (0);
 	ss << line;

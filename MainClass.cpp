@@ -74,7 +74,7 @@ void MainClass::doIt(int args, char **argv, char **env)
 	//printAllServ(MainClass::allServers);
 }
 
-void MainClass::mainLoop()
+_Noreturn void MainClass::mainLoop()
 {
     timeval                 timeout;
     fd_set                  readFds;
@@ -93,14 +93,14 @@ void MainClass::mainLoop()
         {
             switch (it->second->getStage())
             {
-                case 0: { MainClass::addToSet(it->first, maxFd, &readFds); break; }
+                case 0: //{ MainClass::addToSet(it->first, maxFd, &readFds); break; }
                 case 1: { MainClass::addToSet(it->first, maxFd, &readFds); break; }
-                case 10:  { MainClass::addToSet(it->first, maxFd, &writeFds); break; }
-                case 11: { MainClass::addToSet(it->first, maxFd, &writeFds); break; }
+                case 10:  //{ MainClass::addToSet(it->first, maxFd, &writeFds); break; }
+                case 11: //{ MainClass::addToSet(it->first, maxFd, &writeFds); break; }
                 case 12: { MainClass::addToSet(it->first, maxFd, &writeFds); break; }
-                case 20: {break;} //fix me: add fdPipeOut if need
-                case 21: {break;} //nothing to do
-                case 22: {break;} //nothing to do
+                case 20: //{break;} //fix me: add fdPipeOut if need
+                case 21: //{break;} //nothing to do
+                case 22: //{break;} //nothing to do
                 case 23: {break;} //fix me: add fdPipeIN
                 default:
                 {
@@ -131,7 +131,7 @@ void MainClass::mainLoop()
         std::map<int, Server*>::iterator itR = allServers->getConnections().begin();
         while (itR != allServers->getConnections().end())
         {
-            switch (it->second->getStage())
+            switch (itR->second->getStage())
             {
                 case 0: { 
                     if (FD_ISSET(itR->first, &readFds))
@@ -140,7 +140,7 @@ void MainClass::mainLoop()
                 }
                 case 1: {
                     if (FD_ISSET(itR->first, &readFds))
-                        MainClass::readNextChunkRequest(itR);
+                        MainClass::readNextChunk(itR);
                     break;
                 }
                 case 10: { break; }
@@ -152,10 +152,10 @@ void MainClass::mainLoop()
                 case 23: {break;} //fix me: add fdPipeIN
                 default:
                 {
-                    if (it->second->getStage() >= 30 && it->second->getStage() < 40)
+                    if (itR->second->getStage() >= 30 && itR->second->getStage() < 40)
                         ;
                     else
-                        std::cout << it->first << "has incorrect stage!\n";
+                        std::cout << itR->first << "has incorrect stage!\n";
                     break;
                 }
             }
@@ -164,7 +164,7 @@ void MainClass::mainLoop()
             if (FD_ISSET(itR->first, &writeFds))
                 MainClass::sendResponse(itR);
             else if (FD_ISSET(itR->first, &readFds))
-                MainClass::readRequests(itR); //считываем запросы 2.4
+                MainClass::readRequest(itR); //считываем запросы 2.4
             else//it меняем в readRequest и sendResponse.
                 itR++;
         }
@@ -255,7 +255,7 @@ void MainClass::readNextChunk(std::map<int, Server *>::iterator &it)
         default:
         {
             buf[recvRes] = 0;
-            if (!this->addToChunk(std::string(buf)))
+            if (!it->second->addToChunk(std::string(buf)))
             {
                 Logger::putMsg(std::string("incorrect chunk: ") + std::string(buf), it->first, FILE_ERR, ERR);
                 MainClass::closeConnection(it);
@@ -269,21 +269,13 @@ void MainClass::readNextChunk(std::map<int, Server *>::iterator &it)
 void MainClass::sendResponse(std::map<int, Server *>::iterator &it)
 {
     std::cout << "SEND response to: " << it->first << std::endl;
-    switch (this->getStage())
+
+    switch (it->second->getStage())
     {
         case 10: {MainClass::firstSend(it); break;}
         case 11: {MainClass::sendNextChunk(it, true); break;}
         case 12: {MainClass::sendNextChunk(it, false); break;}
         default: {Logger::putMsg(std::string("BAD STAGE IN SEND"), FILE_ERR, ERR); break;}
-    }
-    itHead = it->second->getAnsw_struct.headers.find("Transfer-Encoding");
-    if (itHead != it->second->getAnsw_struct.headers.end() && itHead->second == "chunked")
-    {
-        std::string toSend;
-
-        
-
-        
     }
 }
 
@@ -322,32 +314,46 @@ void MainClass::sendNextChunk(std::map<int, Server *>::iterator &it, bool firstF
 {
     std::string toSend;
 
-    if (firstFlg)
+	//if first send of chunk add head of response
+    if (firstFlg && it->second->getChunkToSend().empty())
     {
         std::map<std::string, std::string>::iterator    itHead;
 
-        toSend = it->second->getAnsw_struct.version + ' ' + it->second->getAnsw_struct.status_code + ' ' + it->second->getAnsw_struct.reason_phrase + "\r\n\r\n";
-        for (itHead = it->second->getAnsw_struct.headers.begin(); itHead != it->second->getAnsw_struct.headers.end(); itHead++)
+        toSend = it->second->getAnsw_struct().version + ' ' + it->second->getAnsw_struct().status_code + ' ' + it->second->getAnsw_struct().reason_phrase + "\r\n\r\n";
+        for (itHead = it->second->getAnsw_struct().headers.begin(); itHead != it->second->getAnsw_struct().headers.end(); itHead++)
             toSend += itHead->first + ": " + itHead->second + "\r\n";
         toSend += "\r\n";
         it->second->setStage(12);
     }
-    switch (it->second->getAnsw_struct.body.length())
-    {
-        case 0: {toSend += "0"; it->second->resClear(); break;}
-        case 400: {
-            toSend += "400\r\n" + it->second->getAnsw_struct.body.substring(0, 400);
-            it->second->getAnsw_struct.body.erase(0, 400);
-            break;
-        }
-        default: {
-            toSend += ConfParser::toString(it->second->getAnsw_struct.body.length()) + "\r\n" + it->second->getAnsw_struct.body;
-            it->second->getAnsw_struct.body.clear();
-            break;
-        }
-    }
-    
-        
+	//add chunk size and chunk body
+	if (it->second->getChunkToSend().empty())
+	{
+		switch (it->second->getAnsw_struct().body.length())
+		{
+			case 0:
+			{
+				toSend += "0";
+				it->second->resClear();
+				break;
+			}
+			default:
+			{
+				if (it->second->getAnsw_struct().body.length() > 400)
+				{
+					toSend += "400\r\n" + it->second->getAnsw_struct().body.substr(0, 400);
+					it->second->getAnsw_struct().body.erase(0, 400);
+					break;
+				} else
+				{
+					toSend += ConfParser::toString(it->second->getAnsw_struct().body.length()) + "\r\n" + it->second->getAnsw_struct().body;
+					it->second->getAnsw_struct().body.clear();
+					break;
+				}
+			}
+		}
+	}
+	else
+		toSend = it->second->getChunkToSend();
     switch (send(it->first, it->second->getRes().c_str(), it->second->getRes().length(), 0))
     {
         case -1: //error
@@ -356,12 +362,22 @@ void MainClass::sendNextChunk(std::map<int, Server *>::iterator &it, bool firstF
             MainClass::closeConnection(it);
             return;
         }
+		case 0:
+		{
+			//fix me: check count or timeout
+			Logger::putMsg("send next chunk failed.", it->first, FILE_ERR, ERR);
+			break;
+		}
         default:
         {
-            if ()
-            it++;
+			if (toSend == "0")
+				it->second->setStage(0);
+			toSend.clear();
+			break;
         }
     }
+	it->second->setChunkToSend(toSend);
+	it++;
 }
 
 void MainClass::closeConnection(std::map<int, Server *>::iterator &it)
@@ -385,14 +401,6 @@ void MainClass::handleRequest(std::map<int, Server *>::iterator &it)
 //        it->second->setResponse(HTTP_Answer::ft_answtostr(it->second->getAnsw_struct()));
     it->second->setResponse(DEF_RESPONSE);
     it->second->reqClear();
-}
-
-bool MainClass::checkCont(std::map<int, Server *>::iterator &it)
-{
-    if (it->second->getReq().empty())
-        return (false);
-    MainClass::handleRequest(it);
-    return (true);
 }
 
 void MainClass::exitHandler(int sig)

@@ -52,6 +52,7 @@ private:
 	HTTP_Request	req_struct;
 
 	std::string		response;
+	std::string		chunkToSend;
 	HTTP_Answer		answ_struct;
 	int				Stage;
 
@@ -63,8 +64,9 @@ private:
 	static void		fillErrorPages(std::vector<std::string> &E, t_serv *cur);
 	static void		setRedirect(t_loc *cur, std::string src);
 
+
+	static ssize_t	cutSize(std::string &src);
 //clears
-	
 	static t_serv*	cloneServList(t_serv const *src);
 	static t_loc*	cloneLocList(t_loc const *src);
 	static void		clearLocation(t_loc **loc);
@@ -79,21 +81,21 @@ public:
 	std::string 	const&	getPort();
 
 	std::string		const&	getReq();
-	HTTP_Request	const&	getReq_struct();
+	HTTP_Request	&		getReq_struct();
 
 	std::string		const&	getRes();
-	HTTP_Answer		const&	getAnsw_struct();
+	HTTP_Answer		&		getAnsw_struct();
+	std::string		const&	getChunkToSend();
 
 	int					getStage();
 	ssize_t				getMaxBodySize();
 
 
-	void				setRespReady(bool flg);
 	void				setStage(int n);
 	void				setAnsw_struct(HTTP_Answer const &src);
 	void				setReq_struct(HTTP_Request const &src);
-	void				setChPid(pid_t pid);
 	void				setMaxBodySize(ssize_t n);
+	void				setChunkToSend(std::string const &src);
 	bool				addToChunk(std::string src);
 
 //clears
@@ -103,6 +105,7 @@ public:
 	void				clearReq_struct();
 
 	void				addToReq(char const* src);
+	bool				addToChunk(std::string src);
 	void				setResponse(std::string const& src);
 	void				resizeResponse(ssize_t res);
 

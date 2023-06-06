@@ -32,7 +32,7 @@ Stage - поле внутри класса Server, показывающий те
     2.0 чистим readset и writeset
     2.1 в зависимости от stage добавляем fd в readset/writeset
         2.1.1 идем по всем используемым подключениям проверяем stage
-            2.1.1.1 stage 0 - добавляем fdKey в readset
+            2.1.1.1 stage 0/1 - добавляем fdKey в readset
                     stage 10/11/12 - добавляем fdKey в writeset
                     stage 20 - добавляем fdPipeOut в writeset
                     stage 23 - добавляем fdPipeIN в readset
@@ -44,7 +44,7 @@ SELECT
     2.3 идем циклом по используемым fd:
         2.3.1 если fdKey в readset:
             2.3.1.1 если resRecv == -1 проверяем stage:
-                        // 0/1 - Закрываем connection
+                        // 0/1 Закрываем connection
             2.3.1.2 если resRecv == 0 проверяем stage:
                         // 0 - Закрываем connection
                         // 1 - Закрываем если таймаут
