@@ -179,7 +179,7 @@ bool ConfParser::fillLocations(std::map <std::string, std::string> &paramL, std:
                 if (line2[line2.length() - 1] != '/')
                     line2.push_back('/');
             }
-            if (line != "acceptedMethods" && line != "dirListOn" && line != "defFileIfdir" && line != "CGIs" && line != "upload_path" && line != "return") {
+            if (line != "acceptedMethods" && line != "dirListOn" && line != "defFileIfdir" && line != "CGIs" && line != "upload_path" && line != "return" && line != "try_files") {
                 Logger::putMsg("BAD PARAM:\n" + line, FILE_ERR, ERR);
 				return (false);
             }

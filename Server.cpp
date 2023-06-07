@@ -152,6 +152,7 @@ t_loc* Server::cloneLocList(t_loc const *src)
 		currRes->CGIs = src->CGIs;
 		currRes->uploadPath = src->uploadPath;
 		currRes->dirListFlg = src->dirListFlg;
+		currRes->files = src->files;
 		currRes->next = NULL;
 		src = src->next;
 		if (!src)
@@ -356,6 +357,8 @@ t_loc* Server::setLocList(t_serv* s, std::map <std::string, std::map<std::string
 				cur->uploadPath = std::string(it2->second);
 			else if (it2->first == "return")
 				Server::setRedirect(cur, it2->second);
+			else if (it2->firsr == "try_files")
+				Server::setFiles(cur, it2->second);
 			else
 			{
 				Logger::putMsg("BAD LOCATION CONFIG:\n" + it2->first, FILE_ERR, ERR);
@@ -369,6 +372,15 @@ t_loc* Server::setLocList(t_serv* s, std::map <std::string, std::map<std::string
 		cur = cur->next;
 	}
 	return (res);
+}
+
+void Server::setFiles(t_loc *cur, std::string src)
+{
+	std::stringstream ss(src);
+	std::string	word;
+
+	while (ss >> word)
+		cur->files.push_back(word);
 }
 
 void Server::setRedirect(t_loc *cur, std::string line1)

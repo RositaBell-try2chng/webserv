@@ -18,6 +18,7 @@ typedef struct s_loc
 
 	std::string					location;
 	std::map<int, std::string>	redirect;
+	std::vector<std::string>	files;
 	std::string					root;
 	bool			        	dirListFlg;
 	std::string		 			defFileIfDir;
@@ -62,7 +63,8 @@ private:
 	static void		setMethods(t_loc* cur, std::string &src);
 	static void		setCGIs(std::set<std::string> &dst, std::string &src);
 	static void		fillErrorPages(std::vector<std::string> &E, t_serv *cur);
-	static void		setRedirect(t_loc *cur, std::string src);
+	static void		setRedirect(t_loc *cur, std::string line1);
+	static void		setFiles(t_loc *cur, std::string src);
 
 
 	static ssize_t	cutSize(std::string &src);
