@@ -2,7 +2,7 @@
 
 //======	SPECIFIC HEADERS HANDLERS	 ===========================================================
 
-void	ft_hdr_host(std::string &host, short int &port, std::string value) {
+void	ft_hdr_host(std::string &host, std::string &port, std::string value) {
 
 	std::pair<std::string, std::string> full_host = ft_strtopair(value, ':');
 
