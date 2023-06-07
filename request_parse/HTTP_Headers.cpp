@@ -162,16 +162,16 @@ void	ft_headers_parse(std::map<std::string, std::string> hdrs, HTTP_Request &req
 
 	for (std::map<std::string, std::string>::iterator it = hdrs.begin(); it != end; ++it) {
 		switch (ft_if_basic_hdr(it->first)) {
-			case Host:				{ ; break; }
-			case Connection:		{ req.flg_cnnctn = ft_hdr_connection(it->second); break;}
-			case Content_Length:	{ req.content_lngth = ft_hdr_content_length(it->second); break; }
-			case Content_Type:		{ ft_hdr_content_type(req.content_type, it->second); break; }
-			case Date:				{ ft_hdr_date(req.date, it->second); break; }
-			case Transfer_Encoding:	{ req.flg_te = ft_hdr_te(it->second); break; }
+			case Host:				{ ; break ; }
+			case Connection:		{ req.flg_cnnctn = ft_hdr_connection(it->second); break ;}
+			case Content_Length:	{ req.content_lngth = ft_hdr_content_length(it->second); break ; }
+			case Content_Type:		{ ft_hdr_content_type(req.content_type, it->second); break ; }
+			case Date:				{ ft_hdr_date(req.date, it->second); break ; }
+			case Transfer_Encoding:	{ req.flg_te = ft_hdr_te(it->second); break ; }
 
 			default: {
 				Logger::putMsg("Header " + it->first + " is not supported", FILE_WREQ, WREQ);
-				break; 
+				break ; 
 			}
 		}
 	}

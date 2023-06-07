@@ -1,19 +1,5 @@
 #include "HTTP_Answer.hpp"
 
-void HTTP_Answer::ft_get_answ(HTTP_Request req, HTTP_Answer *answ) {
-
-	answ->body = req.body;
-}
-
-// void ft_post_answ(HTTP_Request req, HTTP_Answer *answ) {
-
-// }
-
-// void ft_delete_answ(HTTP_Request req, HTTP_Answer *answ) {
-
-
-// }
-
 std::string HTTP_Answer::ft_answtostr(HTTP_Answer answ) {
 
 	std::string answer_str;

@@ -5,6 +5,7 @@
 # include "../Logger.hpp"
 # include "HTTP_Utils.hpp"
 # include "HTTP_Request.hpp"
+# include "HTTP_Methods.hpp"
 # include "Specific_Codes.hpp"
 # include <map>
 struct HTTP_Request;
@@ -18,11 +19,6 @@ struct HTTP_Answer {
 
 		// Sets answer's reason phrase depends on status code
 		static std::string ft_set_rp(int *status_code);
-
-		// Acts depends on request's method (GET, POST, DELETE)
-		static void ft_get_answ(HTTP_Request req, HTTP_Answer *answ);
-		static void ft_post_answ(HTTP_Request req, HTTP_Answer *answ);
-		static void ft_delete_answ(HTTP_Request req, HTTP_Answer *answ);
 
 	public:
 
