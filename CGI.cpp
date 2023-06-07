@@ -1,134 +1,165 @@
 #include "CGI.hpp"
 
-void CGI::startCGI(Server &src)
+CGI::CGI() 
 {
-    int         fdsBack[2];
-    int         fdsForward[2];
-    
-    if (pipe(fdsForward) == -1)
-    {
-        CGI::CGIsFailed(src, -1, -1, -1, -1);
-        return;
-    }
-    if (pipe(fdsBack) == -1)
-    {
-        CGI::CGIsFailed(src, fdsForward[0], fdsForward[1], -1, -1);
-        return;
-    }
-    //push some into pipe
-    src->setChPid(fork());
-    switch (src->getChPid())
-    {
-        case -1: {CGI::CGIsFailed(src, fdsForward[0], fdsForward[1], fdsBack[0], fdsBack[1]); return;}
-        case 0: {CGI::parentCGI(src, fdsForward, fdsForward); break;}
-        default: {CGI::childCGI(src, fdsForward, fdsForward, pathCGI); break;}
-    }
+    this->pid = 0;
+    this->PipeInForward = 0;
+    this->PipeOutForward = 0;
+    this->PipeInBack = 0;
+    this->PipeOutBack = 0;
 }
 
-void CGI::childCGI(Server &src, int *fdsForward, int *fdsBack)
+CGI::~CGI()
 {
-    static char* path[2];
-    static char* envCGI[1];
-    int res;
+    if (this->pid != 0)
+        kill(pid);
+    if (this->PipeInForward != 0)
+        close(this->PipeInForward);
+    if (this->PipeOutForward != 0)
+        close(this->PipeOutForward);
+    if (this->PipeInBack != 0)
+        close(this->PipeInBack);
+    if (this->PipeOutBack != 0)
+        close(this->PipeOutBack);
+}
 
-    if (CGI::path[0])
+int CGI::startCGI(Server &src)
+{
+    int         fdsForward[2];
+    int         fdsBack[2];
+    
+    if (pipe(fdsForward) == -1 || fcntl(fdsForward[0], F_SETFL, O_NONBLOCK) == -1)// || fcntl(fdsForward[1], F_SETFL, O_NONBLOCK) == -1) fix me: need?
+        return (this->CGIsFailed());
+    this->PipeInForward = fdsForward[0];
+    this->PipeOutForward = fdsForward[1];
+    if (pipe(fdsBack) == -1 /*|| fcntl(fdsBack[0], F_SETFL, O_NONBLOCK) == -1*/ || fcntl(fdsBack[1], F_SETFL, O_NONBLOCK) == -1)
+        return (this->CGIsFailed());
+    this->PipeInBack = fdsBack[0];
+    this->PipeOutBack = fdsBack[1];
+    return (20);
+}
+
+int CGI::ForkCGI(Server &src)
+{
+    this->pid = fork();
+    switch (this->pid)
     {
-        delete CGI::path[0];
-        CGI::path[0] = NULL;
+        case -1: { return(this->CGIFailed()); }
+        case 0: { return(this->ParentCGI(src)); }
+        default: { (ChildCGI(src); }
     }
-    close(fdsForward[1]);
-    close(fdsBack[0]);
-    if (!dup2(fdsForward[0], STDIN_FILENO) || !dup2(fdsBack[1], STDOUT_FILENO))
+    return (29); // -1/0 - return own int, Child exit before //fix me: implement
+}
+
+int CGI::ParentCGI()
+{
+    int stts;
+    
+    switch (waitpid(this->pid, &stts, WHOHANG))
+    {
+        case -1: { return(this->CGIFailed()); } //error
+        case 0: { return this->checkTimout(); } //child not ready //fix me: implement
+        case this->pid: { 
+            if (stts == 0) //child finished ok
+                return (23); 
+            return (29); //child finished bad
+        }
+        default: { break; } 
+    }
+    return this->checkTimout(); //wrong pid returned, need to wait correct pid //fix me: implement
+}
+
+int CGI::ChildCGI(Server &src)
+{
+    char **env;
+    char **argv;
+    std::string PATH_INFO; //virtual path
+    std::string PATH_TRANSLATED; //real path
+    std::string SCRIPT_NAME;
+
+    //change STDIN and STDOUT
+    if (!dup2(this->PipeInForward, STDIN_FILENO) || !dup2(this->PipeOutBack, STDOUT_FILENO))
     {
         Logger::putMsg("dup2 failed:\n" + std::string(strerror(errno)));
         exit(1);
     }
-    close(fdsForward[0]);
-    close(fdsBack[1]);
-    path[0] = CGI::setPath(src);//implement
-    res = execve(path[0], path, envCGI);
-    CGI::CGIFailed(src, -1, -1, -1, -1);
-    exit(res);
+    close(this->PipeInBack);
+    close(this->PipeOutForward);
+    try {
+        argv = this->setArgv(src, PATH_INFO, PATH_TRANSLATED, SCRIPT_NAME); //fix me: implement
+        env = this->setEnv(src, PATH_INFO, PATH_TRANSLATED, SCRIPT_NAME);
+    }
+    catch {
+        Logger::putMsg(std::string("env/argv sets failed! in child", FILE_ERR, ERR);
+        exit(1);
+    }
+    execve(argv[0], argv, env);
+    exit(1);
 }
 
-void    CGI::CGIsFailed(Server &src, int fd1, int fd2, int fd3, int fd4)
+
+char** CGI::setArgv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANSLATED, std::string &SCRIPT_NAME)
+{
+    PATH_INFO = src.getReq_struct().uri;
+    std::string loc;
+    std::string::size_type i;
+    //find server
+    t_serv *curServ = src.findServer(src.getReq_struct().host);
+    //find location
+    i = PATH_INFO.rfind('/');
+    loc = PATH_INFO.substr(0, i + 1);
+    t_loc *curLoc = src.findLocation(loc, curServ);
+    SCRIPT_NAME = Server::findFile(PATH_INFO.substr(i + 1, PATH_INFO.length() - i));
+    PATH_TRANSLATED = curServ->root + loc + curLoc->root + SCRIPT_NAME;
+}
+
+char**  CGI::setEnv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANSLATED, std::string &SCRIPT_NAME)
+{
+    char **res;
+    size_t i;
+    size_t size = src->getAnsw_struct().headers.size() + STANDART_ENV_VARS_CNT + 1;
+    std::map<std::string, std::string>::iterator it = src.getAnsw_struct().headers.begin();
+
+    res = new char**[size];
+    res[0] = strdup("SERVER_SOFTWARE=AMANIX");
+    res[1] = strdup((std::string("SERVER_NAME=") + src.getReq_struct().host).c_str());
+    res[2] = strdup("GATEWAY_INTERFACE=CGI/1.1");
+    res[3] = strdup("SERVER_PROTOCOL=HTTP/1.1");
+    res[4] = strdup((std::string("SERVER_PORT=") + src.getReq_struct().port).c_str());
+    res[5] = strdup((std::string("REQUEST_METHOD=") + src.getReq_struct().method).c_str());
+    res[6] = strdup((std::string("SCRIPT_NAME=") + SCRIPT_NAME).c_str()); //fix me: need script name
+    res[7] = strdup("REMOTE_ADDR=");
+    res[8] = strdup((std::string("PATH_INFO=") + PATH_INFO).c_str());
+    res[8] = strdup((std::string("PATH_TRANSLATED=") + PATH_TRANSLATED).c_str());
+    for (i = 0; i < 8; i++)
+        if (!res[i])
+            throw badAlloc();
+    res[size] = NULL;
+    for (; i < size; i++)
+    {
+        res[i] = strdup((it->first + std::string("=") + it->second).c_str());
+        it++;
+    }
+    return res;
+}
+
+ int    CGI::CGIsFailed()
 {
     HTTP_Answer res;
 
-    if (fd1 >= 0)
-        close(fd1);
-    if (fd2 >= 0)
-        close(fd2);
-    if (fd3 >= 0)
-        close(fd3);
-    if (fd4 >= 0)
-        close(fd4);
-    res.version = std::string("HTTP/1.1");
-    res.status_code = std::string("500");
-    res.reason_phrase = std::string("Internal server error");
-    res.headers.insert(std::pair<std::string, std::string>(std::string("Content-Length"), std::string("18")));
-    res.headers.insert(std::pair<std::string, std::string>(std::string("Connection"), std::string("close")));
-    res.body = std::string("CGI launch Failed!");
-    Logger::putMsg("CGI failed:\n" + strerror(errno), FILE_ERR, ERR);
-    src->setResponse(HTTP_Answer::ft_answtostr(res));
+    if (PipeInForward > 0)
+        close(PipeInForward);
+    if (PipeOutForward > 0)
+        close(PipeOutForward);
+    if (PipeInBack > 0)
+        close(PipeInBack);
+    if (PipeOutBack > 0)
+        close(PipeOutBack);
+    Logger::putMsg(std::string("CGI failed!") + std::string(strerror(errno)), FILE_ERR, ERR);
+    return (29);
 }
 
-char*    CGI::setPath(Server &src)
-{
-    t_serv  *curServ = src.serv;
-    t_serv  *prevServ;
-    t_loc   *curLoc;
-    t_loc   *prevLoc;
-    std::map<std::string, std::string>::iterator it;
-    std::string line;
-    std::string RealLoc;
-    std::string::size_type  i;
-    
-    //find correct t_serv for request
-    it = src.getReq_struct().headers().find("Host");
-    if (!(it == src.getReq_struct().headers().end()))
-    {
-        i = it->second.find(':');
-        if (i == std::string::npos)
-            line = it->second;
-        else
-            line = it->second.substr(0, i);
-        if (!ConfParser::checkCorrectHost(line))
-        {
-            while (curServ)
-            {
-                if (line == curServ->ServerName)
-                    break;
-                prevServ = curServ;
-                curServ = curServ->next;
-            }
-            if (!curServ)
-                curServ = src.serv;
-            else
-            {
-                prevServ->next = curServ->next;
-            }
-            RealLoc = cur->serv.root;
-        }
-    }
-    //find correct location
-    i = src.getReq_struct().uri.rfind('/');
-    line = src.getReq_struct().uri.substr(0, i + 1);
-    curLoc = curServ->locList;
-    while (curLoc)
-    {
-        if (curLoc->location == line)
-            break;
-        curLoc = curLoc->next;
-    }
-    if (!curLoc)
-        curLoc = curServ->locList;
-    else
-    {
-
-    }
-    if (curLoc->location != "/")
-        RealLoc += curLoc->location;
-    
-    //setpath
-}
+int     getPipeInForward() { return this->PipeInForward; }
+int     getPipeOutForward() { return this->PipeOutForward; }
+int     getPipeInBack()) { return this->PipeInBack; }
+int     getPipeOutBack()) { return this->PipeOutBack; }

@@ -74,7 +74,7 @@ void MainClass::doIt(int args, char **argv, char **env)
 	//printAllServ(MainClass::allServers);
 }
 
-_Noreturn void MainClass::mainLoop()
+void MainClass::mainLoop()
 {
     timeval                 timeout;
     fd_set                  readFds;
@@ -93,15 +93,18 @@ _Noreturn void MainClass::mainLoop()
         {
             switch (it->second->getStage())
             {
-                case 0: //{ MainClass::addToSet(it->first, maxFd, &readFds); break; }
+                case 0:
                 case 1: { MainClass::addToSet(it->first, maxFd, &readFds); break; }
-                case 10:  //{ MainClass::addToSet(it->first, maxFd, &writeFds); break; }
-                case 11: //{ MainClass::addToSet(it->first, maxFd, &writeFds); break; }
+                case 10:
+                case 11:
                 case 12: { MainClass::addToSet(it->first, maxFd, &writeFds); break; }
-                case 20: //{break;} //fix me: add fdPipeOut if need
-                case 21: //{break;} //nothing to do
-                case 22: //{break;} //nothing to do
-                case 23: {break;} //fix me: add fdPipeIN
+                case 20:
+                case 21:
+                case 22:
+                case 23: {
+                    MainClass::handlerCgi(itR);
+                    break;
+                }
                 default:
                 {
                     if (it->second->getStage() >= 30 && it->second->getStage() < 40)
@@ -143,30 +146,30 @@ _Noreturn void MainClass::mainLoop()
                         MainClass::readNextChunk(itR);
                     break;
                 }
-                case 10: { break; }
-                case 11: { break; }
-                case 12: { break; }
-                case 20: {break;} //fix me: add fdPipeOut if need
-                case 21: {break;} //nothing to do
-                case 22: {break;} //nothing to do
-                case 23: {break;} //fix me: add fdPipeIN
+                case 10:
+                case 11:
+                case 12: {
+                    if (FD_ISSET(itR->first, &writeFds))
+                        MainClass::sendResponse(itR);
+                    break;
+                }
+                case 20:
+                case 21:
+                case 22:
+                case 23: {
+                    MainClass::handlerCGI(itR);
+                    break;
+                }
                 default:
                 {
                     if (itR->second->getStage() >= 30 && itR->second->getStage() < 40)
                         ;
                     else
-                        std::cout << itR->first << "has incorrect stage!\n";
+                        std::cout << itR->first << "has incorrect stage!\n";//fix me: what is wrong with stage???
+                    itR++;
                     break;
                 }
             }
-            //only one read/write per client per select
-            //fix me: add checking FD_PIPE IN/OUT
-            if (FD_ISSET(itR->first, &writeFds))
-                MainClass::sendResponse(itR);
-            else if (FD_ISSET(itR->first, &readFds))
-                MainClass::readRequest(itR); //считываем запросы 2.4
-            else//it меняем в readRequest и sendResponse.
-                itR++;
         }
     }
 }
@@ -217,7 +220,7 @@ void MainClass::readRequest(std::map<int, Server *>::iterator &it)
         }
         default:
         {
-            it->second->addToReq(buf);
+            it->second->addToReq(std::string(buf, recvRes));
             it->second->setStage(30);
             MainClass::handleRequest(it);
         }
@@ -254,8 +257,7 @@ void MainClass::readNextChunk(std::map<int, Server *>::iterator &it)
         }
         default:
         {
-            buf[recvRes] = 0;
-            if (!it->second->addToChunk(std::string(buf)))
+            if (!it->second->addToChunk(std::string(buf, recvRes)))
             {
                 Logger::putMsg(std::string("incorrect chunk: ") + std::string(buf), it->first, FILE_ERR, ERR);
                 MainClass::closeConnection(it);

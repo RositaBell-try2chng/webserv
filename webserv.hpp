@@ -23,6 +23,8 @@
 
 # define DEF_RESPONSE "HTTP/1.1 200 OK\r\nContent-Length: 13\r\nConnection: close\r\n\r\nHello, world!"
 
+# define STANDART_ENV_VARS_CNT 10;
+
 //Mesages
 #define TOO_MANY_ARGS			"Too many args\nUse only first argument\n"
 #define WRONG_EXTENSION_OF_FILE	"Wrong extension of config file: "

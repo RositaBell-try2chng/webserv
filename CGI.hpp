@@ -10,15 +10,31 @@
 class CGI
 {
 private:
-    static void     childCGI(Server &src, int *fdsForward, int *fdsBack);
-    static void     parentCGI(Server &src, int *fdsForward, int *fdsBack);
+    int PipeInForward;
+    int PipeOutForward;
+    int PipeInBack;
+    int PipeOutBack;
 
-    static char*    setPath(Server &src);
-    static void     CGIsFailed(Server &src, int fd1, int fd2, int fd3, int fd4);
+    pid_t   pid;
 public:
     CGI();
     ~CGI();
-    static void     startCGI(Server &src);
+
+    int     ParentCGI(Server &src);
+    void    ChildCGI(Server &src);
+
+    //inits
+    int    CGIFailed();
+    int    startCGI();
+    
+
+    char **setEnv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANSLATED, std::string &SCRIPT_NAME);
+    char **setArgv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANSLATED, std::string &SCRIPT_NAME);
+    //getters
+    int     getPipeInForward();
+    int     getPipeOutForward();
+    int     getPipeInBack());
+    int     getPipeOutBack());
 };
 
 #endif

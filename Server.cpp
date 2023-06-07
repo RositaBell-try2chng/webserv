@@ -83,10 +83,7 @@ void Server::resClear()
 	this->Stage = 0;
 }
 
-void Server::addToReq(const char *src)
-{
-	this->request += std::string(src);
-}
+void Server::addToReq(std::string src) { this->request += src; }
 
 void Server::setResponse(const std::string &src)
 {
@@ -522,4 +519,42 @@ ssize_t	Server::cutSize(std::string &src)
 		return (-1);
 	src.erase(0, i + 2); // i + \r\n
 	return (res);
+}
+
+
+t_serv *Server::findServer(std::string const &str)
+{
+	t_serv *curServ = this->serv;
+
+	if (str == this->host)
+		return (curServ);
+	while (curServ)
+    {
+        if (curServ->ServerName == host)
+            return (curServ);
+    }
+    return(this->serv);
+}
+
+t_loc *Server::findLocation(std::string const &str, t_serv *src)
+{
+	t_loc *cur = src->locList;
+	
+	while (cur)
+	{
+		if (cur->location == str)
+			return(cur);
+	}
+	return (src->locList);
+}
+
+std::string Server::findFile(std::string const &str, t_loc *loc)
+{
+	std::vector<std::string>::iterator it;
+	
+	it = loc->files.find("str");
+	
+	if (it != loc->files.end())
+		return (*it);
+	return(*loc->files.begin());
 }

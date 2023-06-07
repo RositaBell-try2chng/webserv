@@ -58,4 +58,10 @@ class badConfig : public std::exception
 public:
 	const char *what() const throw();
 };
+
+class badAlloc : public std::exception
+{
+public:
+	const char *what() const throw();
+};
 #endif

@@ -92,6 +92,9 @@ public:
 	int					getStage();
 	ssize_t				getMaxBodySize();
 
+	t_loc*				findLocation(std::string const &str, t_serv *src);
+	static t_serv*		findServer(std::string const &str);
+	static std::string	findFile(std::string const &str, t_loc *loc);
 
 	void				setStage(int n);
 	void				setAnsw_struct(HTTP_Answer const &src);
@@ -106,7 +109,7 @@ public:
 	void				clearAnsw_struct();
 	void				clearReq_struct();
 
-	void				addToReq(char const* src);
+	void				addToReq(std::string src);
 	bool				addToChunk(std::string src);
 	void				setResponse(std::string const& src);
 	void				resizeResponse(ssize_t res);

@@ -41,3 +41,8 @@ const char* badConfig::what() const throw()
 {
 	return ("Exception: BAD CONFIG");
 }
+
+const char* badAlloc::what() const throw()
+{
+	return ("Exception: BAD ALLOC");
+}
