@@ -3,6 +3,8 @@
 
 # include "../Logger.hpp"
 # include "HTTP_Utils.hpp"
+# include "HTTP_Answer.hpp"
+# include "HTTP_Request.hpp"
 # include <map>
 
 // Acts depends on request's method (GET, POST, DELETE)

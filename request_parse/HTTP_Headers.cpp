@@ -7,9 +7,7 @@ void	ft_hdr_host(std::string &host, short int &port, std::string value) {
 	std::pair<std::string, std::string> full_host = ft_strtopair(value, ':');
 
 	host = full_host.first;
-
-	std::stringstream strm(full_host.second);
-	strm >> port;
+	port = full_host.second;
 }
 
 short int	ft_hdr_connection(std::string value) {

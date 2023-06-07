@@ -46,7 +46,7 @@ struct HTTP_Request
 		std::map<std::string, std::string>	headers;
 
 		std::string	host;
-		short int	port;
+		std::string	port;
 		short int	flg_cnnctn = 1;	// 0 - close, 1 - keep alive, 2 - upgrade HTTP version
 		int			content_lngth;	// length of request body in bytes						
 		ContentType	content_type;	// media type of the body of the request
