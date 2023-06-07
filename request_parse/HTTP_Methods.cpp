@@ -1,11 +1,18 @@
+#include "HTTP_Methods.hpp"
+
 void	t_get_answ(HTTP_Request &req, HTTP_Answer &answ) {
 
-	std::FILE	file;
+	FILE	file;
 
 	// checking if recourse exists
-	file = std::fopen(req.uri)
+	file = std::fopen(req.uri, r);
 	if (file) {
-
+		std::ifstream in(req.uri);
+		if (in.is_open()) {
+			std::string line;
+			while (std::getline(in, line))
+				answ.body.append(line);
+		}
 	}
 	else {
 		Logger::putMsg("Page not found: 404", FILE_WREQ, WREQ);

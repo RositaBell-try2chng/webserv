@@ -39,6 +39,11 @@ HTTP_Answer HTTP_Answer::ft_reqtoansw(HTTP_Request req) {
 		// 	ft_post_answ(req, answ);
 		// else if (!req.method.compare("DELETE"))
 		// 	ft_delete_answ(req, answ);
+		else if (!req.method.compare("PUT")) {
+			Logger::putMsg("Method: " + req.method + "\nIs Not Allowed" , FILE_WREQ, WREQ);
+			req.answ_code[0] = 4;
+			req.answ_code[1] = 5;
+		}
 		else {
 			Logger::putMsg("Method: " + req.method + "\nIs Not Implemented" , FILE_WREQ, WREQ);
 			req.answ_code[0] = 5;
