@@ -10,7 +10,7 @@ void	t_get_answ(HTTP_Request &req, HTTP_Answer &answ) {
 	else {
 		Logger::putMsg("Page not found: 404", FILE_WREQ, WREQ);
 		req->answ_code[0] = 4;
-		req->answ_code[0] = 4;
+		req->answ_code[1] = 4;
 		return ;
 	}
 

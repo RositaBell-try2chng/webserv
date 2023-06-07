@@ -39,7 +39,7 @@ int ft_set_method(HTTP_Request *req, std::string url, int end) {
 	if (ft_if_method_implemented(method)) {
 		Logger::putMsg("Method is not implemented", FILE_WREQ, WREQ);
 		req->answ_code[0] = 5;
-		req->answ_code[0] = 1;
+		req->answ_code[1] = 1;
 		return 0;
 	}
 
@@ -56,7 +56,7 @@ int	ft_set_uri(HTTP_Request *req, std::string url, int end, int i) {
 	if (req->uri.size() == 0) {
 		Logger::putMsg("Request hasn\'t URI", FILE_WREQ, WREQ);
 		req->answ_code[0] = 4;
-		req->answ_code[0] = 0;
+		req->answ_code[1] = 0;
 		return 0;
 	}
 
@@ -71,14 +71,14 @@ int	ft_set_version(HTTP_Request *req, std::string url, int end, int i) {
 	if (req->version.size() == 0) {
 		Logger::putMsg("Request hasn\'t HTTP version", FILE_WREQ, WREQ);
 		req->answ_code[0] = 4;
-		req->answ_code[0] = 0;
+		req->answ_code[1] = 0;
 		return 0;
 	}
 
 	if (req->version.compare("HTTP/1.1")) {
 		Logger::putMsg("Request has wrong HTTP version", FILE_WREQ, WREQ);
 		req->answ_code[0] = 5;
-		req->answ_code[0] = 5;
+		req->answ_code[1] = 5;
 		return 0;
 	}
 
@@ -107,7 +107,7 @@ int	ft_make_hdr(HTTP_Request *req, std::string raw) {
 	if (len > 4096) {
 		Logger::putMsg("Request header is too large", FILE_WREQ, WREQ);
 		req->answ_code[0] = 4;
-		req->answ_code[0] = 31;
+		req->answ_code[1] = 31;
 		return 0;
 	}
 
@@ -126,14 +126,14 @@ int	ft_make_hdr(HTTP_Request *req, std::string raw) {
 	if (i == end) {
 		Logger::putMsg("Header " + key + "Doesn't have a value", FILE_WREQ, WREQ);
 		req->answ_code[0] = 4;
-		req->answ_code[0] = 0;
+		req->answ_code[1] = 0;
 		return 0;
 	}
 
 	if (req->headers.find(key) != req->headers.end()){
 		Logger::putMsg("Multiple request's header: " + key, FILE_WREQ, WREQ);
 		req->answ_code[0] = 4;
-		req->answ_code[0] = 0;
+		req->answ_code[1] = 0;
 		return 0;
 	}
 
@@ -168,7 +168,7 @@ bool ft_set_hdrs(HTTP_Request *req, std::vector<std::string> req_str_arr, int en
 		if (total_len > 8096) {
 			Logger::putMsg("Request headers are too large", FILE_WREQ, WREQ);
 			req->answ_code[0] = 4;
-			req->answ_code[0] = 31;
+			req->answ_code[1] = 31;
 			return 0;
 		}
 	}
@@ -176,7 +176,7 @@ bool ft_set_hdrs(HTTP_Request *req, std::vector<std::string> req_str_arr, int en
 	if (req->headers.find("Host") == req->headers.end()) {
 		Logger::putMsg("Request hasn't \"Host\" header", FILE_WREQ, WREQ);
 		req->answ_code[0] = 4;
-		req->answ_code[0] = 0;
+		req->answ_code[1] = 0;
 		return 0;
 	}
 
@@ -193,7 +193,7 @@ void ft_set_body(HTTP_Request *req, std::vector<std::string> req_str_arr, int i,
 		if (total_size > limit) {
 			Logger::putMsg("Request\'s body is too large", FILE_WREQ, WREQ);
 			req->answ_code[0] = 4;
-			req->answ_code[0] = 14;
+			req->answ_code[1] = 14;
 			return ;
 		}
 
@@ -210,7 +210,7 @@ HTTP_Request HTTP_Request::ft_strtoreq(std::string raw, int limitCLientBodySize)
 	if (raw.size() > 100000) {
 		Logger::putMsg("Request is too large", FILE_WREQ, WREQ);
 		req.answ_code[0] = 4;
-		req.answ_code[0] = 13;
+		req.answ_code[1] = 13;
 		return req;
 	}
 
