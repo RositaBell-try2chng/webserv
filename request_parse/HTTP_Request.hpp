@@ -7,6 +7,10 @@
 # include <cstring>
 # include <map>
 
+# define REQ_MAX_SIZE		100000
+# define HDR_MAX_LEN		4096
+# define HDRS_MAX_SUM_LEN	8192
+
 struct HTTP_Request
 {
 	private:
@@ -65,7 +69,7 @@ struct HTTP_Request
 		};
 
 		// Get "raw" request and parse into a structure
-		static HTTP_Request ft_strtoreq(std::string &raw, int limitCLientBodySize);
+		static HTTP_Request ft_strtoreq(HTTP_Request &req, std::string &raw, int limitCLientBodySize);
 
 };
 

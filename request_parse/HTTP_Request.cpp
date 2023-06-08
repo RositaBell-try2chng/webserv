@@ -1,6 +1,6 @@
 #include "HTTP_Request.hpp"
 
-bool ft_eof(std::string raw, int i) {
+bool ft_eor(std::string raw, int i) {
 
 	if (raw[i] == '\r' && raw[i + 1] == '\n'
 			&& raw[i + 2] == '\r' && raw[i + 3] == '\n')
@@ -16,15 +16,15 @@ std::vector<std::string> ft_tokenisation(std::string &raw, HTTP_Request &req) {
 	int	letter;
 	int	i;
 
-	for (i = 0; raw[i] != end && !ft_eof(raw, i); ++i) {
+	for (i = 0; raw[i] != end && !ft_eor(raw, i); ++i) {
 		letter = 0;
 		while (raw[i + letter] != '\n' && raw[i + letter - 1] != '\r')
 			letter++;
 		strs.push_back(raw.substr(i, letter - 1));
 		i += letter;
 	}
-	raw.erase(0, i + 1);
-	if (strs.size() > 100000) {
+	raw.erase(0, i + 4);
+	if (strs.size() > REQ_MAX_SIZE) {
 		Logger::putMsg("Request is too large", FILE_WREQ, WREQ);
 		req.answ_code[0] = 4;
 		req.answ_code[1] = 13;
@@ -119,7 +119,7 @@ int	ft_make_hdr(HTTP_Request *req, std::string raw) {
 
 	int len = raw.size();
 
-	if (len > 4096) {
+	if (len > HDR_MAX_LEN) {
 		Logger::putMsg("Request header is too large", FILE_WREQ, WREQ);
 		req->answ_code[0] = 4;
 		req->answ_code[1] = 31;
@@ -180,7 +180,7 @@ bool ft_set_hdrs(HTTP_Request *req, std::vector<std::string> req_str_arr, int en
 		if (!curr_len)
 			return 0;
 		total_len += curr_len;
-		if (total_len > 8096) {
+		if (total_len > HDRS_MAX_SUM_LEN) {
 			Logger::putMsg("Request headers are too large", FILE_WREQ, WREQ);
 			req->answ_code[0] = 4;
 			req->answ_code[1] = 31;
@@ -218,9 +218,7 @@ void ft_set_body(HTTP_Request *req, std::vector<std::string> req_str_arr, int i,
 	// work with body
 }
 
-HTTP_Request HTTP_Request::ft_strtoreq(std::string &raw, int limitCLientBodySize) {
-
-	HTTP_Request req;
+HTTP_Request HTTP_Request::ft_strtoreq(HTTP_Request &req, std::string &raw, int limitCLientBodySize) {
 
 	std::vector<std::string> req_str_arr;
 
