@@ -446,15 +446,36 @@ ssize_t ConfParser::strToSSize_t(std::string const &src, ssize_t limit)
     return (res);
 }
 
-std::string ConfParser::toString(std::string::size_type src)
+std::string ConfParser::Size_tToString(std::string::size_type src, std::string base)
 {
     char c;
 
-    if (src < 10)
+    if (src < base.length())
     {
-        c = src + '0';
+        c = base[src];
         return (std::string(&c, 1));
     }
-    c = (src % 10) + '0';
-    return(ConfParser::toString(src / 10) + std::string(&c, 1));
+    c = base[src % base.length()];
+    return(ConfParser::Size_tToString(src / base.length(), base) + std::string(&c, 1));
+}
+
+std::string::size_type ConfParser::StringToSize_t(std::string src, std::string base, bool &flgCorrect)
+{
+    std::string::size_type j;
+    std::string::size_type res = 0;
+
+    flgCorrect = true;
+    ConfParser::delSpaces(src);
+    for (size_t i = 0; i < src; i++)
+    {
+        j = base.find(src[i]);
+        if (j == std::string::npos)
+        {
+            flgCorrect = false;
+            return (0);
+        }
+        res *= base.length();
+        res += j;
+    }
+    return (res);
 }

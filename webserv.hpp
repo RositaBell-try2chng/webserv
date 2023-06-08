@@ -25,6 +25,11 @@
 
 # define STANDART_ENV_VARS_CNT 10;
 
+# define BINARY_BASE std::string("01", 2)
+# define OCT_BASE  std::string("01234567", 8)
+# define DEC_BASE  std::string("0123456789", 10)
+# define HEX_BASE  std::string("0123456789ABCDEF", 16)
+
 //Mesages
 #define TOO_MANY_ARGS			"Too many args\nUse only first argument\n"
 #define WRONG_EXTENSION_OF_FILE	"Wrong extension of config file: "
