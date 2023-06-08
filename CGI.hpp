@@ -28,13 +28,15 @@ public:
     int    startCGI();
     
 
-    char **setEnv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANSLATED, std::string &SCRIPT_NAME);
-    char **setArgv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANSLATED, std::string &SCRIPT_NAME);
+    char            **setEnv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANSLATED, std::string &SCRIPT_NAME);
+    char            **setArgv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANSLATED, std::string &SCRIPT_NAME);
+    static char     *getAllocatedCharPointer(std::string const src);
+    
     //getters
     int     getPipeInForward();
     int     getPipeOutForward();
-    int     getPipeInBack());
-    int     getPipeOutBack());
+    int     getPipeInBack();
+    int     getPipeOutBack();
 };
 
 #endif

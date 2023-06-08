@@ -85,14 +85,14 @@ int CGI::ChildCGI(Server &src)
     }
     close(this->PipeInBack);
     close(this->PipeOutForward);
-    try {
-        argv = this->setArgv(src, PATH_INFO, PATH_TRANSLATED, SCRIPT_NAME); //fix me: implement
-        env = this->setEnv(src, PATH_INFO, PATH_TRANSLATED, SCRIPT_NAME);
-    }
-    catch {
-        Logger::putMsg(std::string("env/argv sets failed! in child", FILE_ERR, ERR);
+    //set argv/env
+    argv = this->setArgv(src, PATH_INFO, PATH_TRANSLATED, SCRIPT_NAME);
+    if (!argv)
         exit(1);
-    }
+    env = this->setEnv(src, PATH_INFO, PATH_TRANSLATED, SCRIPT_NAME);
+    if (!env)
+        exit(1);
+    //start script
     execve(argv[0], argv, env);
     exit(1);
 }
@@ -100,7 +100,8 @@ int CGI::ChildCGI(Server &src)
 
 char** CGI::setArgv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANSLATED, std::string &SCRIPT_NAME)
 {
-    PATH_INFO = src.getReq_struct().uri;
+    char **res = NULL;
+    PATH_INFO = src.getReq_struct().uri; //fix me: need to substr after '?' ?
     std::string loc;
     std::string::size_type i;
     //find server
@@ -111,39 +112,77 @@ char** CGI::setArgv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANS
     t_loc *curLoc = src.findLocation(loc, curServ);
     SCRIPT_NAME = Server::findFile(PATH_INFO.substr(i + 1, PATH_INFO.length() - i));
     PATH_TRANSLATED = curServ->root + loc + curLoc->root + SCRIPT_NAME;
-}
-
-char**  CGI::setEnv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANSLATED, std::string &SCRIPT_NAME)
-{
-    char **res;
-    size_t i;
-    size_t size = src->getAnsw_struct().headers.size() + STANDART_ENV_VARS_CNT + 1;
-    std::map<std::string, std::string>::iterator it = src.getAnsw_struct().headers.begin();
-
-    res = new char**[size];
-    res[0] = strdup("SERVER_SOFTWARE=AMANIX");
-    res[1] = strdup((std::string("SERVER_NAME=") + src.getReq_struct().host).c_str());
-    res[2] = strdup("GATEWAY_INTERFACE=CGI/1.1");
-    res[3] = strdup("SERVER_PROTOCOL=HTTP/1.1");
-    res[4] = strdup((std::string("SERVER_PORT=") + src.getReq_struct().port).c_str());
-    res[5] = strdup((std::string("REQUEST_METHOD=") + src.getReq_struct().method).c_str());
-    res[6] = strdup((std::string("SCRIPT_NAME=") + SCRIPT_NAME).c_str()); //fix me: need script name
-    res[7] = strdup("REMOTE_ADDR=");
-    res[8] = strdup((std::string("PATH_INFO=") + PATH_INFO).c_str());
-    res[8] = strdup((std::string("PATH_TRANSLATED=") + PATH_TRANSLATED).c_str());
-    for (i = 0; i < 8; i++)
-        if (!res[i])
-            throw badAlloc();
-    res[size] = NULL;
-    for (; i < size; i++)
+    try {
+        res = new char[2];
+        res[0] = NULL;
+        res[0] = CGI::getAllocatedCharPointer(PATH_TRANSLATED);
+        res[1] = NULL;
+    }
+    catch (std::exception &e)
     {
-        res[i] = strdup((it->first + std::string("=") + it->second).c_str());
-        it++;
+        Logger::putMsg(std::string("BAD ALLOC:\n") + std::string(e.what()), FILE_ERR, ERR);
+        if (res)
+        {
+            if (res[0])
+                delete [] res[0];
+            delete [] res;
+        }
+        res = NULL;
     }
     return res;
 }
 
- int    CGI::CGIsFailed()
+char**  CGI::setEnv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANSLATED, std::string &SCRIPT_NAME)
+{
+    char **res = NULL;
+    size_t i = 0;
+    size_t size = src->getAnsw_struct().headers.size() + STANDART_ENV_VARS_CNT + 1;
+    std::map<std::string, std::string>::iterator it = src.getAnsw_struct().headers.begin();
+    try 
+    {
+        res = new char**[size](NULL);
+        res[i++] = CGI::getAllocatedCharPointer(std::string("SERVER_SOFTWARE=AMANIX"));
+        res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("SERVER_NAME=") + src.getReq_struct().host));
+        res[i++] = CGI::getAllocatedCharPointer(std::string("GATEWAY_INTERFACE=CGI/1.1"));
+        res[i++] = CGI::getAllocatedCharPointer(std::string("SERVER_PROTOCOL=HTTP/1.1"));
+        res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("SERVER_PORT=") + src.getReq_struct().port));
+        res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("REQUEST_METHOD=") + src.getReq_struct().method));
+        res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("SCRIPT_NAME=") + SCRIPT_NAME));
+        res[i++] = CGI::getAllocatedCharPointer(std::string("REMOTE_ADDR=");
+        res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("PATH_INFO=") + PATH_INFO);
+        res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("PATH_TRANSLATED=") + PATH_TRANSLATED));
+        res[size] = NULL;
+        for (; i < size; i++)
+        {
+            res[i] = CGI::getAllocatedCharPointer(std::string(it->first + std::string("=") + it->second));
+            it++;
+        }
+    }
+    catch (std::exception &e)
+    {
+        Logger::putMsg(std::string("BAD ALLOC:\n") + std::string(e.what()), FILE_ERR, ERR);
+        if (res)
+        {
+            for (size_t j = 0; j < i; j++)
+                delete [] res[j];
+            delete [] res;
+        }
+        return NULL;
+    }
+    return res;
+}
+
+char    CGI::getAllocatedCharPointer(std::string const src)
+{
+    size_t len = src.length();
+    char *res = new char[len + 1];
+    
+    for (size_t i = 0; i < len; i++)
+        res[i] = src[i];
+    return (res);
+}
+
+int    CGI::CGIsFailed()
 {
     HTTP_Answer res;
 
