@@ -4,7 +4,7 @@
 std::pair<std::string, std::string> ft_strtopair(std::string str, char dlmtr){
 
 	std::string		key;
-	std::string		value;
+	std::string		value("");
 
 	int	end = str.size() - 1;
 	int	i;

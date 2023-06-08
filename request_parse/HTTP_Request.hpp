@@ -12,16 +12,22 @@
 # define HDR_MAX_LEN		4096
 # define HDRS_MAX_SUM_LEN	8192
 
-struct HTTP_Request
-{
+enum Request_Parse_Stage	{	New = 50,
+								Start_String,
+								Headers,
+								Ready,
+								Error				};
+
+struct HTTP_Request {
+	
 	private:
 
 		
 
 	public:
 
-		struct ContentType
-		{
+		struct ContentType {
+
 			bool media_type = false;
 
 			std::string 						type;
@@ -30,6 +36,7 @@ struct HTTP_Request
 		};
 
 		struct Date {
+
 			std::string	txt_day_of_week;
 			short int	day_of_week;
 
@@ -45,18 +52,37 @@ struct HTTP_Request
 
 		struct Base {
 
-			std::string							method;
-			std::string							uri;
-			std::string							version;
+			struct StartString {
+
+				std::string							method;
+				std::string							uri;
+				std::string							version;
+
+				int	len;
+			};
+
+			StartString							start_string;
 
 			std::map<std::string, std::string>	headers;
+			int									hdrs_total_len = 0;
 		};
 
+		std::string	left;	//	unparsed part of request
+
+		int			stage = 50;	//	50 - start
+								//	51 - start string was fully parsed
+								//	52 - headers was fully parsed
+								//	53 - body was fully parsed
+								//	59 - error
+
+		int			curr_size;
+
 		Base		base;
+
 		std::string	host;
 		std::string	port;
 		short int	flg_cnnctn = 1;	// 0 - close, 1 - keep alive, 2 - upgrade HTTP version
-		int			content_lngth;	// length of request body in bytes						
+		int			content_lngth = 0;	// length of request body in bytes						
 		ContentType	content_type;	// media type of the body of the request
 		Date		date;			// the date and time at which the message was originated
 		short int	flg_te = 0;		// 0 - full, 1 - chunked
@@ -73,7 +99,7 @@ struct HTTP_Request
 		};
 
 		// Get "raw" request and parse into a structure
-		static HTTP_Request ft_strtoreq(HTTP_Request &req, std::string &raw, int limitCLientBodySize);
+		static void ft_strtoreq(HTTP_Request &req, std::string &raw, int limitCLientBodySize);
 
 };
 

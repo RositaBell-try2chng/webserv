@@ -1,41 +1,5 @@
 #include "HTTP_Request.hpp"
 
-bool ft_eoh(std::string raw, int i) {
-
-	if (raw[i] == '\r' && raw[i + 1] == '\n'
-			&& raw[i + 2] == '\r' && raw[i + 3] == '\n')
-		return (true);
-	return (false);
-}
-
-std::vector<std::string> ft_tokenisation(std::string &raw, HTTP_Request &req) {
-
-	int end = raw.size() - 1;
-	std::vector<std::string> strs;
-
-	int	letter;
-	int	i;
-
-	for (i = 0; raw[i] != end && !ft_eoh(raw, i); ++i) {
-		letter = 0;
-		while (raw[i + letter] != '\n' && raw[i + letter - 1] != '\r')
-			letter++;
-		strs.push_back(raw.substr(i, letter - 1));
-		i += letter;
-	}
-	i += 4;
-	
-	ft_headers_parse(req);
-
-	raw.erase(0, i);
-	if (strs.size() > REQ_MAX_SIZE) {
-		Logger::putMsg("Request is too large", FILE_WREQ, WREQ);
-		req.answ_code[0] = 4;
-		req.answ_code[1] = 13;
-	}
-	return strs;
-}
-
 bool ft_if_method_implemented(std::string method) {
 
 	// put here implemented methods:
@@ -50,15 +14,16 @@ int ft_set_method(HTTP_Request &req, std::string url, int end) {
 
 	// set method
 	for (; url[i] != ' ' && i < 7 && i < end; ++i)
-		req.base.method.push_back(url[i]);
+		req.base.start_string.method.push_back(url[i]);
 
-	std::string method = req.base.method;
+	std::string method = req.base.start_string.method;
 
 	// checking if method implemented
 	if (ft_if_method_implemented(method)) {
 		Logger::putMsg("Method is not implemented", FILE_WREQ, WREQ);
 		req.answ_code[0] = 5;
 		req.answ_code[1] = 1;
+
 		return 0;
 	}
 
@@ -70,9 +35,9 @@ int ft_set_method(HTTP_Request &req, std::string url, int end) {
 int	ft_set_uri(HTTP_Request &req, std::string url, int end, int i) {
 
 	for (++i; url[i] != ' ' && i != end ; ++i)
-		req.base.uri.push_back(url[i]);
+		req.base.start_string.uri.push_back(url[i]);
 
-	if (req.base.uri.size() == 0) {
+	if (req.base.start_string.uri.size() == 0) {
 		Logger::putMsg("Request hasn\'t URI", FILE_WREQ, WREQ);
 		req.answ_code[0] = 4;
 		req.answ_code[1] = 0;
@@ -85,16 +50,16 @@ int	ft_set_uri(HTTP_Request &req, std::string url, int end, int i) {
 int	ft_set_version(HTTP_Request &req, std::string url, int end, int i) {
 
 	for (++i; i != end; ++i)
-		req.base.version.push_back(url[i]);
+		req.base.start_string.version.push_back(url[i]);
 
-	if (req.base.version.size() == 0) {
+	if (req.base.start_string.version.size() == 0) {
 		Logger::putMsg("Request hasn\'t HTTP version", FILE_WREQ, WREQ);
 		req.answ_code[0] = 4;
 		req.answ_code[1] = 0;
 		return 0;
 	}
 
-	if (req.base.version.compare("HTTP/1.1")) {
+	if (req.base.start_string.version.compare("HTTP/1.1")) {
 		Logger::putMsg("Request has wrong HTTP version", FILE_WREQ, WREQ);
 		req.answ_code[0] = 5;
 		req.answ_code[1] = 5;
@@ -104,102 +69,79 @@ int	ft_set_version(HTTP_Request &req, std::string url, int end, int i) {
 	return i;
 }
 
-int	ft_set_url(HTTP_Request &req, std::string url) {
+int	ft_set_url(HTTP_Request &req) {
 
-	int	end = url.size() - 1;
+	int	end = req.left.size();
 
-	int i = ft_set_method(req, url, end);
+	if (end > REQ_MAX_SIZE) {
+		Logger::putMsg("Request is too large", FILE_WREQ, WREQ);
+		req.answ_code[0] = 4;
+		req.answ_code[1] = 13;
+		return (0);
+	}
+
+	--end;
+
+	int i = ft_set_method(req, req.left, end);
 
 	if (i > 0)
-		i = ft_set_uri(req, url, end, i);
+		i = ft_set_uri(req, req.left, end, i);
 
 	if (i > 0)
-		i = ft_set_version(req, url, end, i);
+		i = ft_set_version(req, req.left, end, i);
 
 	return (i);
 }
 
-int	ft_make_hdr(HTTP_Request &req, std::string raw) {
+bool ft_set_hdr(HTTP_Request &req) {
 
-	int len = raw.size();
+	int i = 1;
+	int curr_len = req.left.size();
 
-	if (len > HDR_MAX_LEN) {
+	if (curr_len > HDR_MAX_LEN) {
 		Logger::putMsg("Request header is too large", FILE_WREQ, WREQ);
 		req.answ_code[0] = 4;
 		req.answ_code[1] = 31;
-		return 0;
+		return false;
 	}
 
-	int	end = len - 1;
+	req.base.hdrs_total_len += curr_len;
 
-	std::string	key;
-	std::string	value;
-
-	int	i = 0;
-
-// Key
-	for (; i != end && raw[i] != ':'; ++i) {
-		key.push_back(raw[i]);
+	if (req.base.hdrs_total_len > HDRS_MAX_SUM_LEN) {
+		Logger::putMsg("Request headers are too large", FILE_WREQ, WREQ);
+		req.answ_code[0] = 4;
+		req.answ_code[1] = 31;
+		return false;
 	}
 
-	if (i == end) {
-		Logger::putMsg("Header " + key + "Doesn't have a value", FILE_WREQ, WREQ);
+	if (req.base.hdrs_total_len + req.base.start_string.len > REQ_MAX_SIZE) {
+		Logger::putMsg("Request is too large", FILE_WREQ, WREQ);
+		req.answ_code[0] = 4;
+		req.answ_code[1] = 13;
+		return (0);
+	}
+
+	std::pair<std::string, std::string>	header = ft_strtopair(req.left, ':');
+	req.left.clear();
+
+	if (req.base.headers.find(header.first) != req.base.headers.end()){
+		Logger::putMsg("Multiple request's header: " + header.first, FILE_WREQ, WREQ);
+		req.answ_code[0] = 4;
+		req.answ_code[1] = 0;
+		return false;
+	}
+	else if (!header.first.compare("")) {
+		Logger::putMsg("Header " + header.first + "Doesn't have a value", FILE_WREQ, WREQ);
 		req.answ_code[0] = 4;
 		req.answ_code[1] = 0;
 		return 0;
 	}
+	else
+		req.base.headers.insert(header);
 
-	if (req.base.headers.find(key) != req.base.headers.end()){
-		Logger::putMsg("Multiple request's header: " + key, FILE_WREQ, WREQ);
-		req.answ_code[0] = 4;
-		req.answ_code[1] = 0;
-		return 0;
-	}
+	return true;
 
-// Value
-	for (++i; raw[i] == ' '; ++i) {}
-
-	for (; i != end && raw[i] != '\n'; ++i)
-		if (raw[i] != '\r')
-			value.push_back(raw[i]);
-
-	std::pair<std::string, std::string> hdr = std::make_pair(key, value);
-	key.clear();
-	value.clear();
-
-	req.base.headers.insert(hdr);
-
-	return len;
-}
-
-bool ft_set_hdrs(HTTP_Request &req, std::vector<std::string> req_str_arr, int end) {
-
-	int i = 1;
-	int total_len = 0;
-	int curr_len;
-
-// Headers
-	for (; req_str_arr[i].compare("\r") && i != end; ++i) {
-		curr_len = ft_make_hdr(req, req_str_arr[i]);
-		if (!curr_len)
-			return 0;
-		total_len += curr_len;
-		if (total_len > HDRS_MAX_SUM_LEN) {
-			Logger::putMsg("Request headers are too large", FILE_WREQ, WREQ);
-			req.answ_code[0] = 4;
-			req.answ_code[1] = 31;
-			return 0;
-		}
-	}
-
-	if (req.base.headers.find("Host") == req.base.headers.end()) {
-		Logger::putMsg("Request hasn't \"Host\" header", FILE_WREQ, WREQ);
-		req.answ_code[0] = 4;
-		req.answ_code[1] = 0;
-		return 0;
-	}
-
-	return i;
+	
 }
 
 void ft_set_body(HTTP_Request *req, std::vector<std::string> req_str_arr, int i, int end, int limit) {
@@ -222,20 +164,96 @@ void ft_set_body(HTTP_Request *req, std::vector<std::string> req_str_arr, int i,
 	// work with body
 }
 
-HTTP_Request HTTP_Request::ft_strtoreq(HTTP_Request &req, std::string &raw, int limitCLientBodySize) {
+void	ft_parse_body(HTTP_Request &req, std::string &raw, int &end) {
 
-	std::vector<std::string> req_str_arr;
+	if (req.base.hdrs_total_len + req.base.start_string.len + req.content_lngth > REQ_MAX_SIZE) {
+		Logger::putMsg("Request is too large", FILE_WREQ, WREQ);
+		req.answ_code[0] = 4;
+		req.answ_code[1] = 13;
+		return ;
+	}
 
-// Request to sthrings vector
-	req_str_arr = ft_tokenisation(raw, req);
+	if (end == 0 || req.stage != 52 || req.answ_code[0] > 3)
+		return ;
 
-// Headers
-	int	end = req_str_arr.size() - 1;
-	int i = ft_set_hdrs(req, req_str_arr, end);
-	if (!i)
-		return req;
-		
-// Body
-	ft_set_body(&req, req_str_arr, i, end, limitCLientBodySize);
-	return req;
+	int i;
+
+	for (i = 0; i < end && i < req.content_lngth; ++i) {}
+
+	std::string	content = raw.substr(0, i);
+
+	if (i < req.content_lngth)
+		req.left = content;
+	else {
+		req.body = req.left + content;
+		++req.stage;
+		req.left.clear();
+	}
+
+	raw.erase(0, i);
+	end = raw.size();
+}
+
+void	ft_parse_headers(HTTP_Request &req, std::string &raw, int &end) {
+
+	if (end == 0 || req.stage != 51 || req.answ_code[0] > 3)
+		return;
+
+	int	i;
+	int	letter;
+
+	for (i = 0; i < end; ++i) {
+		for (letter = 1;
+				i + letter < end && raw[i + letter] != '\n' && raw[i + letter - 1] != '\r';
+				++letter) {}
+		req.left += raw.substr(i, letter - 1);
+		if (raw[i + letter] != '\n' && raw[i + letter - 1] != '\r') {
+			ft_set_hdr(req);
+			i += (letter + 1);
+		}
+		else
+			break ;
+		if (i + 1 < end && raw[i + 1] == '\n' && raw[i] == '\r') {
+			ft_headers_parse(req);
+			++req.stage;
+			i += 2;
+			break ;
+		}
+	}
+	raw.erase(0, i);
+	end = raw.size();
+}
+
+void	ft_parse_start_string(HTTP_Request &req, std::string &raw, int &end) {
+
+	if (end == 0 || req.stage != 50 || req.answ_code[0] > 3)
+		return ;
+
+	int i;
+
+	for (i = 0; (i < end) && (raw[i] != '\n' && raw[i - 1] != '\r'); ++i)
+		req.left.push_back(raw[i]);
+
+	if (raw[i] == '\n' && raw[i - 1] == '\r') {
+		if (ft_set_url(req) != 0)
+			++req.stage;
+		req.left.clear();
+	}
+
+	raw.erase(0, i);
+	end = raw.size();
+}
+
+void HTTP_Request::ft_strtoreq(HTTP_Request &req, std::string &raw, int limitCLientBodySize) {
+
+	int	end = raw.size();
+
+	switch (req.stage) {
+		case New: 			{ ft_parse_start_string(req, raw, end); }
+		case Start_String:	{ ft_parse_headers(req, raw, end); }
+		case Headers: 		{ ft_parse_body(req, raw, end); }
+		case Ready: 		{ if (req.answ_code[0] < 4) break; }
+		case Error: 		{ break; }
+		default:			{ break; }
+	}
 }

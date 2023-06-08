@@ -173,6 +173,11 @@ void	ft_headers_parse(HTTP_Request &req) {
 			}
 		}
 	}
+	if (req.base.headers.find("Host") == req.base.headers.end()) {
+		Logger::putMsg("Request hasn't \"Host\" header", FILE_WREQ, WREQ);
+		req.answ_code[0] = 4;
+		req.answ_code[1] = 0;
+	}
 }
 
 int		ft_if_basic_hdr(std::string key) {
