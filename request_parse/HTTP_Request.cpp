@@ -191,7 +191,6 @@ void	ft_parse_body(HTTP_Request &req, std::string &raw, int &end) {
 	}
 
 	raw.erase(0, i);
-	end = raw.size();
 }
 
 void	ft_parse_headers(HTTP_Request &req, std::string &raw, int &end) {
