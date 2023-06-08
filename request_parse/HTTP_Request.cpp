@@ -253,7 +253,11 @@ void HTTP_Request::ft_strtoreq(HTTP_Request &req, std::string &raw, int limitCLi
 		case Start_String:	{ ft_parse_headers(req, raw, end); }
 		case Headers: 		{ ft_parse_body(req, raw, end); }
 		case Ready: 		{ if (req.answ_code[0] < 4) break; }
-		case Error: 		{ break; }
-		default:			{ break; }
+		case Error: 		{ req.stage = 59; break; }
+		default:			{ 
+
+			Logger::putMsg("Undefined stage 5x!!!", FILE_WREQ, WREQ);
+			break; 
+		}
 	}
 }
