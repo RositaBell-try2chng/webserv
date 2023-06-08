@@ -272,113 +272,50 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it)
 {
     std::cout << "SEND response to: " << it->first << std::endl;
 
-    switch (it->second->getStage())
-    {
-        case 10: {MainClass::firstSend(it); break;}
-        case 11: {MainClass::sendNextChunk(it, true); break;}
-        case 12: {MainClass::sendNextChunk(it, false); break;}
-        default: {Logger::putMsg(std::string("BAD STAGE IN SEND"), FILE_ERR, ERR); break;}
-    }
-}
+	ssize_t sendRes;
+	std::string toSend = it->second->getResponse();
 
-void MainClass::firstSend(std::map<int, Server *>::iterator &it)
-{
-    if (it->second->getRes().empty()) // nothing to send
-    {
-        Logger::putMsg(std::string("NOTHING TO SEND"), FILE_ERR, ERR);
-        it->second->resClear();
-        it++;
-        return;
-    }
-    switch (send(it->first, it->second->getRes().c_str(), it->second->getRes().length(), 0))
-    {
-        case -1: //error
-        {
-            Logger::putMsg(std::string("error while send ") + std::string(strerror(errno)), it->first, FILE_ERR, ERR);
-            MainClass::closeConnection(it);
-            return;
-        }
-        case 0:
-        {
-            it++;
-            //fix me: check cnt of trying or timeout
-            return;
-        }
-        default:
-        {
-            it->second->resClear();
-            it++;
-        }
-    }
-}
-
-void MainClass::sendNextChunk(std::map<int, Server *>::iterator &it, bool firstFlg)
-{
-    std::string toSend;
-
-	//if first send of chunk add head of response
-    if (firstFlg && it->second->getChunkToSend().empty())
-    {
-        std::map<std::string, std::string>::iterator    itHead;
-
-        toSend = it->second->getAnsw_struct().version + ' ' + it->second->getAnsw_struct().status_code + ' ' + it->second->getAnsw_struct().reason_phrase + "\r\n\r\n";
-        for (itHead = it->second->getAnsw_struct().headers.begin(); itHead != it->second->getAnsw_struct().headers.end(); itHead++)
-            toSend += itHead->first + ": " + itHead->second + "\r\n";
-        toSend += "\r\n";
-        it->second->setStage(12);
-    }
-	//add chunk size and chunk body
-	if (it->second->getChunkToSend().empty())
+	if (toSend.empty()) // nothing to send = ERROR //should not to happen //fix me: test this
 	{
-		switch (it->second->getAnsw_struct().body.length())
-		{
-			case 0:
-			{
-				toSend += "0";
-				it->second->resClear();
-				break;
-			}
-			default:
-			{
-				if (it->second->getAnsw_struct().body.length() > 400)
-				{
-					toSend += "400\r\n" + it->second->getAnsw_struct().body.substr(0, 400);
-					it->second->getAnsw_struct().body.erase(0, 400);
-					break;
-				} else
-				{
-					toSend += ConfParser::toString(it->second->getAnsw_struct().body.length()) + "\r\n" + it->second->getAnsw_struct().body;
-					it->second->getAnsw_struct().body.clear();
-					break;
-				}
-			}
-		}
+		Logger::putMsg(std::string("NOTHING TO SEND"), it->first, FILE_ERR, ERR);
+		std::cout << it->first << ": ERROR, NOTHING TO SEND\n";
+		MainClass::closeConnection(it);
+		return;
 	}
-	else
-		toSend = it->second->getChunkToSend();
-    switch (send(it->first, it->second->getRes().c_str(), it->second->getRes().length(), 0))
-    {
-        case -1: //error
-        {
-            Logger::putMsg(std::string("error while send ") + std::string(strerror(errno)), it->first, FILE_ERR, ERR);
-            MainClass::closeConnection(it);
-            return;
-        }
+	sendRes = send(it->first, toSend.c_str(), toSend.length(), 0);
+	switch (sendRes)
+	{
+		case -1: //error
+		{
+			Logger::putMsg(std::string("error while send ") + std::string(strerror(errno)), it->first, FILE_ERR, ERR);
+			MainClass::closeConnection(it);
+			return;
+		}
 		case 0:
 		{
-			//fix me: check count or timeout
-			Logger::putMsg("send next chunk failed.", it->first, FILE_ERR, ERR);
+			if (it->second->checkCntTryingSend())
+			{
+				Logger::putMsg(std::string("error while send:\n3 times zero send in a raw"), it->first, FILE_ERR, ERR);
+				MainClass::closeConnection(it);
+			}
 			break;
 		}
-        default:
-        {
-			if (toSend == "0")
+		case toSend.length():
+		{
+			it->second->resClear();
+			it->second->CntTryingSendZero();
+			if (it->second->getStage() != 11)
 				it->second->setStage(0);
-			toSend.clear();
 			break;
-        }
-    }
-	it->second->setChunkToSend(toSend);
+		}
+		default:
+		{
+			toSend.erase(0, sendRes);
+			it->second->setResponse(toSend);
+			it->second->CntTryingSendZero();
+			break;
+		}
+	}
 	it++;
 }
 

@@ -58,7 +58,7 @@ int CGI::ParentCGI()
     switch (waitpid(this->pid, &stts, WHOHANG))
     {
         case -1: { return(this->CGIFailed()); } //error
-        case 0: { return this->checkTimout(); } //child not ready //fix me: implement
+        case 0: { return (this->checkTimout()); } //child not ready //fix me: implement
         case this->pid: { 
             if (stts == 0) //child finished ok
                 return (23); 
@@ -95,6 +95,123 @@ int CGI::ChildCGI(Server &src)
     //start script
     execve(argv[0], argv, env);
     exit(1);
+}
+
+int    CGI::CGIsFailed()
+{
+    if (PipeInForward > 0)
+        close(PipeInForward);
+    if (PipeOutForward > 0)
+        close(PipeOutForward);
+    if (PipeInBack > 0)
+        close(PipeInBack);
+    if (PipeOutBack > 0)
+        close(PipeOutBack);
+    Logger::putMsg(std::string("CGI failed!") + std::string(strerror(errno)), FILE_ERR, ERR);
+    return (29);
+}
+
+int CGI::sendToPipe(std::string &src) //fix me: перед выставлением stage 24 нужно записать предыдущий Stage в CGI class
+{
+	ssize_t		wrRes;
+
+    wrRes = write(this->PipeOutForward, src.c_str(), src.length());
+    switch (wrRes)
+    {
+        case -1: //error
+        {
+        	Logger::putMsg(std::string("ERROR while writing to ") + ConfParser::Size_tToString(this->PipeOutForward) + std::string(":\n") + std::string(strerror(errno)));
+        	return (this->CGIFailed());
+        }
+    	case 0:
+		{
+			Logger::putMsg(std::string("write 0 bytes"), this->PipeInBack + std::string(":\n") + std::string(strerror(errno)));
+			return (this->checkCntTrying('w'));
+		}
+        case (src.length()): //all sent
+        {
+        	this->cntErrorsWriting = 0;
+			switch (this->prevStage)
+			{
+				case 1: { return(1); } //chunked request -> waiting next chunk
+				case 5: { return(22); } //request is over -> waiting CGI response
+				default: {std::cout << "invalid prev stage in CGI::sendToPipe: " << this->prevStage << std::endl; return(CGIFailed());}
+			}
+        }
+		default: //part sent
+		{
+			this->cntErrorsWriting = 0;
+			src.erase(0, wrRes);
+			return (24); //repeat write
+		}
+    }
+}
+
+int CGI::readFromPipe(Server &thisServer)
+{
+	ssize_t		rdRes;
+	std::string res;
+	char		buf[BUF_SIZE_PIPE];
+
+	rdRes = read(this->PipeInBack, buf, BUF_SIZE_PIPE);
+	switch (rdRes)
+	{
+		case -1: //error
+		{
+			Logger::putMsg(std::string("ERROR while reading from "), this->PipeInBack + std::string(":\n") + std::string(strerror(errno)));
+			return (this->CGIFailed());
+		}
+		case 0:
+		{
+			Logger::putMsg(std::string("read 0 bytes"), this->PipeInBack + std::string(":\n") + std::string(strerror(errno)));
+			return (this->checkCntTrying('r'));
+		}
+		case BUF_SIZE_PIPE: //maybe somthing else in PIPE
+		{
+			this->cntTryingReading = 0;
+			res = std::string(buf, rdRes);
+			thisServer.setResponse(res);
+			switch (thisServer.getStage())
+			{
+				case 23: {return(25);}
+				case 25:
+				case 26: {return(26);}
+			}
+			break;
+		}
+		default: //end of file
+		{
+			this->cntTryingReading = 0;
+			res = std::string(buf, rdRes);
+			thisServer.setResponse(res);
+			switch (thisServer.getStage())
+			{
+				case 23: {return(28);}
+				case 25:
+				case 26: {return(27);}
+			}
+		}
+	}
+	std::cout << "BAD STAGE in read from PIPE: " << thisServer.getStage() << std::endl;
+	return (this->CGIFailed());
+}
+
+//checker counters
+int CGI::checkCntTrying(char c, int stage)
+{
+	char *checks;
+
+	switch (c)
+	{
+		case 'r': {checks = &cntTryingReading; break;} //read count
+		case 'w': {checks = &cntTryingWriting; break;}//write count
+		default: {std::cout << "wrong c in CGI check counter: " << static_cast<int>(c);}
+	}
+	++(*checks);
+	if (*checks < CNT_TRYING)
+		return (stage);
+	Logger::putMsg(std::string("read/write 0 bytes 3 times in a raw: ") + std::string(&c, 1), this->PipeInBack + std::string(":\n") + std::string(strerror(errno)));
+	return (this->CGIFailed());
 }
 
 
@@ -138,7 +255,7 @@ char**  CGI::setEnv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANS
     size_t i = 0;
     size_t size = src->getAnsw_struct().headers.size() + STANDART_ENV_VARS_CNT + 1;
     std::map<std::string, std::string>::iterator it = src.getAnsw_struct().headers.begin();
-    try 
+    try
     {
         res = new char**[size](NULL);
         res[i++] = CGI::getAllocatedCharPointer(std::string("SERVER_SOFTWARE=AMANIX"));
@@ -176,29 +293,18 @@ char    CGI::getAllocatedCharPointer(std::string const src)
 {
     size_t len = src.length();
     char *res = new char[len + 1];
-    
+
     for (size_t i = 0; i < len; i++)
         res[i] = src[i];
     return (res);
 }
 
-int    CGI::CGIsFailed()
-{
-    HTTP_Answer res;
+//getters
+int     CGI::getPipeInForward() { return this->PipeInForward; }
+int     CGI::getPipeOutForward() { return this->PipeOutForward; }
+int     CGI::getPipeInBack()) { return this->PipeInBack; }
+int     CGI::getPipeOutBack()) { return this->PipeOutBack; }
+const std::string & CGI::getTosendToPipe() { return this->toSendToPipe; }
 
-    if (PipeInForward > 0)
-        close(PipeInForward);
-    if (PipeOutForward > 0)
-        close(PipeOutForward);
-    if (PipeInBack > 0)
-        close(PipeInBack);
-    if (PipeOutBack > 0)
-        close(PipeOutBack);
-    Logger::putMsg(std::string("CGI failed!") + std::string(strerror(errno)), FILE_ERR, ERR);
-    return (29);
-}
-
-int     getPipeInForward() { return this->PipeInForward; }
-int     getPipeOutForward() { return this->PipeOutForward; }
-int     getPipeInBack()) { return this->PipeInBack; }
-int     getPipeOutBack()) { return this->PipeOutBack; }
+//setters
+void CGI::setToSendToPipe(const std::string &src) {this->toSendToPipe = src;}

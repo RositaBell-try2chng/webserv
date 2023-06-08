@@ -15,6 +15,11 @@ private:
     int PipeInBack;
     int PipeOutBack;
 
+    int         prevStage;
+
+    char cntTryingReading;
+    char cntTryingWriting;
+
     pid_t   pid;
 public:
     CGI();
@@ -24,19 +29,24 @@ public:
     void    ChildCGI(Server &src);
 
     //inits
-    int    CGIFailed();
-    int    startCGI();
-    
+    int     CGIFailed();
+    int     startCGI();
+
+    //communicate
+    int     sendToPipe(Server &thisServer, std::string &src);
+    int     readFromPipe(Server &thisServer);
 
     char            **setEnv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANSLATED, std::string &SCRIPT_NAME);
     char            **setArgv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANSLATED, std::string &SCRIPT_NAME);
     static char     *getAllocatedCharPointer(std::string const src);
     
     //getters
-    int     getPipeInForward();
-    int     getPipeOutForward();
-    int     getPipeInBack();
-    int     getPipeOutBack();
+    int         getPipeInForward();
+    int         getPipeOutForward();
+    int         getPipeInBack();
+    int         getPipeOutBack();
+
+    int checkCntTrying(char c, int stage);
 };
 
 #endif

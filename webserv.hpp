@@ -30,6 +30,12 @@
 # define DEC_BASE  std::string("0123456789", 10)
 # define HEX_BASE  std::string("0123456789ABCDEF", 16)
 
+# define LAST_CHUNK std::string("0\r\n\r\n", 5);
+
+# define BUF_SIZE_PIPE 1024
+
+# define CNT_TRYING 3
+
 //Mesages
 #define TOO_MANY_ARGS			"Too many args\nUse only first argument\n"
 #define WRONG_EXTENSION_OF_FILE	"Wrong extension of config file: "

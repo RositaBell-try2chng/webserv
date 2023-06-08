@@ -19,179 +19,121 @@ Server::Server(const std::string& _host, const std::string& _port)
 	this->response = std::string();
 	this->serv = NULL;
 	this->Stage = 0;
-}
-
-//getters
-const std::string & Server::getHost() { return (this->host); }
-const std::string & Server::getPort() { return (this->port); }
-const std::string & Server::getReq() { return (this->request); }
-const std::string & Server::getRes() { return (this->response); }
-int					Server::getStage() { return (this->Stage); }
-const std::string &Server::getChunkToSend() {return this->chunkToSend;}
-ssize_t				Server::getMaxBodySize() { return (this->maxLimitBodiSize); }
-HTTP_Answer		&Server::getAnsw_struct() { return (this->answ_struct); }
-HTTP_Request	&Server::getReq_struct() { return (this->req_struct); }
-
-//setters
-void Server::setStage(int n) {this->Stage = n;}
-void Server::setMaxBodySize(ssize_t n) {this->maxLimitBodiSize = n;}
-
-void Server::setAnsw_struct(HTTP_Answer const &src)
-{
-	this->answ_struct.body = src.body;
-	this->answ_struct.headers = std::map<std::string, std::string>(src.headers);
-	this->answ_struct.reason_phrase = src.reason_phrase;
-	this->answ_struct.status_code = src.status_code;
-	this->answ_struct.version = src.status_code;
-}
-
-void Server::setReq_struct(HTTP_Request const &src)
-{
-	this->req_struct.version = src.version;
-	this->req_struct.headers = src.headers;
-	this->req_struct.body = src.body;
-	this->req_struct.answ_code[0] = src.answ_code[0];
-	this->req_struct.answ_code[1] = src.answ_code[1];
-	this->req_struct.method = src.method;
-	this->req_struct.uri = src.uri;
-}
-
-void Server::clearAnsw_struct()
-{
-	this->answ_struct.body.clear();
-	this->answ_struct.headers.clear();
-	this->answ_struct.reason_phrase.clear();
-	this->answ_struct.status_code.clear();
-	this->answ_struct.version.clear();
-}
-
-void Server::clearReq_struct()
-{
-	this->req_struct.version.clear();
-	this->req_struct.headers.clear();
-	this->req_struct.body.clear();
-	this->req_struct.answ_code[0] = -1;
-	this->req_struct.answ_code[1] = -1;
-	this->req_struct.method.clear();
-	this->req_struct.uri.clear();
-}
-
-void Server::reqClear() { this->request.clear(); }
-void Server::resClear()
-{
-	this->response.clear();
-	this->Stage = 0;
+	this->cntErrorsRecv = 0;
+	this->cntErrorsSend = 0;
 }
 
 void Server::addToReq(std::string src) { this->request += src; }
 
-void Server::setResponse(const std::string &src)
+void Server::setChunkToSend(const std::string &src) {this->chunkToSend = src;}
+
+bool	Server::addToChunk(std::string src)
 {
-	this->response = src;
-	this->Stage = 10;
+	ssize_t		size;
+	
+	while (!src.empty())
+	{
+		size = Server::cutSize(src);
+		if (size < 0)
+			return (false);
+		if (size == 0)
+		{
+			this->setStage(30);
+			return (true);
+		}
+		this->addToReq(src.substr(0, size).c_str());
+		src.erase(0, size);
+		if (!src.empty())
+		{
+			if (src.find("\r\n") != 0) //bad delimiter for chunk
+				return (false);
+			src.erase(0, 2);
+		}
+	}
+	return (true);
 }
 
-Server*	Server::clone() const
+ssize_t	Server::cutSize(std::string &src)
 {
-	Server *res;
+	std::string::size_type	i;
+	std::stringstream		ss;
+	std::string				line;
+	ssize_t					res;
 
-	res = new Server(this->host, this->port);
-	res->serv = Server::cloneServList(this->serv);
-	res->maxLimitBodiSize = this->maxLimitBodiSize;
+	i = src.find("\r\n");
+	if (i == std::string::npos)
+		return (-1);
+	line = src.substr(0, i);
+	if (line == "0")
+		return (0);
+	ss << line;
+	ss >> res;
+	line.clear();
+	ss >> line;
+	if (res <= 0 || !line.empty())
+		return (-1);
+	src.erase(0, i + 2); // i + \r\n
 	return (res);
 }
 
-t_serv* Server::cloneServList(t_serv const *src)
+
+bool Server::checkCntTryingRecv()
 {
-	if (!src)
-		return (NULL);
-
-	t_serv *res;
-	res = new t_serv;
-
-	t_serv	*currRes = res;
-
-	while (src)
-	{
-		currRes->ServerName = src->ServerName;
-		currRes->errPages = std::map<int, std::string>(src->errPages);
-		currRes->limitCLientBodySize = src->limitCLientBodySize;
-		currRes->root = std::string(src->root);
-		currRes->locList = Server::cloneLocList(src->locList);
-		currRes->next = NULL;
-		src = src->next;
-		if (!src)
-			continue;
-		currRes->next = new t_serv;
-		currRes = currRes->next;
-	}
-	return (res);
+	this->cntTryingRecv++;
+	if (this->cntTryingRecv < CNT_TRYING)
+		return (false);
+	return (true);
 }
 
-t_loc* Server::cloneLocList(t_loc const *src)
+bool Server::checkCntTryingSend()
 {
-	if (!src)
-		return (NULL);
-
-	t_loc *res;
-	res = new t_loc;
-	t_loc *currRes = res;
-
-	while (src)
-	{
-		currRes->location = src->location;
-		currRes->flgGet = src->flgGet;
-		currRes->flgPost = src->flgPost;
-		currRes->flgDelete = src->flgDelete;
-		currRes->redirect = src->redirect;
-		currRes->root = src->root;
-		currRes->defFileIfDir = src->defFileIfDir;
-		currRes->CGIs = src->CGIs;
-		currRes->uploadPath = src->uploadPath;
-		currRes->dirListFlg = src->dirListFlg;
-		currRes->files = src->files;
-		currRes->next = NULL;
-		src = src->next;
-		if (!src)
-			continue;
-		currRes->next = new t_loc;
-		currRes = currRes->next;
-	}
-	return res;
+	this->cntTryingSend++;
+	if (this->cntTryingSend < CNT_TRYING)
+		return (false);
+	return (true);
 }
 
-void    Server::clearLocation(t_loc	**loc)
+//finders
+t_serv *Server::findServer(std::string const &str)
 {
-	t_loc*  tmp;
-	t_loc*  current;
+	t_serv *curServ = this->serv;
 
-	current = *loc;
-	while (current)
-	{
-		tmp = current;
-		current = current->next;
-		delete tmp;
-	}
-	*loc = NULL;
+	if (str == this->host)
+		return (curServ);
+	while (curServ)
+    {
+        if (curServ->ServerName == host)
+            return (curServ);
+    }
+    return(this->serv);
 }
 
-void    Server::clearServ()
+//finders
+t_loc *Server::findLocation(std::string const &str, t_serv *src)
 {
-	t_serv* tmp;
-	t_serv* current;
-
-	current = this->serv;
-	while (current)
+	t_loc *cur = src->locList;
+	
+	while (cur)
 	{
-		tmp = current;
-		current = current->next;
-		if (tmp->locList)
-			clearLocation(&tmp->locList);
-		delete tmp;
+		if (cur->location == str)
+			return(cur);
 	}
-	this->serv = NULL;
+	return (src->locList);
 }
 
+//finders
+std::string Server::findFile(std::string const &str, t_loc *loc)
+{
+	std::vector<std::string>::iterator it;
+	
+	it = loc->files.find("str");
+	
+	if (it != loc->files.end())
+		return (*it);
+	return(*loc->files.begin());
+}
+
+//for configs
 void Server::setServList(std::map<std::string, std::string> &S, std::map <std::string, std::map<std::string, std::string> > &L, std::vector<std::string> &SN, std::vector<std::string> &E)
 {
 	std::map<std::string, std::string>::iterator itS;
@@ -261,6 +203,7 @@ void Server::setServList(std::map<std::string, std::string> &S, std::map <std::s
 	}
 }
 
+//for configs
 void Server::fillErrorPages(std::vector<std::string> &E, t_serv *cur)
 {
 	std::vector<std::string>::iterator itE;
@@ -307,6 +250,7 @@ void Server::fillErrorPages(std::vector<std::string> &E, t_serv *cur)
 	}
 }
 
+//for configs
 t_loc* Server::setLocList(t_serv* s, std::map <std::string, std::map<std::string, std::string> > L)
 {
 	std::map <std::string, std::map<std::string, std::string> >::iterator it;
@@ -371,6 +315,7 @@ t_loc* Server::setLocList(t_serv* s, std::map <std::string, std::map<std::string
 	return (res);
 }
 
+//for configs
 void Server::setFiles(t_loc *cur, std::string src)
 {
 	std::stringstream ss(src);
@@ -380,6 +325,7 @@ void Server::setFiles(t_loc *cur, std::string src)
 		cur->files.push_back(word);
 }
 
+//for configs
 void Server::setRedirect(t_loc *cur, std::string line1)
 {
 	std::string line2;
@@ -416,6 +362,7 @@ void Server::setRedirect(t_loc *cur, std::string line1)
 	cur->redirect.insert(std::pair<int, std::string>(code, line2));
 }
 
+//for configs
 void Server::setMethods(t_loc *cur, std::string &src)
 {
 	std::string::size_type i;
@@ -458,8 +405,7 @@ void Server::setMethods(t_loc *cur, std::string &src)
 	MainClass::exitHandler(0);
 }
 
-void Server::setChunkToSend(const std::string &src) {this->chunkToSend = src;}
-
+//for configs
 void Server::setCGIs(std::set<std::string> &dst, std::string &src)
 {
 	std::string	line;
@@ -472,89 +418,177 @@ void Server::setCGIs(std::set<std::string> &dst, std::string &src)
 	}
 }
 
-bool	Server::addToChunk(std::string src)
+//clones
+Server*	Server::clone() const
 {
-	ssize_t		size;
-	
-	while (!src.empty())
-	{
-		size = Server::cutSize(src);
-		if (size < 0)
-			return (false);
-		if (size == 0)
-		{
-			this->setStage(30);
-			return (true);
-		}
-		this->addToReq(src.substr(0, size).c_str());
-		src.erase(0, size);
-		if (!src.empty())
-		{
-			if (src.find("\r\n") != 0) //bad delimiter for chunk
-				return (false);
-			src.erase(0, 2);
-		}
-	}
-	return (true);
-}
+	Server *res;
 
-ssize_t	Server::cutSize(std::string &src)
-{
-	std::string::size_type	i;
-	std::stringstream		ss;
-	std::string				line;
-	ssize_t					res;
-
-	i = src.find("\r\n");
-	if (i == std::string::npos)
-		return (-1);
-	line = src.substr(0, i);
-	if (line == "0")
-		return (0);
-	ss << line;
-	ss >> res;
-	line.clear();
-	ss >> line;
-	if (res <= 0 || !line.empty())
-		return (-1);
-	src.erase(0, i + 2); // i + \r\n
+	res = new Server(this->host, this->port);
+	res->serv = Server::cloneServList(this->serv);
+	res->maxLimitBodiSize = this->maxLimitBodiSize;
 	return (res);
 }
 
-
-t_serv *Server::findServer(std::string const &str)
+t_serv* Server::cloneServList(t_serv const *src)
 {
-	t_serv *curServ = this->serv;
+	if (!src)
+		return (NULL);
 
-	if (str == this->host)
-		return (curServ);
-	while (curServ)
-    {
-        if (curServ->ServerName == host)
-            return (curServ);
-    }
-    return(this->serv);
-}
+	t_serv *res;
+	res = new t_serv;
 
-t_loc *Server::findLocation(std::string const &str, t_serv *src)
-{
-	t_loc *cur = src->locList;
-	
-	while (cur)
+	t_serv	*currRes = res;
+
+	while (src)
 	{
-		if (cur->location == str)
-			return(cur);
+		currRes->ServerName = src->ServerName;
+		currRes->errPages = std::map<int, std::string>(src->errPages);
+		currRes->limitCLientBodySize = src->limitCLientBodySize;
+		currRes->root = std::string(src->root);
+		currRes->locList = Server::cloneLocList(src->locList);
+		currRes->next = NULL;
+		src = src->next;
+		if (!src)
+			continue;
+		currRes->next = new t_serv;
+		currRes = currRes->next;
 	}
-	return (src->locList);
+	return (res);
 }
 
-std::string Server::findFile(std::string const &str, t_loc *loc)
+t_loc* Server::cloneLocList(t_loc const *src)
 {
-	std::vector<std::string>::iterator it;
-	
-	it = loc->files.find("str");
-	
-	if (it != loc->files.end())
-		return (*it);
-	return(*loc->files.begin());
+	if (!src)
+		return (NULL);
+
+	t_loc *res;
+	res = new t_loc;
+	t_loc *currRes = res;
+
+	while (src)
+	{
+		currRes->location = src->location;
+		currRes->flgGet = src->flgGet;
+		currRes->flgPost = src->flgPost;
+		currRes->flgDelete = src->flgDelete;
+		currRes->redirect = src->redirect;
+		currRes->root = src->root;
+		currRes->defFileIfDir = src->defFileIfDir;
+		currRes->CGIs = src->CGIs;
+		currRes->uploadPath = src->uploadPath;
+		currRes->dirListFlg = src->dirListFlg;
+		currRes->files = src->files;
+		currRes->next = NULL;
+		src = src->next;
+		if (!src)
+			continue;
+		currRes->next = new t_loc;
+		currRes = currRes->next;
+	}
+	return res;
+}
+
+//clears
+void Server::clearAnsw_struct()
+{
+	this->answ_struct.body.clear();
+	this->answ_struct.headers.clear();
+	this->answ_struct.reason_phrase.clear();
+	this->answ_struct.status_code.clear();
+	this->answ_struct.version.clear();
+}
+
+//clears
+void Server::clearReq_struct()
+{
+	this->req_struct.version.clear();
+	this->req_struct.headers.clear();
+	this->req_struct.body.clear();
+	this->req_struct.answ_code[0] = -1;
+	this->req_struct.answ_code[1] = -1;
+	this->req_struct.method.clear();
+	this->req_struct.uri.clear();
+}
+
+//clears
+void Server::reqClear() { this->request.clear(); }
+
+//clears
+void Server::resClear()
+{
+	this->response.clear();
+	this->Stage = 0;
+}
+
+//clears
+void    Server::clearLocation(t_loc	**loc)
+{
+	t_loc*  tmp;
+	t_loc*  current;
+
+	current = *loc;
+	while (current)
+	{
+		tmp = current;
+		current = current->next;
+		delete tmp;
+	}
+	*loc = NULL;
+}
+
+//clears
+void    Server::clearServ()
+{
+	t_serv* tmp;
+	t_serv* current;
+
+	current = this->serv;
+	while (current)
+	{
+		tmp = current;
+		current = current->next;
+		if (tmp->locList)
+			clearLocation(&tmp->locList);
+		delete tmp;
+	}
+	this->serv = NULL;
+}
+
+//getters
+const std::string & Server::getHost() { return (this->host); }
+const std::string & Server::getPort() { return (this->port); }
+const std::string & Server::getRequest() { return (this->request); }
+const std::string & Server::getResponse() { return (this->response); }
+int					Server::getStage() { return (this->Stage); }
+const std::string &Server::getChunkToSend() {return this->chunkToSend;}
+ssize_t				Server::getMaxBodySize() { return (this->maxLimitBodiSize); }
+HTTP_Answer		&Server::getAnsw_struct() { return (this->answ_struct); }
+HTTP_Request	&Server::getReq_struct() { return (this->req_struct); }
+
+//setters
+void Server::setStage(int n) {this->Stage = n;}
+void Server::setMaxBodySize(ssize_t n) {this->maxLimitBodiSize = n;}
+void Server::setResponse(const std::string src) { this->response = src; }
+void Server::CntTryingRecvZero() {this->cntTryingRecv = 0;}
+void Server::CntTryingSendZero() {this->cntTryingSend = 0;}
+//copy structs Answ/Req
+void Server::setAnsw_struct(HTTP_Answer const &src)
+{
+	this->answ_struct.body = src.body;
+	this->answ_struct.headers = std::map<std::string, std::string>(src.headers);
+	this->answ_struct.reason_phrase = src.reason_phrase;
+	this->answ_struct.status_code = src.status_code;
+	this->answ_struct.version = src.status_code;
+}
+
+//copy structs Answ/Req
+void Server::setReq_struct(HTTP_Request const &src)
+{
+	this->req_struct.version = src.version;
+	this->req_struct.headers = src.headers;
+	this->req_struct.body = src.body;
+	this->req_struct.answ_code[0] = src.answ_code[0];
+	this->req_struct.answ_code[1] = src.answ_code[1];
+	this->req_struct.method = src.method;
+	this->req_struct.uri = src.uri;
 }

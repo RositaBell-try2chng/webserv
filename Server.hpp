@@ -55,7 +55,11 @@ private:
 	std::string		response;
 	std::string		chunkToSend;
 	HTTP_Answer		answ_struct;
+
 	int				Stage;
+
+	char cntTryingRecv;
+	char cntTryingSend;
 
 	//CGIs
 	std::map<pid_t, CGI *>	CGIs;//fix me???
@@ -82,10 +86,10 @@ public:
 	std::string 	const&	getHost();
 	std::string 	const&	getPort();
 
-	std::string		const&	getReq();
+	std::string		const&	getRequest();
 	HTTP_Request	&		getReq_struct();
 
-	std::string		const&	getRes();
+	std::string		const&	getResponse();
 	HTTP_Answer		&		getAnsw_struct();
 	std::string		const&	getChunkToSend();
 
@@ -111,8 +115,13 @@ public:
 
 	void				addToReq(std::string src);
 	bool				addToChunk(std::string src);
-	void				setResponse(std::string const& src);
+	void				setResponse(std::string const src);
 	void				resizeResponse(ssize_t res);
+
+	bool 				checkCntTryingRecv();
+	bool 				checkCntTryingSend();
+	void				CntTryingRecvZero();
+	void				CntTryingSendZero();
 
 	Server*				clone() const;
 
