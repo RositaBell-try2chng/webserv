@@ -1,18 +1,33 @@
 #include "HTTP_Request.hpp"
 
-std::vector<std::string> ft_tokenisation(std::string raw) {
+bool ft_eof(std::string raw, int i) {
+
+	if (raw[i] == '\r' && raw[i + 1] == '\n'
+			&& raw[i + 2] == '\r' && raw[i + 3] == '\n')
+		return (true);
+	return (false);
+}
+
+std::vector<std::string> ft_tokenisation(std::string &raw, HTTP_Request &req) {
 
 	int end = raw.size() - 1;
 	std::vector<std::string> strs;
 
 	int	letter;
+	int	i;
 
-	for (int i = 0; raw[i] != end; ++i) {
+	for (i = 0; raw[i] != end && !ft_eof(raw, i); ++i) {
 		letter = 0;
 		while (raw[i + letter] != '\n' && raw[i + letter - 1] != '\r')
 			letter++;
 		strs.push_back(raw.substr(i, letter - 1));
 		i += letter;
+	}
+	raw.erase(0, i + 1);
+	if (strs.size() > 100000) {
+		Logger::putMsg("Request is too large", FILE_WREQ, WREQ);
+		req.answ_code[0] = 4;
+		req.answ_code[1] = 13;
 	}
 	return strs;
 }
@@ -203,21 +218,14 @@ void ft_set_body(HTTP_Request *req, std::vector<std::string> req_str_arr, int i,
 	// work with body
 }
 
-HTTP_Request HTTP_Request::ft_strtoreq(std::string raw, int limitCLientBodySize) {
+HTTP_Request HTTP_Request::ft_strtoreq(std::string &raw, int limitCLientBodySize) {
 
 	HTTP_Request req;
-
-	if (raw.size() > 100000) {
-		Logger::putMsg("Request is too large", FILE_WREQ, WREQ);
-		req.answ_code[0] = 4;
-		req.answ_code[1] = 13;
-		return req;
-	}
 
 	std::vector<std::string> req_str_arr;
 
 // Request to sthrings vector
-	req_str_arr = ft_tokenisation(raw);
+	req_str_arr = ft_tokenisation(raw, req);
 
 // URL (Method, URI, HTTP-version)
 	if (!ft_set_url(&req, req_str_arr[0]))
