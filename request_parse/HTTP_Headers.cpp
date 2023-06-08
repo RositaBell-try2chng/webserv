@@ -154,11 +154,11 @@ short int ft_hdr_te(std::string te) {
 
 //======	BASIC INFRASTRUCTURE	================================================================
 
-void	ft_headers_parse(std::map<std::string, std::string> hdrs, HTTP_Request &req) {
+void	ft_headers_parse(HTTP_Request &req) {
 
-	std::map<std::string, std::string>::iterator end = hdrs.end();
+	std::map<std::string, std::string>::iterator end = req.base.headers.end();
 
-	for (std::map<std::string, std::string>::iterator it = hdrs.begin(); it != end; ++it) {
+	for (std::map<std::string, std::string>::iterator it = req.base.headers.begin(); it != end; ++it) {
 		switch (ft_if_basic_hdr(it->first)) {
 			case Host:				{ ; break ; }
 			case Connection:		{ req.flg_cnnctn = ft_hdr_connection(it->second); break ;}

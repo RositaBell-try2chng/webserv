@@ -4,6 +4,7 @@
 # include "../webserv.hpp"
 # include "../Logger.hpp"
 # include "HTTP_Utils.hpp"
+# include "HTTP_Headers.hpp"
 # include <cstring>
 # include <map>
 
@@ -28,8 +29,7 @@ struct HTTP_Request
 			std::map<std::string, std::string>	options;
 		};
 
-		struct Date
-		{
+		struct Date {
 			std::string	txt_day_of_week;
 			short int	day_of_week;
 
@@ -43,12 +43,16 @@ struct HTTP_Request
 			short int	hrs;
 		};
 
-		std::string							method;
-		std::string							uri;
-		std::string							version;
+		struct Base {
 
-		std::map<std::string, std::string>	headers;
+			std::string							method;
+			std::string							uri;
+			std::string							version;
 
+			std::map<std::string, std::string>	headers;
+		};
+
+		Base		base;
 		std::string	host;
 		std::string	port;
 		short int	flg_cnnctn = 1;	// 0 - close, 1 - keep alive, 2 - upgrade HTTP version
