@@ -94,24 +94,20 @@ void MainClass::mainLoop()
             switch (it->second->getStage())
             {
                 case 0:
-                case 1: { MainClass::addToSet(it->first, maxFd, &readFds); break; }
+                case 1: 
+                case 2: 
+                case 3: { MainClass::addToSet(it->first, maxFd, &readFds); break; }
                 case 10:
                 case 11:
                 case 12: { MainClass::addToSet(it->first, maxFd, &writeFds); break; }
-                case 20:
-                case 21:
-                case 22:
-                case 23: {
-                    MainClass::handlerCgi(itR);
-                    break;
-                }
+                case 23: 
+                case 25:
+                case 26: { MainClass::addToSet(it->second->getCGIptr()->PipeInBack, maxFd, &readFds); break; }
+                case 24: { MainClass::addToSet(it->second->getCGIptr()->PipeOutForward, maxFd, &readFds); break; }
+                //fix me: add 40 - 99 need stages
                 default:
                 {
-                    if (it->second->getStage() >= 30 && it->second->getStage() < 40)
-                        ;
-                    else
-                        std::cout << it->first << "has incorrect stage!\n";
-                    break;
+                    break;//fix me: check correct stage???
                 }
             }
         }

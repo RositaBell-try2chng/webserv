@@ -21,12 +21,15 @@ Server::Server(const std::string& _host, const std::string& _port)
 	this->Stage = 0;
 	this->cntErrorsRecv = 0;
 	this->cntErrorsSend = 0;
+	this->CGI = NULL;
 }
 
 void Server::addToReq(std::string src) { this->request += src; }
 
 void Server::setChunkToSend(const std::string &src) {this->chunkToSend = src;}
 
+
+//fix me: need?
 bool	Server::addToChunk(std::string src)
 {
 	ssize_t		size;
@@ -53,6 +56,7 @@ bool	Server::addToChunk(std::string src)
 	return (true);
 }
 
+//fix me: need?
 ssize_t	Server::cutSize(std::string &src)
 {
 	std::string::size_type	i;
@@ -564,13 +568,15 @@ const std::string &Server::getChunkToSend() {return this->chunkToSend;}
 ssize_t				Server::getMaxBodySize() { return (this->maxLimitBodiSize); }
 HTTP_Answer		&Server::getAnsw_struct() { return (this->answ_struct); }
 HTTP_Request	&Server::getReq_struct() { return (this->req_struct); }
+CGI				*Server::getCGIptr() { return (this->ptrCGI) };
 
 //setters
-void Server::setStage(int n) {this->Stage = n;}
-void Server::setMaxBodySize(ssize_t n) {this->maxLimitBodiSize = n;}
-void Server::setResponse(const std::string src) { this->response = src; }
-void Server::CntTryingRecvZero() {this->cntTryingRecv = 0;}
-void Server::CntTryingSendZero() {this->cntTryingSend = 0;}
+void	Server::setSGIptr(CGI *src) {this->ptrCGI = src;}
+void	Server::setStage(int n) {this->Stage = n;}
+void	Server::setMaxBodySize(ssize_t n) {this->maxLimitBodiSize = n;}
+void	Server::setResponse(const std::string src) { this->response = src; }
+void	Server::CntTryingRecvZero() {this->cntTryingRecv = 0;}
+void	Server::CntTryingSendZero() {this->cntTryingSend = 0;}
 //copy structs Answ/Req
 void Server::setAnsw_struct(HTTP_Answer const &src)
 {

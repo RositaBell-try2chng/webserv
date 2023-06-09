@@ -7,6 +7,7 @@ CGI::CGI()
     this->PipeOutForward = 0;
     this->PipeInBack = 0;
     this->PipeOutBack = 0;
+    this->prevStage = -1
 }
 
 CGI::~CGI()
@@ -204,7 +205,7 @@ int CGI::checkCntTrying(char c, int stage)
 	switch (c)
 	{
 		case 'r': {checks = &cntTryingReading; break;} //read count
-		case 'w': {checks = &cntTryingWriting; break;}//write count
+		case 'w': {checks = &cntTryingWriting; break;} //write count
 		default: {std::cout << "wrong c in CGI check counter: " << static_cast<int>(c);}
 	}
 	++(*checks);

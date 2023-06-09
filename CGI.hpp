@@ -15,7 +15,7 @@ private:
     int PipeInBack;
     int PipeOutBack;
 
-    int         prevStage;
+    int prevStage;
 
     char cntTryingReading;
     char cntTryingWriting;

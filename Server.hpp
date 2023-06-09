@@ -49,7 +49,6 @@ private:
 
 	//req/resp
 	std::string		request;
-	//std::string	nextRequest; fix me: need???  if something exists after length body / chunk with size 0;
 	HTTP_Request	req_struct;
 
 	std::string		response;
@@ -61,8 +60,7 @@ private:
 	char cntTryingRecv;
 	char cntTryingSend;
 
-	//CGIs
-	std::map<pid_t, CGI *>	CGIs;//fix me???
+	CGI				*ptrCGI;
 
 	static void		setMethods(t_loc* cur, std::string &src);
 	static void		setCGIs(std::set<std::string> &dst, std::string &src);
@@ -95,11 +93,13 @@ public:
 
 	int					getStage();
 	ssize_t				getMaxBodySize();
+	CGI					*getCGIptr();
 
 	t_loc*				findLocation(std::string const &str, t_serv *src);
 	static t_serv*		findServer(std::string const &str);
 	static std::string	findFile(std::string const &str, t_loc *loc);
 
+	void				setSGIptr(CGI *src);
 	void				setStage(int n);
 	void				setAnsw_struct(HTTP_Answer const &src);
 	void				setReq_struct(HTTP_Request const &src);
