@@ -37,7 +37,7 @@ int CGI::startCGI(Server &src)
         return (this->CGIsFailed());
     this->PipeInBack = fdsBack[0];
     this->PipeOutBack = fdsBack[1];
-    return (20);
+    return (21);
 }
 
 int CGI::ForkCGI(Server &src)

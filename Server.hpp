@@ -56,11 +56,14 @@ private:
 	HTTP_Answer		answ_struct;
 
 	int				Stage;
+	int				prevStage;
 
 	char cntTryingRecv;
 	char cntTryingSend;
 
 	CGI				*ptrCGI;
+
+	timeval			lastReadTime;
 
 	static void		setMethods(t_loc* cur, std::string &src);
 	static void		setCGIs(std::set<std::string> &dst, std::string &src);
@@ -68,8 +71,6 @@ private:
 	static void		setRedirect(t_loc *cur, std::string line1);
 	static void		setFiles(t_loc *cur, std::string src);
 
-
-	static ssize_t	cutSize(std::string &src);
 //clears
 	static t_serv*	cloneServList(t_serv const *src);
 	static t_loc*	cloneLocList(t_loc const *src);
@@ -91,7 +92,10 @@ public:
 	HTTP_Answer		&		getAnsw_struct();
 	std::string		const&	getChunkToSend();
 
+	bool				checkTimeOut();
+
 	int					getStage();
+	int					getPrevStage();
 	ssize_t				getMaxBodySize();
 	CGI					*getCGIptr();
 
@@ -114,7 +118,6 @@ public:
 	void				clearReq_struct();
 
 	void				addToReq(std::string src);
-	bool				addToChunk(std::string src);
 	void				setResponse(std::string const src);
 	void				resizeResponse(ssize_t res);
 

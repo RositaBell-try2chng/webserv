@@ -76,9 +76,11 @@ void MainClass::doIt(int args, char **argv, char **env)
 
 void MainClass::mainLoop()
 {
-    timeval                 timeout;
-    fd_set                  readFds;
-    fd_set                  writeFds;
+    timeval                             timeout;
+    fd_set                              readFds;
+    fd_set                              writeFds;
+    std::map<int, Server*>::iterator    it;
+    int                                 Stage;
 
     timeout.tv_sec = 15;//fix me: возможно менять динамически когда появляется запрос к cgi и нужно ждать ответ
     timeout.tv_usec = 0;
@@ -88,8 +90,36 @@ void MainClass::mainLoop()
         FD_ZERO(&readFds);
         FD_ZERO(&writeFds);
         maxFd = -1;
+        //handle all request until read/write or waiting child(22)
+        for (it = allServers->getConnections().begin(); it != allServers->getConnections().end(); it++)
+        {
+            Stage = it->second->getStage();
+            switch (Stage)
+            {
+                //reading
+                case 4: //something else in request after -> parsing
+                case 30: //запрос только считан -> parsing
+                case 50: //start parsing -> parsing
+                case 5: //ready to handle -> handle
+                //CGI
+                case 20: //CGI creating -> создание объекта
+                case 21: //fork + start script -> fork + запуск
+                case 22: //waiting child check timeout -> ждем ребенка
+                case 25: //first chunk from pipe was read -> send
+                case 26: //next chunk from pipe was read -> send
+                case 27: //ответ считан полностью после чанка -> send
+                case 28: //ответ считан полностью -> send
+                
+                case 40: //открыть файл -> чтение файла
+                case 43: HandlerRequest::prepareToSend(it, Stage);//ответ полностью считан -> send
+                
+                case 51: // - start string was fully parsed
+				case 52: // - headers was fully parsed
+				case 53: // - body was fully parsed
+            }
+        }
         //добавляем использующиеся сокеты
-        for (std::map<int, Server*>::iterator it = allServers->getConnections().begin(); it != allServers->getConnections().end(); it++)
+        for (it = allServers->getConnections().begin(); it != allServers->getConnections().end(); it++)
         {
             switch (it->second->getStage())
             {
@@ -126,44 +156,39 @@ void MainClass::mainLoop()
             default: {break;} //have somthing to do
         }
         acceptConnections(&readFds);
-        //проверяем готовых для записи/чтения
-        std::map<int, Server*>::iterator itR = allServers->getConnections().begin();
-        while (itR != allServers->getConnections().end())
+        // doing write/read depend on stage for all servers
+        it = allServers->getConnections().begin();
+        while (it != allServers->getConnections().end())
         {
-            switch (itR->second->getStage())
+            Stage = it->second->getStage();
+            switch (Stage)
             {
-                case 0: { 
-                    if (FD_ISSET(itR->first, &readFds))
-                        MainClass::readRequest(itR);
-                    break;
-                }
-                case 1: {
-                    if (FD_ISSET(itR->first, &readFds))
-                        MainClass::readNextChunk(itR);
-                    break;
-                }
+                //read from socket
+                case 0:
+                case 1:
+                case 2:
+                case 3: { MainClass::readRequest(it, Stage, &readFds, &writeFds); break; }
+                //write to socket
                 case 10:
                 case 11:
-                case 12: {
-                    if (FD_ISSET(itR->first, &writeFds))
-                        MainClass::sendResponse(itR);
-                    break;
-                }
-                case 20:
-                case 21:
-                case 22:
-                case 23: {
-                    MainClass::handlerCGI(itR);
-                    break;
-                }
-                default:
+                case 12: { MainClass::sendResponse(it, Stage, &readFds, &writeFds); break; }
+                //CGI
+                case 22: {break;} //waiting child process
+                case 23:
+                case 24: { MainClass::writeReadCGI(it, Stage, &readFds, &writeFds); break; } //fix me: implement
+                //read from file
+                case 41:
+                case 42: { MainClass::readFiles(it, Stage, &readFds); break; }
+                //errors
+                case 29: 
+                case 39:
+                case 49: 
+                case 59:
+                case 99: {MainClass::errorManager(it, Stage, &readFds, &writeFds); break; }
+                default://all servers should be in write/read stage or waiting child(22), if not then ERROR
                 {
-                    if (itR->second->getStage() >= 30 && itR->second->getStage() < 40)
-                        ;
-                    else
-                        std::cout << itR->first << "has incorrect stage!\n";//fix me: what is wrong with stage???
-                    itR++;
-                    break;
+                    std::cout << "bad stage for server: " << it->first << " stage is: " << Stage << std::endl;
+                    
                 }
             }
         }
@@ -210,56 +235,16 @@ void MainClass::readRequest(std::map<int, Server *>::iterator &it)
         }
         case 0: //нечего читать
         {
-            Logger::putMsg(std::string("User closed connection ", it->first));
-            MainClass::closeConnection(it);
-            return;
-        }
-        default:
-        {
-            it->second->addToReq(std::string(buf, recvRes));
-            it->second->setStage(30);
-            MainClass::handleRequest(it);
-        }
-    }
-    it++;
-}
-
-void MainClass::readNextChunk(std::map<int, Server *>::iterator &it)
-{
-    ssize_t	recvRes;
-    char    buf[BUF_SIZE];
-
-    std::cout << "RECV next chunk request from: " << it->first << std::endl;
-    recvRes = recv(it->first, buf, BUF_SIZE, 0);
-    switch (recvRes)
-    {
-        case -1: //error recv
-        {
-            Logger::putMsg(std::string("error while recv ") + std::string(strerror(errno)), it->first, FILE_ERR, ERR);
-            MainClass::closeConnection(it);
-            return;
-        }
-        case 0: //nothing to read
-        {
-            if (MainClass::checkTimout(it->second))//fix me: implement this
-            {
-                Logger::putMsg(std::string("waiting chunk timeout"), it->first, FILE_ERR, ERR);
-                MainClass::closeConnection(it);
-                return;
-            }
+            if (it->second->getStage() == 1)
+                 Logger::putMsg(std::string("waiting next chunk", it->first));
             else
-                Logger::putMsg(std::string("Waiting next chunk"), it->first);
+            {
+                Logger::putMsg(std::string("User closed connection ", it->first));
+                MainClass::closeConnection(it);
+            }
             return;
         }
-        default:
-        {
-            if (!it->second->addToChunk(std::string(buf, recvRes)))
-            {
-                Logger::putMsg(std::string("incorrect chunk: ") + std::string(buf), it->first, FILE_ERR, ERR);
-                MainClass::closeConnection(it);
-                return;
-            }
-        }
+        default: { it->second->addToReq(std::string(buf, recvRes)); }
     }
     it++;
 }
@@ -327,15 +312,7 @@ void MainClass::closeConnection(std::map<int, Server *>::iterator &it)
 
 void MainClass::handleRequest(std::map<int, Server *>::iterator &it)
 {
-   // Logger::putMsg(it->second->getReq(), FILE_REQ, REQ);
-//    it->second->setReq_struct(HTTP_Request::ft_strtoreq(it->second->getReq(), it->second->serv->getMaxBodySize()));
-//    it->second->setAnsw_struct(HTTP_Answer::ft_reqtoansw(it->second->getReq_struct()));
-    // if (it->second->getCGIsFlg())
-    //     MainClass::startCGI(*makeit->second);//implement
-//    if (!it->second->respReady())
-//        it->second->setResponse(HTTP_Answer::ft_answtostr(it->second->getAnsw_struct()));
-    it->second->setResponse(DEF_RESPONSE);
-    it->second->reqClear();
+
 }
 
 void MainClass::exitHandler(int sig)

@@ -35,6 +35,7 @@ public:
     static void     doIt(int args, char** argv, char** env);
     static void     exitHandler(int sig);
     static void     addToSet(int fd, int &maxFd, fd_set *dst);
+    static void     prepareToSend(Server *src, int Stage);
 };
 
 #endif

@@ -19,67 +19,17 @@ Server::Server(const std::string& _host, const std::string& _port)
 	this->response = std::string();
 	this->serv = NULL;
 	this->Stage = 0;
+	this->prevStage = 0;
 	this->cntErrorsRecv = 0;
 	this->cntErrorsSend = 0;
 	this->CGI = NULL;
+	this->lastReadTime.tv_sec = time(NULL);
+	this->lastReadTime.tv_usec = 0;
 }
 
 void Server::addToReq(std::string src) { this->request += src; }
 
 void Server::setChunkToSend(const std::string &src) {this->chunkToSend = src;}
-
-
-//fix me: need?
-bool	Server::addToChunk(std::string src)
-{
-	ssize_t		size;
-	
-	while (!src.empty())
-	{
-		size = Server::cutSize(src);
-		if (size < 0)
-			return (false);
-		if (size == 0)
-		{
-			this->setStage(30);
-			return (true);
-		}
-		this->addToReq(src.substr(0, size).c_str());
-		src.erase(0, size);
-		if (!src.empty())
-		{
-			if (src.find("\r\n") != 0) //bad delimiter for chunk
-				return (false);
-			src.erase(0, 2);
-		}
-	}
-	return (true);
-}
-
-//fix me: need?
-ssize_t	Server::cutSize(std::string &src)
-{
-	std::string::size_type	i;
-	std::stringstream		ss;
-	std::string				line;
-	ssize_t					res;
-
-	i = src.find("\r\n");
-	if (i == std::string::npos)
-		return (-1);
-	line = src.substr(0, i);
-	if (line == "0")
-		return (0);
-	ss << line;
-	ss >> res;
-	line.clear();
-	ss >> line;
-	if (res <= 0 || !line.empty())
-		return (-1);
-	src.erase(0, i + 2); // i + \r\n
-	return (res);
-}
-
 
 bool Server::checkCntTryingRecv()
 {
@@ -564,6 +514,7 @@ const std::string & Server::getPort() { return (this->port); }
 const std::string & Server::getRequest() { return (this->request); }
 const std::string & Server::getResponse() { return (this->response); }
 int					Server::getStage() { return (this->Stage); }
+int					Server::getPrevStage() { return (this->prevStage); }
 const std::string &Server::getChunkToSend() {return this->chunkToSend;}
 ssize_t				Server::getMaxBodySize() { return (this->maxLimitBodiSize); }
 HTTP_Answer		&Server::getAnsw_struct() { return (this->answ_struct); }
@@ -572,7 +523,13 @@ CGI				*Server::getCGIptr() { return (this->ptrCGI) };
 
 //setters
 void	Server::setSGIptr(CGI *src) {this->ptrCGI = src;}
-void	Server::setStage(int n) {this->Stage = n;}
+void	Server::setStage(int n) 
+{
+	if (this->Stage == n)
+		return;
+	this->prevStage = this->Stage;
+	this->Stage = n;
+}
 void	Server::setMaxBodySize(ssize_t n) {this->maxLimitBodiSize = n;}
 void	Server::setResponse(const std::string src) { this->response = src; }
 void	Server::CntTryingRecvZero() {this->cntTryingRecv = 0;}
