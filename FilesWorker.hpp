@@ -23,5 +23,5 @@ public:
 
 	void	openFile(Server &thisServer, std::string path);
 	void	closeFile();
-}
+};
 #endif

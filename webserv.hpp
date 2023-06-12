@@ -7,6 +7,7 @@
 # include <fstream>
 # include <ctime>
 # include <sys/types.h>
+# include <sys/wait.h>
 # include <sys/socket.h>
 # include <netdb.h>
 # include <csignal>

@@ -15,7 +15,7 @@ private:
     int PipeInBack;
     int PipeOutBack;
 
-    int prevStage;
+	timeval	timeCGIStarted;
 
     char cntTryingReading;
     char cntTryingWriting;
@@ -25,15 +25,17 @@ public:
     CGI();
     ~CGI();
 
+	int		ForkCGI(Server &src);
     int     ParentCGI(Server &src);
     void    ChildCGI(Server &src);
+	int		waitingCGI();
 
     //inits
-    int     CGIFailed();
+    int     CGIsFailed();
     int     startCGI();
 
     //communicate
-    int     sendToPipe(Server &thisServer, std::string &src);
+    int     sendToPipe(std::string &src);
     int     readFromPipe(Server &thisServer);
 
     char            **setEnv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANSLATED, std::string &SCRIPT_NAME);

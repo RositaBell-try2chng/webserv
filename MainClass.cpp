@@ -1,4 +1,4 @@
-# include "MainClass.hpp"
+#include "MainClass.hpp"
 
 //инициализируем static vars
 int         MainClass::maxFd = 0;
@@ -76,65 +76,38 @@ void MainClass::doIt(int args, char **argv, char **env)
 
 void MainClass::mainLoop()
 {
-    timeval                             timeout;
+    timeval                             timeout = {1, 0};
     fd_set                              readFds;
     fd_set                              writeFds;
     std::map<int, Server*>::iterator    it;
     int                                 Stage;
 
-    timeout.tv_sec = 15;//fix me: возможно менять динамически когда появляется запрос к cgi и нужно ждать ответ
-    timeout.tv_usec = 0;
     while (true)
     {
         //2.0 clean sets
         FD_ZERO(&readFds);
         FD_ZERO(&writeFds);
-        maxFd = -1;
+        MainClass::maxFd = -1;
         //handle all request until read/write or waiting child(22)
         for (it = allServers->getConnections().begin(); it != allServers->getConnections().end(); it++)
-        {
-            Stage = it->second->getStage();
-            switch (Stage)
-            {
-                //reading
-                case 4: //something else in request after -> parsing
-                case 30: //запрос только считан -> parsing
-                case 50: //start parsing -> parsing
-                case 5: //ready to handle -> handle
-                //CGI
-                case 20: //CGI creating -> создание объекта
-                case 21: //fork + start script -> fork + запуск
-                case 22: //waiting child check timeout -> ждем ребенка
-                case 25: //first chunk from pipe was read -> send
-                case 26: //next chunk from pipe was read -> send
-                case 27: //ответ считан полностью после чанка -> send
-                case 28: //ответ считан полностью -> send
-                
-                case 40: //открыть файл -> чтение файла
-                case 43: HandlerRequest::prepareToSend(it, Stage);//ответ полностью считан -> send
-                
-                case 51: // - start string was fully parsed
-				case 52: // - headers was fully parsed
-				case 53: // - body was fully parsed
-            }
-        }
+            HandlerRequest::mainHandler(it->second, it->second->getStage());
         //добавляем использующиеся сокеты
         for (it = allServers->getConnections().begin(); it != allServers->getConnections().end(); it++)
         {
             switch (it->second->getStage())
             {
                 case 0:
-                case 1: 
-                case 2: 
-                case 3: { MainClass::addToSet(it->first, maxFd, &readFds); break; }
+                case 1:
+                case 2:
+                case 3: { MainClass::addToSet(it->first, &readFds); break; }
                 case 10:
                 case 11:
-                case 12: { MainClass::addToSet(it->first, maxFd, &writeFds); break; }
+                case 12: { MainClass::addToSet(it->first,  &writeFds); break; }
                 case 23: 
                 case 25:
-                case 26: { MainClass::addToSet(it->second->getCGIptr()->PipeInBack, maxFd, &readFds); break; }
-                case 24: { MainClass::addToSet(it->second->getCGIptr()->PipeOutForward, maxFd, &readFds); break; }
-                //fix me: add 40 - 99 need stages
+                case 26: { MainClass::addToSet(it->second->getCGIptr()->getPipeInBack(), &readFds); break; }
+                case 24: { MainClass::addToSet(it->second->getCGIptr()->getPipeOutForward(), &readFds); break; }
+                //fix me: add 0-99 need stages??
                 default:
                 {
                     break;//fix me: check correct stage???
@@ -142,10 +115,10 @@ void MainClass::mainLoop()
             }
         }
         //2.1.2 add listen fds
-        for (std::map<int, Server*>::iterator it = allServers->getConnections(true).begin(); it != allServers->getConnections(true).end(); it++)
-            MainClass::addToSet(it->first, maxFd, &readFds);
+        for (it = allServers->getConnections(true).begin(); it != allServers->getConnections(true).end(); it++)
+            MainClass::addToSet(it->first, &readFds);
         //select ловим готовые
-        switch (select(maxFd + 1, &readFds, &writeFds, NULL, &timeout))
+        switch (select(MainClass::maxFd + 1, &readFds, &writeFds, NULL, &timeout))
         {
             case -1: { //select error
                 Logger::putMsg(strerror(errno), FILE_ERR, ERR); 
@@ -153,7 +126,7 @@ void MainClass::mainLoop()
                 continue; //fix me: need to continue or exit from server?
             }
             case 0: {continue;} //timeout. try another select
-            default: {break;} //have somthing to do
+            default: {break;} //have something to do
         }
         acceptConnections(&readFds);
         // doing write/read depend on stage for all servers
@@ -167,24 +140,19 @@ void MainClass::mainLoop()
                 case 0:
                 case 1:
                 case 2:
-                case 3: { MainClass::readRequest(it, Stage, &readFds, &writeFds); break; }
+                case 3: { MainClass::readRequest(it, Stage, &readFds); break; }
                 //write to socket
                 case 10:
                 case 11:
-                case 12: { MainClass::sendResponse(it, Stage, &readFds, &writeFds); break; }
+                case 12: { MainClass::sendResponse(it, &writeFds); break; }
                 //CGI
                 case 22: {break;} //waiting child process
                 case 23:
                 case 24: { MainClass::writeReadCGI(it, Stage, &readFds, &writeFds); break; } //fix me: implement
-                //read from file
-                case 41:
-                case 42: { MainClass::readFiles(it, Stage, &readFds); break; }
                 //errors
-                case 29: 
-                case 39:
-                case 49: 
+                case 29:
                 case 59:
-                case 99: {MainClass::errorManager(it, Stage, &readFds, &writeFds); break; }
+                case 99: { MainClass::errorManager(it, Stage, &readFds, &writeFds); break; } //fix me: implement
                 default://all servers should be in write/read stage or waiting child(22), if not then ERROR
                 {
                     std::cout << "bad stage for server: " << it->first << " stage is: " << Stage << std::endl;
@@ -218,8 +186,11 @@ bool MainClass::acceptConnections(fd_set *readFds)
     return (flgConnection);
 }
 
-void MainClass::readRequest(std::map<int, Server *>::iterator &it)
+void MainClass::readRequest(std::map<int, Server *>::iterator &it, int Stage, fd_set *reads)
 {
+	if (!FD_ISSET(it->first, reads))
+		return;
+
     ssize_t	recvRes;
     char    buf[BUF_SIZE];
 
@@ -235,7 +206,7 @@ void MainClass::readRequest(std::map<int, Server *>::iterator &it)
         }
         case 0: //нечего читать
         {
-            if (it->second->getStage() == 1)
+            if (Stage == 1)
                  Logger::putMsg(std::string("waiting next chunk", it->first));
             else
             {
@@ -244,13 +215,18 @@ void MainClass::readRequest(std::map<int, Server *>::iterator &it)
             }
             return;
         }
-        default: { it->second->addToReq(std::string(buf, recvRes)); }
+        default: {
+			it->second->addToReq(std::string(buf, recvRes));
+			it->second->setStage(50);
+		}
     }
     it++;
 }
 
-void MainClass::sendResponse(std::map<int, Server *>::iterator &it)
+void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *writes)
 {
+	if (!FD_ISSET(it->first, writes))
+		return;
     std::cout << "SEND response to: " << it->first << std::endl;
 
 	ssize_t sendRes;
@@ -281,19 +257,22 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it)
 			}
 			break;
 		}
-		case toSend.length():
-		{
-			it->second->resClear();
-			it->second->CntTryingSendZero();
-			if (it->second->getStage() != 11)
-				it->second->setStage(0);
-			break;
-		}
 		default:
 		{
-			toSend.erase(0, sendRes);
-			it->second->setResponse(toSend);
-			it->second->CntTryingSendZero();
+			if (static_cast<size_t>(sendRes) == toSend.length())
+			{
+				it->second->resClear();
+				it->second->CntTryingSendZero();
+				if (it->second->getStage() != 11)
+					it->second->setStage(0);
+				//fix me: assign new stage depend on prevStage
+			}
+			else
+			{
+				toSend.erase(0, sendRes);
+				it->second->setResponse(toSend);
+				it->second->CntTryingSendZero();
+			}
 			break;
 		}
 	}
@@ -310,11 +289,6 @@ void MainClass::closeConnection(std::map<int, Server *>::iterator &it)
     std::cout << "close connection: " << fd << std::endl;
 }
 
-void MainClass::handleRequest(std::map<int, Server *>::iterator &it)
-{
-
-}
-
 void MainClass::exitHandler(int sig)
 {
     if (sig != SIGTERM && sig != 0)
@@ -327,9 +301,9 @@ void MainClass::exitHandler(int sig)
     exit(0);
 }
 
-void addToSet(int fd, int &maxFd, fd_set *dst)
+void MainClass::addToSet(int fd, fd_set *dst)
 {
     FD_SET(fd, dst);
-    if (fd > maxFd)
-        maxFd = fd;
+    if (fd > MainClass::maxFd)
+        MainClass::maxFd = fd;
 }

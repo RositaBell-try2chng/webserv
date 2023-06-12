@@ -7,13 +7,13 @@ CGI::CGI()
     this->PipeOutForward = 0;
     this->PipeInBack = 0;
     this->PipeOutBack = 0;
-    this->prevStage = -1
+    this->prevStage = -1;
 }
 
 CGI::~CGI()
 {
     if (this->pid != 0)
-        kill(pid);
+        kill(pid, SIGTERM);
     if (this->PipeInForward != 0)
         close(this->PipeInForward);
     if (this->PipeOutForward != 0)
@@ -24,7 +24,7 @@ CGI::~CGI()
         close(this->PipeOutBack);
 }
 
-int CGI::startCGI(Server &src)
+int CGI::startCGI()
 {
     int         fdsForward[2];
     int         fdsBack[2];
@@ -47,30 +47,40 @@ int CGI::ForkCGI(Server &src)
     {
         case -1: { return(this->CGIFailed()); }
         case 0: { return(this->ParentCGI(src)); }
-        default: { (ChildCGI(src); }
+        default: { ChildCGI(src); }
     }
-    return (29); // -1/0 - return own int, Child exit before //fix me: implement
+    return (29); // -1/0 - return own int, Child exit before
 }
 
-int CGI::ParentCGI()
+int	CGI::ParentCGI(Server &src)
 {
-    int stts;
-    
-    switch (waitpid(this->pid, &stts, WHOHANG))
+	this->timeCGIStarted.tv_sec = time(NULL);
+	this->timeCGIStarted.tv_usec = 0;
+	return (24);
+}
+
+int CGI::waitingCGI()
+{
+    int		stts;
+	pid_t	resPid;
+
+	resPid = waitpid(this->pid, &stts, WNOHANG);
+    switch (resPid)
     {
-        case -1: { return(this->CGIFailed()); } //error
+        case -1: { return(this->CGIsFailed()); } //error
         case 0: { return (this->checkTimout()); } //child not ready //fix me: implement
-        case this->pid: { 
-            if (stts == 0) //child finished ok
-                return (23); 
-            return (29); //child finished bad
-        }
-        default: { break; } 
+        default:
+		{
+			if (resPid == this->pid && stts == 0) //child finished ok
+				return (23);
+			else if (resPid == this->pid && stts != 0) //child finished bad
+				return (29);
+		}
     }
     return this->checkTimout(); //wrong pid returned, need to wait correct pid //fix me: implement
 }
 
-int CGI::ChildCGI(Server &src)
+void	CGI::ChildCGI(Server &src)
 {
     char **env;
     char **argv;
@@ -112,7 +122,7 @@ int    CGI::CGIsFailed()
     return (29);
 }
 
-int CGI::sendToPipe(std::string &src) //fix me: перед выставлением stage 24 нужно записать предыдущий Stage в CGI class
+int CGI::sendToPipe(std::string &src)
 {
 	ssize_t		wrRes;
 
@@ -122,7 +132,7 @@ int CGI::sendToPipe(std::string &src) //fix me: перед выставлени�
         case -1: //error
         {
         	Logger::putMsg(std::string("ERROR while writing to ") + ConfParser::Size_tToString(this->PipeOutForward) + std::string(":\n") + std::string(strerror(errno)));
-        	return (this->CGIFailed());
+        	return (this->CGIsFailed());
         }
     	case 0:
 		{
