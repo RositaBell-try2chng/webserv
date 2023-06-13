@@ -54,9 +54,10 @@ struct HTTP_Request {
 
 			struct StartString {
 
-				std::string							method;
-				std::string							uri;
-				std::string							version;
+				std::string	method;
+				std::string	uri;
+				std::string	prmtrs;						
+				std::string	version;
 
 				int	len;
 			};

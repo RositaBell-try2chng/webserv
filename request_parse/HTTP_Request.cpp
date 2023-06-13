@@ -37,12 +37,20 @@ int	ft_set_uri(HTTP_Request &req, std::string url, int end, int i) {
 	for (++i; url[i] != ' ' && i != end ; ++i)
 		req.base.start_string.uri.push_back(url[i]);
 
-	if (req.base.start_string.uri.size() == 0) {
+	end = req.base.start_string.uri.size();
+
+	if (end == 0) {
 		Logger::putMsg("Request hasn\'t URI", FILE_WREQ, WREQ);
 		req.answ_code[0] = 4;
 		req.answ_code[1] = 0;
 		return 0;
 	}
+
+	int	j;
+
+	for (++j; req.base.start_string.uri[j] != '?' && j < end ; ++j){}
+	for (++j; j < end; ++j)
+		req.base.start_string.prmtrs.push_back(req.base.start_string.uri[j]);
 
 	return (i);
 }
