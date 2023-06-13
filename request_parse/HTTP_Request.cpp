@@ -46,7 +46,7 @@ int	ft_set_uri(HTTP_Request &req, std::string url, int end, int i) {
 		return 0;
 	}
 
-	int	j;
+	int	j = 0;
 
 	for (++j; req.base.start_string.uri[j] != '?' && j < end ; ++j){}
 	for (++j; j < end; ++j)
@@ -103,7 +103,6 @@ int	ft_set_url(HTTP_Request &req) {
 
 bool ft_set_hdr(HTTP_Request &req) {
 
-	int i = 1;
 	int curr_len = req.left.size();
 
 	if (curr_len > HDR_MAX_LEN) {
@@ -240,7 +239,7 @@ void	ft_parse_start_string(HTTP_Request &req, std::string &raw, int &end) {
 
 	for (i = 0; (i < end) && (raw[i] != '\n' && raw[i - 1] != '\r'); ++i)
 		req.left.push_back(raw[i]);
-
+struct HTTP_Request;
 	if (raw[i] == '\n' && raw[i - 1] == '\r') {
 		if (ft_set_url(req) != 0)
 			++req.stage;
@@ -251,15 +250,15 @@ void	ft_parse_start_string(HTTP_Request &req, std::string &raw, int &end) {
 	end = raw.size();
 }
 
-void HTTP_Request::ft_strtoreq(HTTP_Request &req, std::string &raw, int limitCLientBodySize) {
+void HTTP_Request::ft_strtoreq(HTTP_Request &req, std::string &raw) {
 
 	int	end = raw.size();
 
 	switch (req.stage) {
-		case New: 			{ ft_parse_start_string(req, raw, end); }
-		case Start_String:	{ ft_parse_headers(req, raw, end); }
-		case Headers: 		{ ft_parse_body(req, raw, end); }
-		case Ready: 		{ if (req.answ_code[0] < 4) break; }
+		case New: 			{ ft_parse_start_string(req, raw, end); __attribute__ ((fallthrough));}
+		case Start_String:	{ ft_parse_headers(req, raw, end); __attribute__ ((fallthrough));}
+		case Headers: 		{ ft_parse_body(req, raw, end); __attribute__ ((fallthrough));}
+		case Ready: 		{ if (req.answ_code[0] < 4) break; __attribute__ ((fallthrough));}
 		case Error: 		{ req.stage = 59; break; }
 		default:			{ 
 

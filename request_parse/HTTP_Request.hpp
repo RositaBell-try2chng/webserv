@@ -104,7 +104,7 @@ struct HTTP_Request {
 		};
 
 		// Get "raw" request and parse into a structure
-		static void ft_strtoreq(HTTP_Request &req, std::string &raw, int limitCLientBodySize);
+		static void ft_strtoreq(HTTP_Request &req, std::string &raw);
 
 };
 

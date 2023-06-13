@@ -62,6 +62,7 @@ enum Basic_Headers	{	Host,
 						Transfer_Encoding,
 						Something_six	};
 
+struct HTTP_Request;
 
 int     ft_if_basic_hdr(std::string key);
 void    ft_headers_parse(HTTP_Request &req);
