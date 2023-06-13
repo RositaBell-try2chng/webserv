@@ -5,9 +5,9 @@ void	t_get_answ(HTTP_Request &req, HTTP_Answer &answ) {
 	FILE	*file;
 
 	// checking if recourse exists
-	file = std::fopen(req.uri.c_str(), "r");
+	file = std::fopen(req.base.start_string.uri.c_str(), "r");
 	if (file) {
-		std::ifstream in(req.uri);
+		std::ifstream in(req.base.start_string.uri.c_str());
 		if (in.is_open()) {
 			std::string line;
 			while (std::getline(in, line))

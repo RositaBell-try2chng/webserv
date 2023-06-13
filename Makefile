@@ -2,7 +2,9 @@ R_PARS		= ./request_parse/
 
 HTTP		= ${R_PARS}HTTP_Request.cpp ${R_PARS}HTTP_Answer.cpp ${R_PARS}HTTP_Utils.cpp ${R_PARS}Specific_Codes.cpp
 
-SRCS		= main.cpp Server.cpp Exceptions.cpp Logger.cpp ConfParser.cpp MainClass.cpp Servers.cpp ${HTTP}
+MAIN		= Server.cpp Exceptions.cpp Logger.cpp ConfParser.cpp MainClass.cpp Servers.cpp
+
+SRCS		= main.cpp ${HTTP}
 
 OBJS		= ${SRCS:.cpp=.o}
 

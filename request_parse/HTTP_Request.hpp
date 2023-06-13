@@ -28,11 +28,13 @@ struct HTTP_Request {
 
 		struct ContentType {
 
-			bool media_type = false;
+			bool media_type;
 
 			std::string 						type;
 			std::string 						subtype;
 			std::map<std::string, std::string>	options;
+
+			ContentType() : media_type(false) {};
 		};
 
 		struct Date {
@@ -65,16 +67,18 @@ struct HTTP_Request {
 			StartString							start_string;
 
 			std::map<std::string, std::string>	headers;
-			int									hdrs_total_len = 0;
+			int									hdrs_total_len;
+
+			Base() : hdrs_total_len(0){}
 		};
 
 		std::string	left;	//	unparsed part of request
 
-		int			stage = 50;	//	50 - start
-								//	51 - start string was fully parsed
-								//	52 - headers was fully parsed
-								//	53 - body was fully parsed
-								//	59 - error
+		int			stage;	//	50 - start
+							//	51 - start string was fully parsed
+							//	52 - headers was fully parsed
+							//	53 - body was fully parsed
+							//	59 - errorHTTP_Request
 
 		int			curr_size;
 
@@ -82,21 +86,21 @@ struct HTTP_Request {
 
 		std::string	host;
 		std::string	port;
-		short int	flg_cnnctn = 1;	// 0 - close, 1 - keep alive, 2 - upgrade HTTP version
-		int			content_lngth = 0;	// length of request body in bytes						
+		short int	flg_cnnctn;		// 0 - close, 1 - keep alive, 2 - upgrade HTTP version
+		int			content_lngth;	// length of request body in bytes						
 		ContentType	content_type;	// media type of the body of the request
 		Date		date;			// the date and time at which the message was originated
-		short int	flg_te = 0;		// 0 - full, 1 - chunked
+		short int	flg_te;			// 0 - full, 1 - chunked
 
 		std::string							body;
 
 		int									answ_code[2];
 
 		~HTTP_Request() {};
-		HTTP_Request() {
+		HTTP_Request() : stage(50), flg_cnnctn(1), content_lngth(0), flg_te(0) {
 
 			answ_code[0] = 2;
-			answ_code[0] = 0;
+			answ_code[1] = 0;
 		};
 
 		// Get "raw" request and parse into a structure
