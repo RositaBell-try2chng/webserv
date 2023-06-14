@@ -55,10 +55,8 @@ private:
 	std::string		chunkToSend;
 	HTTP_Answer		answ_struct;
 
-	int				Stage;
 	int				prevStage;
 
-	char cntTryingRecv;
 	char cntTryingSend;
 
 	CGI				*ptrCGI;
@@ -80,7 +78,14 @@ public:
 	Server(std::string const& _host, std::string const& _port);
 	~Server();
 
-	t_serv*					serv;//public because need to change in another class
+	t_serv*					serv;
+	int						Stage;
+	int						readStage;
+	int						writeStage;
+	int						parseStage;
+	int						CGIStage;
+	bool					isChunkedRequest;
+	bool					isChunkedResponse;
 
 	std::string 	const&	getHost();
 	std::string 	const&	getPort();
@@ -94,8 +99,6 @@ public:
 
 	bool				checkTimeOut();
 
-	int					getStage();
-	int					getPrevStage();
 	ssize_t				getMaxBodySize();
 	CGI					*getCGIptr();
 
@@ -104,22 +107,17 @@ public:
 	static std::string	findFile(std::string const &str, t_loc *loc);
 
 	void				setSGIptr(CGI *src);
-	void				setStage(int n);
 	void				setAnsw_struct(HTTP_Answer const &src);
 	void				setReq_struct(HTTP_Request const &src);
 	void				setMaxBodySize(ssize_t n);
-	void				setChunkToSend(std::string const &src);
-	bool				addToChunk(std::string src);
 
 //clears
-	void				reqClear();
 	void				resClear();
 	void				clearAnsw_struct();
 	void				clearReq_struct();
 
 	void				addToReq(std::string src);
 	void				setResponse(std::string const src);
-	void				resizeResponse(ssize_t res);
 
 	bool 				checkCntTryingRecv();
 	bool 				checkCntTryingSend();

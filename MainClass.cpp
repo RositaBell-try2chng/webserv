@@ -90,30 +90,7 @@ void MainClass::mainLoop()
         MainClass::maxFd = -1;
         //handle all request until read/write or waiting child(22)
         for (it = allServers->getConnections().begin(); it != allServers->getConnections().end(); it++)
-            HandlerRequest::mainHandler(it->second, it->second->getStage());
-        //добавляем использующиеся сокеты
-        for (it = allServers->getConnections().begin(); it != allServers->getConnections().end(); it++)
-        {
-            switch (it->second->getStage())
-            {
-                case 0:
-                case 1:
-                case 2:
-                case 3: { MainClass::addToSet(it->first, &readFds); break; }
-                case 10:
-                case 11:
-                case 12: { MainClass::addToSet(it->first,  &writeFds); break; }
-                case 23: 
-                case 25:
-                case 26: { MainClass::addToSet(it->second->getCGIptr()->getPipeInBack(), &readFds); break; }
-                case 24: { MainClass::addToSet(it->second->getCGIptr()->getPipeOutForward(), &readFds); break; }
-                //fix me: add 0-99 need stages??
-                default:
-                {
-                    break;//fix me: check correct stage???
-                }
-            }
-        }
+            HandlerRequest::mainHandler(it, &readFds, &writeFds);
         //2.1.2 add listen fds
         for (it = allServers->getConnections(true).begin(); it != allServers->getConnections(true).end(); it++)
             MainClass::addToSet(it->first, &readFds);
@@ -137,26 +114,14 @@ void MainClass::mainLoop()
             switch (Stage)
             {
                 //read from socket
-                case 0:
-                case 1:
-                case 2:
-                case 3: { MainClass::readRequest(it, Stage, &readFds); break; }
-                //write to socket
-                case 10:
-                case 11:
-                case 12: { MainClass::sendResponse(it, &writeFds); break; }
+                case 1: { MainClass::readRequest(it, Stage, &readFds); break; }
                 //CGI
-                case 22: {break;} //waiting child process
-                case 23:
-                case 24: { MainClass::writeReadCGI(it, Stage, &readFds, &writeFds); break; } //fix me: implement
-                //errors
-                case 29:
-                case 59:
-                case 99: { MainClass::errorManager(it, Stage, &readFds, &writeFds); break; } //fix me: implement
-                default://all servers should be in write/read stage or waiting child(22), if not then ERROR
+                case 4: { MainClass::CGIHandlerReadWrite(it, &readFds, &writeFds); break; }
+                //write to socket
+                case 5: { MainClass::sendResponse(it, &writeFds); break; }
+                default://all servers should be in write/read stage or CGI, if not then ERROR
                 {
                     std::cout << "bad stage for server: " << it->first << " stage is: " << Stage << std::endl;
-                    
                 }
             }
         }
@@ -206,18 +171,13 @@ void MainClass::readRequest(std::map<int, Server *>::iterator &it, int Stage, fd
         }
         case 0: //нечего читать
         {
-            if (Stage == 1)
-                 Logger::putMsg(std::string("waiting next chunk", it->first));
-            else
-            {
-                Logger::putMsg(std::string("User closed connection ", it->first));
-                MainClass::closeConnection(it);
-            }
+            Logger::putMsg(std::string("User closed connection ", it->first));
+            MainClass::closeConnection(it);
             return;
         }
         default: {
 			it->second->addToReq(std::string(buf, recvRes));
-			it->second->setStage(50);
+			it->second->Stage = 2;
 		}
     }
     it++;
@@ -259,24 +219,63 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *writ
 		}
 		default:
 		{
+			it->second->CntTryingSendZero();
 			if (static_cast<size_t>(sendRes) == toSend.length())
 			{
-				it->second->resClear();
-				it->second->CntTryingSendZero();
-				if (it->second->getStage() != 11)
-					it->second->setStage(0);
-				//fix me: assign new stage depend on prevStage
+				if (!it->second->isChunkedResponse || it->second->CGIStage == 6)
+                    it->second->resClear();
+                else if (it->second->CGIStage == 5 || it->second->CGIStage == 50)
+                    it->second->Stage = 4;
+                //fix me: maybe something else???
+                else
+                    std::cout << it->first << ": bad stages in send:\nStage is: " << it->second->Stage << ". CGIStage is: " << it->second->CGIStage << std::endl;
 			}
 			else
 			{
 				toSend.erase(0, sendRes);
 				it->second->setResponse(toSend);
-				it->second->CntTryingSendZero();
 			}
 			break;
 		}
 	}
 	it++;
+}
+
+void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_set *reads, fd_set *writes)
+{
+    switch (it->second->CGIStage)
+    {
+        case 1: //1 - send to pipe
+        {
+            it->second->CGIStage = it->second->getCGIptr()->sendToPipe(it, writes, false);
+            it->second->getCGIptr()->prevStage = 1;
+            break;
+        }
+        case 2: //2 - last send to pipe
+        {
+            it->second->CGIStage = it->second->getCGIptr()->sendToPipe(it, writes, true);
+            it->second->getCGIptr()->prevStage = 2;
+            break;
+        }
+        case 20: { it->second->CGIStage = it->second->getCGIptr()->sendToPipe(it, writes, it->second->getCGIptr()->prevStage == 2); break; } //repeat write
+        case 5:
+        {
+            it->second->CGIStage = it->second->getCGIptr()->readFromPipe(it, reads);
+            if (it->second->CGIStage == 50)
+                ;//fix me: find body and add chunk size
+            break;
+        }//read from pipe first
+        case 50:
+        {
+            it->second->CGIStage = it->second->getCGIptr()->readFromPipe(it, reads, false);
+            if (it->second->CGIStage == 50)
+                ;//fix me: add chunk size
+            else if (it->second->CGIStage == 6)
+                ;//fix me: add chunk size + add NULL-chunk
+            break;
+        } // read from pipe next chunk
+        default: { std:: cout << "BAD Stage CGI: " << it->second->Stage << " - " << it->second->CGIStage << std::endl; return; }
+    }
 }
 
 void MainClass::closeConnection(std::map<int, Server *>::iterator &it)

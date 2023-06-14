@@ -35,6 +35,7 @@
 # define BUF_SIZE_PIPE 1024
 
 # define CNT_TRYING 3
+# define TIMEOUT 15 //in sec
 
 //Mesages
 #define TOO_MANY_ARGS			"Too many args\nUse only first argument\n"

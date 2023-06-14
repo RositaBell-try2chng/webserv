@@ -37,7 +37,7 @@ int CGI::startCGI()
         return (this->CGIsFailed());
     this->PipeInBack = fdsBack[0];
     this->PipeOutBack = fdsBack[1];
-    return (21);
+    return (1);
 }
 
 int CGI::ForkCGI(Server &src)
@@ -46,17 +46,17 @@ int CGI::ForkCGI(Server &src)
     switch (this->pid)
     {
         case -1: { return(this->CGIFailed()); }
-        case 0: { return(this->ParentCGI(src)); }
+        case 0: { return(this->ParentCGI()); }
         default: { ChildCGI(src); }
     }
-    return (29); // -1/0 - return own int, Child exit before
+    return (this->CGIFailed()); // -1/0 - return own int, Child exit before
 }
 
-int	CGI::ParentCGI(Server &src)
+int	CGI::ParentCGI()
 {
 	this->timeCGIStarted.tv_sec = time(NULL);
 	this->timeCGIStarted.tv_usec = 0;
-	return (24);
+	return (4);
 }
 
 int CGI::waitingCGI()
@@ -68,16 +68,16 @@ int CGI::waitingCGI()
     switch (resPid)
     {
         case -1: { return(this->CGIsFailed()); } //error
-        case 0: { return (this->checkTimout()); } //child not ready //fix me: implement
+        case 0: { return (this->checkTimout()); } //child not ready
         default:
 		{
 			if (resPid == this->pid && stts == 0) //child finished ok
-				return (23);
+				return (5);
 			else if (resPid == this->pid && stts != 0) //child finished bad
-				return (29);
+				return (9);
 		}
     }
-    return this->checkTimout(); //wrong pid returned, need to wait correct pid //fix me: implement
+    return (this->checkTimout()); //wrong pid returned, need to wait correct pid
 }
 
 void	CGI::ChildCGI(Server &src)
@@ -119,49 +119,50 @@ int    CGI::CGIsFailed()
     if (PipeOutBack > 0)
         close(PipeOutBack);
     Logger::putMsg(std::string("CGI failed!") + std::string(strerror(errno)), FILE_ERR, ERR);
-    return (29);
+    return (9);
 }
 
-int CGI::sendToPipe(std::string &src)
+int CGI::sendToPipe(std::map<int, Server *>::iterator &it, fd_set *writes, bool flgLast)
 {
 	ssize_t		wrRes;
 
-    wrRes = write(this->PipeOutForward, src.c_str(), src.length());
-    switch (wrRes)
-    {
-        case -1: //error
-        {
-        	Logger::putMsg(std::string("ERROR while writing to ") + ConfParser::Size_tToString(this->PipeOutForward) + std::string(":\n") + std::string(strerror(errno)));
-        	return (this->CGIsFailed());
-        }
-    	case 0:
+    if (!FD_ISSET(this->PipeOutForward, writes))
+        return (20); //repeat write
+	wrRes = write(this->PipeOutForward, it->second->getReq_struct().body.c_str(), it->second->getReq_struct().body.length());
+	switch (wrRes)
+	{
+		case -1: //error
 		{
-			Logger::putMsg(std::string("write 0 bytes"), this->PipeInBack + std::string(":\n") + std::string(strerror(errno)));
-			return (this->checkCntTrying('w'));
+			Logger::putMsg(std::string("ERROR while writing to ") + ConfParser::Size_tToString(this->PipeOutForward) + std::string(":\n") + std::string(strerror(errno)), FILE_ERR, ERR);
+			return (this->CGIsFailed());
 		}
-        case (src.length()): //all sent
-        {
-        	this->cntErrorsWriting = 0;
-			switch (this->prevStage)
-			{
-				case 1: { return(1); } //chunked request -> waiting next chunk
-				case 5: { return(22); } //request is over -> waiting CGI response
-				default: {std::cout << "invalid prev stage in CGI::sendToPipe: " << this->prevStage << std::endl; return(CGIFailed());}
-			}
-        }
-		default: //part sent
+		case 0:
+		{
+			Logger::putMsg(std::string("write 0 bytes CGI") + std::string(strerror(errno)), this->PipeInBack, FILE_ERR, ERR);
+			return (this->checkCntTrying('w', it->second->CGIStage));
+		}
+		default:
 		{
 			this->cntErrorsWriting = 0;
-			src.erase(0, wrRes);
-			return (24); //repeat write
+            if (wrRes == it->second->getReq_struct().body.length())
+            {
+                if (flgLast)
+                    return (4);
+                else
+                    return (2);
+            }
+			it->second->getReq_struct().body.erase(0, wrRes);
+			return (20); //repeat write
 		}
-    }
+	}
 }
 
-int CGI::readFromPipe(Server &thisServer)
+int CGI::readFromPipe(std::map<int, Server *>::iterator &it, fd_set *reads)
 {
+    if (!FD_ISSET(this->PipeInBack, reads))
+        return (it->second->CGIStage);
+
 	ssize_t		rdRes;
-	std::string res;
 	char		buf[BUF_SIZE_PIPE];
 
 	rdRes = read(this->PipeInBack, buf, BUF_SIZE_PIPE);
@@ -175,32 +176,18 @@ int CGI::readFromPipe(Server &thisServer)
 		case 0:
 		{
 			Logger::putMsg(std::string("read 0 bytes"), this->PipeInBack + std::string(":\n") + std::string(strerror(errno)));
-			return (this->checkCntTrying('r'));
+			return (this->checkCntTrying('r', it->second->CGIStage));
 		}
 		case BUF_SIZE_PIPE: //maybe somthing else in PIPE
 		{
 			this->cntTryingReading = 0;
-			res = std::string(buf, rdRes);
-			thisServer.setResponse(res);
-			switch (thisServer.getStage())
-			{
-				case 23: {return(25);}
-				case 25:
-				case 26: {return(26);}
-			}
-			break;
+			it->second->setResponse(std::string(buf, rdRes));
+			return (50);
 		}
 		default: //end of file
 		{
 			this->cntTryingReading = 0;
-			res = std::string(buf, rdRes);
-			thisServer.setResponse(res);
-			switch (thisServer.getStage())
-			{
-				case 23: {return(28);}
-				case 25:
-				case 26: {return(27);}
-			}
+            return (6);
 		}
 	}
 	std::cout << "BAD STAGE in read from PIPE: " << thisServer.getStage() << std::endl;
@@ -315,7 +302,10 @@ int     CGI::getPipeInForward() { return this->PipeInForward; }
 int     CGI::getPipeOutForward() { return this->PipeOutForward; }
 int     CGI::getPipeInBack()) { return this->PipeInBack; }
 int     CGI::getPipeOutBack()) { return this->PipeOutBack; }
-const std::string & CGI::getTosendToPipe() { return this->toSendToPipe; }
 
-//setters
-void CGI::setToSendToPipe(const std::string &src) {this->toSendToPipe = src;}
+int CGI::checkTimout()
+{
+    if (time(NULL) - this->timeCGIStarted.tv_sec > TIMEOUT)
+        return (9);
+    return (4);
+}

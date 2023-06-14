@@ -20,7 +20,7 @@ private:
     static int      maxFd;
     static Servers* allServers;
 
-	_Noreturn static void     mainLoop();
+	static void     mainLoop();
     static bool     acceptConnections(fd_set *readFd);
     static void     readRequest(std::map<int, Server*>::iterator &it, int Stage, fd_set *reads);
     static void     readNextChunk(std::map<int, Server*>::iterator &it);
@@ -28,7 +28,7 @@ private:
     static void     handleRequest(std::map<int, Server *>::iterator &it);
     static void     closeConnection(std::map<int, Server *>::iterator &it);
     static void     firstSend(std::map<int, Server *>::iterator &it);
-    static void     handlerCgi(std::map<int, Server *>::iterator &it);
+    static void     CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_set *reads, fd_set *writes);
 public:
     static char             **envCGI;
     static std::set<int>    readsCGI;

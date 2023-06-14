@@ -18,26 +18,20 @@ Server::Server(const std::string& _host, const std::string& _port)
 	this->request = std::string();
 	this->response = std::string();
 	this->serv = NULL;
-	this->Stage = 0;
-	this->prevStage = 0;
-	this->cntErrorsRecv = 0;
 	this->cntErrorsSend = 0;
 	this->CGI = NULL;
 	this->lastReadTime.tv_sec = time(NULL);
 	this->lastReadTime.tv_usec = 0;
+	this->Stage = 0;
+	this->readStage = 0;
+	this->writeStage = 0;
+	this->parseStage = 0;
+	this->CGIStage = 0;
+	this->isChunkedRequest = false;
+	this->isChunkedResponse = false;
 }
 
 void Server::addToReq(std::string src) { this->request += src; }
-
-void Server::setChunkToSend(const std::string &src) {this->chunkToSend = src;}
-
-bool Server::checkCntTryingRecv()
-{
-	this->cntTryingRecv++;
-	if (this->cntTryingRecv < CNT_TRYING)
-		return (false);
-	return (true);
-}
 
 bool Server::checkCntTryingSend()
 {
@@ -307,8 +301,7 @@ void Server::setRedirect(t_loc *cur, std::string line1)
 	std::stringstream ss(line1);
 
 	ss >> code;
-	//fix me: use exist codes
-	if (!(code <= 305 && code >= 300))
+	if (!(code <= 309 && code >= 300))
 	{
 		Logger::putMsg("BAD CONFIG 'return':\n" + line1 + " " + line2, FILE_ERR, ERR);
 		MainClass::exitHandler(0);
@@ -465,12 +458,30 @@ void Server::clearReq_struct()
 }
 
 //clears
-void Server::reqClear() { this->request.clear(); }
+void Server::reqClear()
+{
+	this->Stage = 0;
+	this->readStage = 0;
+	this->writeStage = 0;
+	this->parseStage = 0;
+	this->CGIStage = 0;
+	this->isChunkedRequest = false;
+	this->isChunkedResponse = false;
+	this->response.clear();
+	this->CntTryingSendZero();
+	if (!this->ptrCGI)
+	{
+		delete this->ptrCGI;
+		this->ptrCGI = NULL;
+	}
+}
 
 //clears
 void Server::resClear()
 {
 	this->response.clear();
+	this->isChunkedResponse = false;
+	this->CntTryingSendZero();
 	this->Stage = 0;
 }
 
@@ -513,8 +524,6 @@ const std::string & Server::getHost() { return (this->host); }
 const std::string & Server::getPort() { return (this->port); }
 const std::string & Server::getRequest() { return (this->request); }
 const std::string & Server::getResponse() { return (this->response); }
-int					Server::getStage() { return (this->Stage); }
-int					Server::getPrevStage() { return (this->prevStage); }
 const std::string &Server::getChunkToSend() {return this->chunkToSend;}
 ssize_t				Server::getMaxBodySize() { return (this->maxLimitBodiSize); }
 HTTP_Answer		&Server::getAnsw_struct() { return (this->answ_struct); }
@@ -523,7 +532,6 @@ CGI				*Server::getCGIptr() { return (this->ptrCGI) };
 
 //setters
 void	Server::setSGIptr(CGI *src) {this->ptrCGI = src;}
-void	Server::setStage(int n) 
 {
 	if (this->Stage == n)
 		return;
@@ -532,7 +540,6 @@ void	Server::setStage(int n)
 }
 void	Server::setMaxBodySize(ssize_t n) {this->maxLimitBodiSize = n;}
 void	Server::setResponse(const std::string src) { this->response = src; }
-void	Server::CntTryingRecvZero() {this->cntTryingRecv = 0;}
 void	Server::CntTryingSendZero() {this->cntTryingSend = 0;}
 //copy structs Answ/Req
 void Server::setAnsw_struct(HTTP_Answer const &src)
