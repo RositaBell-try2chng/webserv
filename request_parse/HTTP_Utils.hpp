@@ -13,5 +13,6 @@ int ft_strtohdrs(std::string raw, int i, int end,
 
 
 std::string ft_hdrstostr(std::map<std::string, std::string> headers);
+std::pair<std::string, std::string> ft_strtopair(std::string str, char dlmtr);
 
 #endif

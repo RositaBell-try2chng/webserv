@@ -34,7 +34,7 @@ HTTP_Answer HTTP_Answer::ft_reqtoansw(HTTP_Request req) {
 
 	if (req.answ_code[0] < 4) {
 		if (!req.base.start_string.method.compare("GET")) 
-			ft_get_answ(req, &answ);
+			ft_get_answ(req, answ);
 		// else if (!req.method.compare("POST"))
 		// 	ft_post_answ(req, answ);
 		// else if (!req.method.compare("DELETE"))

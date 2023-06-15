@@ -1,6 +1,6 @@
 #include "HTTP_Methods.hpp"
 
-void	t_get_answ(HTTP_Request &req, HTTP_Answer &answ) {
+void	ft_get_answ(HTTP_Request &req, HTTP_Answer &answ) {
 
 	FILE	*file;
 
@@ -31,3 +31,5 @@ void	t_get_answ(HTTP_Request &req, HTTP_Answer &answ) {
 
 
 // }
+
+

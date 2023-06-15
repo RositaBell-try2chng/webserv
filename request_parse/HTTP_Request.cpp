@@ -211,18 +211,19 @@ void	ft_parse_headers(HTTP_Request &req, std::string &raw, int &end) {
 	for (i = 0; i < end; ++i) {
 		for (letter = 1;
 				i + letter < end && raw[i + letter] != '\n' && raw[i + letter - 1] != '\r';
-				++letter) {}
-		req.left += raw.substr(i, letter - 1);
-		if (raw[i + letter] != '\n' && raw[i + letter - 1] != '\r') {
+				++letter) {	
+		}
+		req.left += raw.substr(i, letter);
+		if (raw[i + letter] == '\n' && raw[i + letter - 1] == '\r') {
 			ft_set_hdr(req);
-			i += (letter + 1);
+			i += letter;
 		}
 		else
 			break ;
 		if (i + 1 < end && raw[i + 1] == '\n' && raw[i] == '\r') {
 			ft_headers_parse(req);
 			++req.stage;
-			i += 2;
+			i += 1;
 			break ;
 		}
 	}
@@ -239,14 +240,13 @@ void	ft_parse_start_string(HTTP_Request &req, std::string &raw, int &end) {
 
 	for (i = 0; (i < end) && (raw[i] != '\n' && raw[i - 1] != '\r'); ++i)
 		req.left.push_back(raw[i]);
-struct HTTP_Request;
+
 	if (raw[i] == '\n' && raw[i - 1] == '\r') {
 		if (ft_set_url(req) != 0)
 			++req.stage;
 		req.left.clear();
 	}
-
-	raw.erase(0, i);
+	raw.erase(0, i + 1);
 	end = raw.size();
 }
 
@@ -255,10 +255,10 @@ void HTTP_Request::ft_strtoreq(HTTP_Request &req, std::string &raw) {
 	int	end = raw.size();
 
 	switch (req.stage) {
-		case New: 			{ ft_parse_start_string(req, raw, end); __attribute__ ((fallthrough));}
-		case Start_String:	{ ft_parse_headers(req, raw, end); __attribute__ ((fallthrough));}
-		case Headers: 		{ ft_parse_body(req, raw, end); __attribute__ ((fallthrough));}
-		case Ready: 		{ if (req.answ_code[0] < 4) break; __attribute__ ((fallthrough));}
+		case New: 			{ ft_parse_start_string(req, raw, end); }
+		case Start_String:	{ ft_parse_headers(req, raw, end); }
+		case Headers: 		{ ft_parse_body(req, raw, end); }
+		case Ready: 		{ if (req.answ_code[0] < 4) break; }
 		case Error: 		{ req.stage = 59; break; }
 		default:			{ 
 
