@@ -125,50 +125,31 @@ bool ft_set_hdr(HTTP_Request &req) {
 		Logger::putMsg("Request is too large", FILE_WREQ, WREQ);
 		req.answ_code[0] = 4;
 		req.answ_code[1] = 13;
-		return (0);
+		return false;
 	}
 
 	std::pair<std::string, std::string>	header = ft_strtopair(req.left, ':');
 	req.left.clear();
 
-	if (req.base.headers.find(header.first) != req.base.headers.end()){
+	if (!header.second.compare("")) {
+		Logger::putMsg("Header " + header.first + " Doesn't have a value", FILE_WREQ, WREQ);
+		req.answ_code[0] = 4;
+		req.answ_code[1] = 0;
+		return false;
+	}
+	else if (req.base.headers.find(header.first) != req.base.headers.end()){
 		Logger::putMsg("Multiple request's header: " + header.first, FILE_WREQ, WREQ);
 		req.answ_code[0] = 4;
 		req.answ_code[1] = 0;
 		return false;
 	}
-	else if (!header.first.compare("")) {
-		Logger::putMsg("Header " + header.first + "Doesn't have a value", FILE_WREQ, WREQ);
-		req.answ_code[0] = 4;
-		req.answ_code[1] = 0;
-		return 0;
-	}
+	
 	else
 		req.base.headers.insert(header);
 
 	return true;
 
 	
-}
-
-void ft_set_body(HTTP_Request *req, std::vector<std::string> req_str_arr, int i, int end, int limit) {
-
-	int total_size = 0;
-
-	for (; req_str_arr[i] != req_str_arr[end]; ++i) {
-		total_size += req_str_arr[i].size();
-
-		if (total_size > limit) {
-			Logger::putMsg("Request\'s body is too large", FILE_WREQ, WREQ);
-			req->answ_code[0] = 4;
-			req->answ_code[1] = 14;
-			return ;
-		}
-
-		req->body.append(req_str_arr[i]);
-	}
-
-	// work with body
 }
 
 void	ft_parse_body(HTTP_Request &req, std::string &raw, int &end) {
@@ -216,14 +197,15 @@ void	ft_parse_headers(HTTP_Request &req, std::string &raw, int &end) {
 		req.left += raw.substr(i, letter);
 		if (raw[i + letter] == '\n' && raw[i + letter - 1] == '\r') {
 			ft_set_hdr(req);
-			i += letter;
+			i += (letter - 1);
 		}
 		else
 			break ;
+		++i;
 		if (i + 1 < end && raw[i + 1] == '\n' && raw[i] == '\r') {
 			ft_headers_parse(req);
 			++req.stage;
-			i += 1;
+			i += 2;
 			break ;
 		}
 	}

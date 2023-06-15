@@ -6,76 +6,77 @@ std::pair<std::string, std::string> ft_strtopair(std::string str, char dlmtr){
 	std::string		key;
 	std::string		value("");
 
-	int	end = str.size() - 1;
+	int	end = str.size();
 	int	i;
 
 	// Key
-	for (i = 0; i != end && str[i] != dlmtr; ++i)
+	for (i = 0; i < end && str[i] != '\r' && str[i] != dlmtr; ++i)
 		key.push_back(str[i]);
-
+	if (i == end)
+		return std::make_pair(key, std::string(""));
 
 	// Value
-	for (++i; i != end; ++i)
+	for (++i; i != end && str[i] != '\r'; ++i)
 		value.push_back(str[i]);
 
 	return std::make_pair(key, value);
 }
 
-int ft_strtohdrs(std::string raw, int i, int end,
-		std::map<std::string, std::string> *hdrs,
-		std::string *body) {
+// int ft_strtohdrs(std::string raw, int i, int end,
+// 		std::map<std::string, std::string> *hdrs,
+// 		std::string *body) {
 
-	std::string		key;
-	std::string		value;
+// 	std::string		key;
+// 	std::string		value;
 
-// Headers
-	for (++i; raw[i] != ('\n') && i != end; ) {
-	// Key
-		for (; i != end && raw[i] != ':'; ++i) {
-			key.push_back(raw[i]);
-		}
-		if (i == end) {
-			Logger::putMsg("Header " + key + "Doesn't have a value", FILE_WREQ, WREQ);
-			return 400;
-		}
+// // Headers
+// 	for (++i; raw[i] != ('\n') && i != end; ) {
+// 	// Key
+// 		for (; i != end && raw[i] != ':'; ++i) {
+// 			key.push_back(raw[i]);
+// 		}
+// 		if (i == end) {
+// 			Logger::putMsg("Header " + key + "Doesn't have a value", FILE_WREQ, WREQ);
+// 			return 400;
+// 		}
 
-	// Value
-		for (++i; raw[i] == ' '; ++i) {}
+// 	// Value
+// 		for (++i; raw[i] == ' '; ++i) {}
 	
-		for (; i != end && raw[i] != '\n'; ++i)
-			if (raw[i] != '\r')
-				value.push_back(raw[i]);
+// 		for (; i != end && raw[i] != '\n'; ++i)
+// 			if (raw[i] != '\r')
+// 				value.push_back(raw[i]);
 
-		std::pair<std::string, std::string> hdr = std::make_pair(key, value);
-		key.clear();
-		value.clear();
+// 		std::pair<std::string, std::string> hdr = std::make_pair(key, value);
+// 		key.clear();
+// 		value.clear();
 
-		if (hdrs->find(hdr.first) != hdrs->end()){
-			Logger::putMsg("Multiple request's header: " + hdr.first, FILE_WREQ, WREQ);
-			return (400);
-		}
-		hdrs->insert(hdr);
+// 		if (hdrs->find(hdr.first) != hdrs->end()){
+// 			Logger::putMsg("Multiple request's header: " + hdr.first, FILE_WREQ, WREQ);
+// 			return (400);
+// 		}
+// 		hdrs->insert(hdr);
 
-		if (i != end) {
-			++i;
-			if (raw[i] == '\r')
-				++i;
-		}
-	}
+// 		if (i != end) {
+// 			++i;
+// 			if (raw[i] == '\r')
+// 				++i;
+// 		}
+// 	}
 
-	if (hdrs->find("Host") == hdrs->end()) {
-		Logger::putMsg("Request hasn't \"Host\" header", FILE_WREQ, WREQ);
-		return 400;
-	}
+// 	if (hdrs->find("Host") == hdrs->end()) {
+// 		Logger::putMsg("Request hasn't \"Host\" header", FILE_WREQ, WREQ);
+// 		return 400;
+// 	}
 
-// Body
-	if (raw.size() > 0) {
-		raw.erase(0, ++i);
-		*body = raw;
-	}
+// // Body
+// 	if (raw.size() > 0) {
+// 		raw.erase(0, ++i);
+// 		*body = raw;
+// 	}
 
-	return 200;
-}
+// 	return 200;
+// }
 
 std::string ft_hdrstostr(std::map<std::string, std::string> headers) {
 	

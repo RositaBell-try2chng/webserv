@@ -24,7 +24,7 @@
 int main( void )
 {
 
-	std::string raw =	"GET / HTTP/1.1\r\nHost: 127.0.0.1:8081\r\nConnection: keep-alive\r\nsec-ch-ua: \"Chromium\";v=\"110\", \"Not A(Brand\";v=\"24\", \"Google Chrome\";v=\"110\"\r\nsec-ch-ua-mobile: ?0\r\nsec-ch-ua-platform: \"macOS\"\r\nUpgrade-Insecure-Requests: 1\r\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7\r\nSec-Fetch-Site: none\r\nSec-Fetch-Mode: navigate\r\nSec-Fetch-User: ?1\r\nSec-Fetch-Dest: document\r\nAccept-Encoding: gzip, deflate, br\r\nAccept-Language: en-US,en;q=0.9\r\nCookie: wp-settings-1=mfold%3Df; wp-settings-time-1=1682074510\r\n";
+	std::string raw =	"GET / HTTP/1.1\r\nHost: 127.0.0.1:8081\r\nConnection keep-alive\r\nsec-ch-ua: \"Chromium\";v=\"110\", \"Not A(Brand\";v=\"24\", \"Google Chrome\";v=\"110\"\r\nsec-ch-ua-mobile: ?0\r\nsec-ch-ua-platform: \"macOS\"\r\nUpgrade-Insecure-Requests: 1\r\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7\r\nSec-Fetch-Site: none\r\nSec-Fetch-Mode: navigate\r\nSec-Fetch-User: ?1\r\nSec-Fetch-Dest: document\r\nAccept-Encoding: gzip, deflate, br\r\nAccept-Language: en-US,en;q=0.9\r\nCookie: wp-settings-1=mfold%3Df; wp-settings-time-1=1682074510\r\n\r\n9999";
 
 	std::cout << raw << "\n\n=================================================================\n=================================================================\n\n";
 
@@ -47,7 +47,7 @@ int main( void )
 
 	std::cout << raw << "\n\n=================================================================\n=================================================================\n\n";
 
-	std::cout << "Request code: " << "\n" << req.answ_code[0] << req.answ_code[1] << std::endl;
+	std::cout << "Request code: " << "\n" << req.answ_code[0] * 100 + req.answ_code[1] << std::endl;
 // ============================================================================================================================================
 
 	HTTP_Answer str_answ;
