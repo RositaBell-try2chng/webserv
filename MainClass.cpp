@@ -63,13 +63,19 @@ void MainClass::doIt(int args, char **argv, char **env)
         return;
     }
 
+	for (std::map<int, Server *>::iterator it = allServers.begin(); it != allServers.end(); it++)
+	{
+		if (MainClass::isRedirectionInARaw(it))
+			return;
+	}
+
     if (!MainClass::allServers || MainClass::allServers->getConnections(true).empty())
     {
         std::cerr << "NO SERVER CREATED, CHECK YOUR CONFIG\n";
         return;
     }
     std::cout << "Server has been launched!\n";
-    MainClass::envCGI = env;
+
     MainClass::mainLoop();
 	//printAllServ(MainClass::allServers);
 }
@@ -265,15 +271,12 @@ void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_se
                 ;//fix me: find body and add chunk size
             break;
         }//read from pipe first
-        case 50:
+        case 50: // read from pipe next chunk
         {
             it->second->CGIStage = it->second->getCGIptr()->readFromPipe(it, reads, false);
-            if (it->second->CGIStage == 50)
-                ;//fix me: add chunk size
-            else if (it->second->CGIStage == 6)
-                ;//fix me: add chunk size + add NULL-chunk
+            ;//fix me: handle add chunk size + add NULL-chunk if need
             break;
-        } // read from pipe next chunk
+        }
         default: { std:: cout << "BAD Stage CGI: " << it->second->Stage << " - " << it->second->CGIStage << std::endl; return; }
     }
 }
@@ -305,4 +308,108 @@ void MainClass::addToSet(int fd, fd_set *dst)
     FD_SET(fd, dst);
     if (fd > MainClass::maxFd)
         MainClass::maxFd = fd;
+}
+
+bool MainClass::isRedirectionInARaw(std::map<int, Server *>::iterator it)
+{
+	t_serv		*chNodeServ;
+	t_loc		*chNodeLoc;
+	std::string	redirectString;
+	std::string name;
+	std::string ip;
+	std::string port;
+
+	for (chNodeServ = it->second->serv; chNodeServ != NULL; chNodeServ = chNodeServ->next)
+	{
+		for (chNodeLoc = chNodeServ->locList; chNodeLoc != NULL; chNodeLoc = chNodeLoc->next)
+		{
+			if (chNodeLoc->redirect.empty())
+				continue;
+			redirectString = chNodeLoc->redirect.begin()->second;
+			if (!MainClass::checkCorrectHostPortInRedirection(redirectString, name, port))
+				return (true);
+			//find Server *
+			for (std::map<int, Server *>::iterator itA = allServers->getConnections(true).begin(); itA != allServers->getConnections(true).end(); itA++)
+			{
+				if (ip == itA->second->getHost())
+				{
+					t_serv	*curServ = itA->second->findServer(name);
+					t_loc	*curLoc = Server::findLocation(redirectString, curServ);
+					if (!curLoc->redirect.empty())
+					{
+						Logger::putMsg("Two or more redirection in a raw: " + ip + name + ":" + port, FILE_ERR, ERR);
+						return (true);
+					}
+				}
+			}
+		}
+	}
+	return (false);
+}
+
+bool MainClass::checkCorrectHostPortInRedirection(std::string &src, std::string &name, std::string &port, std::string &ip)
+{
+	std::string::size_type	i;
+	std::string				tmp;
+
+	i = src.find("http://");
+	if (i != 0)
+	{
+		i = src.find("https://");
+		if (i != 0)
+			return (false);
+		else
+		{
+			src.erase(0, 8);
+			port = "443";
+		}
+	}
+	else
+	{
+		port = "80";
+		src.erase(0, 7);
+	}
+	i = src.find("www.");
+	if (i == 0)
+		src.erase(0, 4);
+	i = src.find('/');
+	tmp = substr(0, i);
+	src.erase(0, i);
+	i = src.rfind('/');
+	src.resize(i + 1);
+	i = tmp.find(':');
+	name = tmp.substr(0, i);
+	tmp.erase(0, i + 1);
+	if (!tmp.empty())
+		port = tmp;
+	//check port
+	for (i = 0; i < 6; i++)
+	{
+		if (i >= 5 || !std::isdigit(port[i]))
+		{
+			Logger::putMsg("BAD Port in redirection: " + port + "host", FILE_ERR, ERR);
+			return (false);
+		}
+	}
+	while (port.length() < 5)
+		port = '0' + port;
+	if (port > "65535")
+	{
+		Logger::putMsg("BAD Port in redirection: " + port + "host", FILE_ERR, ERR);
+		return (false);
+	}
+	//check host/name
+	if (ConfParser::checkCorrectHost(name))
+	{
+		ip = name;
+		name.clear();
+	}
+	if (name == "localhost")
+		ip = "127.0.0.1";
+	return (true);
+}
+
+bool MainClass::hasInfLoop(std::map<int, Server *>::iterator it, t_serv *srcSrv, t_loc *srcLoc, std::string dst)
+{
+
 }

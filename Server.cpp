@@ -6,6 +6,8 @@
 Server::Server() {};
 Server::~Server()
 {
+	delete this->req_struct;
+	delete this->answ_struct;
 	if (!this->serv)
 		return;
 	this->clearServ();
@@ -29,6 +31,8 @@ Server::Server(const std::string& _host, const std::string& _port)
 	this->CGIStage = 0;
 	this->isChunkedRequest = false;
 	this->isChunkedResponse = false;
+	this->req_struct = new HTTP_Request();
+	this->answ_struct = new HTTP_Answer();
 }
 
 void Server::addToReq(std::string src) { this->request += src; }
@@ -526,8 +530,8 @@ const std::string & Server::getRequest() { return (this->request); }
 const std::string & Server::getResponse() { return (this->response); }
 const std::string &Server::getChunkToSend() {return this->chunkToSend;}
 ssize_t				Server::getMaxBodySize() { return (this->maxLimitBodiSize); }
-HTTP_Answer		&Server::getAnsw_struct() { return (this->answ_struct); }
-HTTP_Request	&Server::getReq_struct() { return (this->req_struct); }
+HTTP_Answer		*Server::getAnsw_struct() { return (this->answ_struct); }
+HTTP_Request	*Server::getReq_struct() { return (this->req_struct); }
 CGI				*Server::getCGIptr() { return (this->ptrCGI) };
 
 //setters

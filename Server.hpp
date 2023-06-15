@@ -49,15 +49,14 @@ private:
 
 	//req/resp
 	std::string		request;
-	HTTP_Request	req_struct;
+	HTTP_Request	*req_struct;
 
 	std::string		response;
-	std::string		chunkToSend;
-	HTTP_Answer		answ_struct;
+	HTTP_Answer		*answ_struct;
 
 	int				prevStage;
 
-	char cntTryingSend;
+	char			cntTryingSend;
 
 	CGI				*ptrCGI;
 
@@ -91,10 +90,10 @@ public:
 	std::string 	const&	getPort();
 
 	std::string		const&	getRequest();
-	HTTP_Request	&		getReq_struct();
+	HTTP_Request	*		getReq_struct();
 
 	std::string		const&	getResponse();
-	HTTP_Answer		&		getAnsw_struct();
+	HTTP_Answer		*		getAnsw_struct();
 	std::string		const&	getChunkToSend();
 
 	bool				checkTimeOut();
@@ -102,8 +101,8 @@ public:
 	ssize_t				getMaxBodySize();
 	CGI					*getCGIptr();
 
-	t_loc*				findLocation(std::string const &str, t_serv *src);
-	static t_serv*		findServer(std::string const &str);
+	static t_loc*		findLocation(std::string const &str, t_serv *src);
+	t_serv*				findServer(std::string const &str);
 	static std::string	findFile(std::string const &str, t_loc *loc);
 
 	void				setSGIptr(CGI *src);

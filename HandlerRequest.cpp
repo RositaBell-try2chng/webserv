@@ -4,14 +4,42 @@ void HandlerRequest::mainHandler(Server &srv)
 {
 	switch (src.Stage)
 	{
-		case 0: //start
-		case 1: //need read from socket
-		case 2: //need parse request
-		case 3: //need handle HTTP_reqStruct
+		case 0: { HandlerRequest::start(srv) break; } //start
+		//case 1: //read from socket //nothing to do //server ready to read
+		case 2: { HandlerRequest::parserRequest(srv); break; } //need parse request
+		case 3: { HandlerRequest::handleRequest(srv); break; } //need handle HTTP_reqStruct
 		case 4: { HandlerRequest::CGIHandler(srv); break; } //need CGI
-		case 5: //need write to socket
-		case 9: //error
+		//case 5: //write to socket //nothing to do //server ready to write
+		case 9: { HandlerRequest::prepareToSendError(srv); break; } //error
 	}
+}
+
+void HandlerRequest::start(Server &srv)
+{
+	if (srv.getRequest().empty()) { srv.Stage = 1; return; }
+	HandlerRequest::parserRequest(srv);
+	switch (srv.parseStage)
+	{
+		case 0:
+		case 1: { srv.Stage = 1; break; }
+		case 2: { HandlerRequest::checkHeaders(srv); break; }
+		case 3: { srv.Stage = 3; HandlerRequest::handleRequest(srv); break; }
+		case 9: { srv.Stage = 9; HandlerRequest::prepareToSendError(srv); break; }
+		default: { std::cout << "BAD parse Stage: " << srv.parseStage << std::endl; break; }
+	}
+}
+
+void HandlerRequest::handleRequest(Server &srv)
+{
+	t_serv		*servNode = srv.findServer(srv.getReq_struct()->host);
+
+	if (srv.getReq_struct()->flg_te == 0 && srv.getReq_struct()->content_lngth > servNode->limitCLientBodySize)
+		;//fix me: add error limiting
+
+	size_t		i = srv.getReq_struct()->uri.rfind('/');
+	std::string	locName = srv.getReq_struct()->uri.substr(0, i + 1);
+	t_loc		*locNode = srv.findLocation(locName, servNode);
+
 }
 
 void HandlerRequest::CGIHandler(Server &srv)
@@ -90,31 +118,23 @@ void HandlerRequest::startCGI(Server &srv)
 		HandlerRequest::prepareToSendCGI(srv);
 }
 
+void HandlerRequest::checkHeaders(Server &srv)
+{
+	if (srv.getReq_struct()->flg_te == 0)
+	{
+		srv.Stage = 1;
+		return;
+	}
+	srv.isChunkedRequest = true;
+	srv.readStage = 1;
+	if (!srv.getReq_struct()->body.empty())
+	{
+		srv.Stage = 3;
+		HandlerRequest::handleRequest(srv);
+	}
+	else
+		srv.Stage = 1;
+}
+
 HandlerRequest::HandlerRequest() {}
 HandlerRequest::~HandlerRequest() {}
-
-
-void HandlerRequest::CGIHandler(Server &srv)
-{
-    if (!(it->second->CGIStage == 0 || it->second->CGIStage == 6) && it->second->getCGIptr() == NULL)
-    {
-        std::cout << "BAD stages or ptr in CGI Handler on fd: " << it->first << std::endl;
-        return;
-    }
-    switch (it->second->CGIStage)
-    {
-        
-
-        
-
-
-
-        case 6:  { it->second->CGIStage = it->second->getCGIptr()->endOfCGI(it); break; }//end of pipe riched + clean all
-        case 9: { it->second->Stage = 9; MainClass::errorManager(it) break; } //CGI failed + clean
-        default:
-        {
-			if ( )
-            std::cout << "bad stage of CGI: " << it->second->CGIStage << std::endl;
-        }
-    }
-}

@@ -30,13 +30,14 @@ private:
     static void     firstSend(std::map<int, Server *>::iterator &it);
     static void     CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_set *reads, fd_set *writes);
 public:
-    static char             **envCGI;
     static std::set<int>    readsCGI;
     static std::set<int>    writeCGI;
-    static void     doIt(int args, char** argv, char** env);
-    static void     exitHandler(int sig);
-    static void     addToSet(int fd, fd_set *dst);
-    static void     prepareToSend(Server *src, int Stage);
+    static void				doIt(int args, char** argv, char** env);
+    static void				exitHandler(int sig);
+    static void				addToSet(int fd, fd_set *dst);
+    static void				prepareToSend(Server *src, int Stage);
+	static bool				isRedirectionInARaw(std::map<int, Server *>::iterator it);
+	static bool				checkCorrectHostPortInRedirection(std::string &src, std::string &host, std::string &port);
 };
 
 #endif
