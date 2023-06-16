@@ -190,8 +190,6 @@ int CGI::readFromPipe(std::map<int, Server *>::iterator &it, fd_set *reads)
             return (6);
 		}
 	}
-	std::cout << "BAD STAGE in read from PIPE: " << thisServer.getStage() << std::endl;
-	return (this->CGIFailed());
 }
 
 //checker counters
@@ -257,11 +255,11 @@ char**  CGI::setEnv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANS
     {
         res = new char**[size](NULL);
         res[i++] = CGI::getAllocatedCharPointer(std::string("SERVER_SOFTWARE=AMANIX"));
-        res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("SERVER_NAME=") + src.getReq_struct().host));
+        res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("SERVER_NAME=") + src.getReq_struct()->host));
         res[i++] = CGI::getAllocatedCharPointer(std::string("GATEWAY_INTERFACE=CGI/1.1"));
         res[i++] = CGI::getAllocatedCharPointer(std::string("SERVER_PROTOCOL=HTTP/1.1"));
-        res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("SERVER_PORT=") + src.getReq_struct().port));
-        res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("REQUEST_METHOD=") + src.getReq_struct().method));
+        res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("SERVER_PORT=") + src.getReq_struct()->port));
+        res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("REQUEST_METHOD=") + src.getReq_struct()->base.start_string.method));
         res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("SCRIPT_NAME=") + SCRIPT_NAME));
         res[i++] = CGI::getAllocatedCharPointer(std::string("REMOTE_ADDR=");
         res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("PATH_INFO=") + PATH_INFO);

@@ -29,12 +29,6 @@ public:
     static bool     checkArgs(int args, char **argv);
     static void     parseConf(char* arg, Servers** allServers);
     static void     splitLine(std::string &src, std::string &dst);
-    static void     delSpaces(std::string &str);
-    static bool     checkCorrectHost(std::string &Host);
-    static ssize_t  strToSSize_t(std::string const& src, ssize_t limit);
-    
-    static std::string      Size_tToString(std::string::size_type src);
-    std::string::size_type  StringToSize_t(std::string src, std::string base, bool &flgCorrect);
 };
 
 #endif

@@ -65,8 +65,11 @@ void MainClass::doIt(int args, char **argv, char **env)
 
 	for (std::map<int, Server *>::iterator it = allServers.begin(); it != allServers.end(); it++)
 	{
-		if (MainClass::isRedirectionInARaw(it))
+		if (!MainClass::isCorrectRedirection(it))
+		{
+			std::cerr << "BAD redirection, check logs\n";
 			return;
+		}
 	}
 
     if (!MainClass::allServers || MainClass::allServers->getConnections(true).empty())
@@ -94,7 +97,7 @@ void MainClass::mainLoop()
         FD_ZERO(&readFds);
         FD_ZERO(&writeFds);
         MainClass::maxFd = -1;
-        //handle all request until read/write or waiting child(22)
+        //handle all request until read/write or waiting child
         for (it = allServers->getConnections().begin(); it != allServers->getConnections().end(); it++)
             HandlerRequest::mainHandler(it, &readFds, &writeFds);
         //2.1.2 add listen fds
@@ -228,8 +231,9 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *writ
 			it->second->CntTryingSendZero();
 			if (static_cast<size_t>(sendRes) == toSend.length())
 			{
+				it->second->resClear();
 				if (!it->second->isChunkedResponse || it->second->CGIStage == 6)
-                    it->second->resClear();
+					it->second->reqClear();
                 else if (it->second->CGIStage == 5 || it->second->CGIStage == 50)
                     it->second->Stage = 4;
                 //fix me: maybe something else???
@@ -310,7 +314,7 @@ void MainClass::addToSet(int fd, fd_set *dst)
         MainClass::maxFd = fd;
 }
 
-bool MainClass::isRedirectionInARaw(std::map<int, Server *>::iterator it)
+bool MainClass::isCorrectRedirection(std::map<int, Server *>::iterator it)
 {
 	t_serv		*chNodeServ;
 	t_loc		*chNodeLoc;
@@ -325,9 +329,15 @@ bool MainClass::isRedirectionInARaw(std::map<int, Server *>::iterator it)
 		{
 			if (chNodeLoc->redirect.empty())
 				continue;
+			if (!(chNodeLoc->files.empty() && chNodeLoc->root.empty() && chNodeLoc->files.empty() \
+					&& !chNodeLoc->dirListFlg && chNodeLoc->defFileIfDir.empty() && chNodeLoc->CGIs.empty() && chNodeLoc->uploadPath.empty()))
+			{
+				Logger::putMsg("Bad configs with redirection: if 'return is set you should't use other parameters in location" + it->second->getHost() + ":" + it->second->getPort(), FILE_ERR, ERR);
+				return (false);
+			}
 			redirectString = chNodeLoc->redirect.begin()->second;
 			if (!MainClass::checkCorrectHostPortInRedirection(redirectString, name, port))
-				return (true);
+				return (false);
 			//find Server *
 			for (std::map<int, Server *>::iterator itA = allServers->getConnections(true).begin(); itA != allServers->getConnections(true).end(); itA++)
 			{
@@ -338,13 +348,13 @@ bool MainClass::isRedirectionInARaw(std::map<int, Server *>::iterator it)
 					if (!curLoc->redirect.empty())
 					{
 						Logger::putMsg("Two or more redirection in a raw: " + ip + name + ":" + port, FILE_ERR, ERR);
-						return (true);
+						return (false);
 					}
 				}
 			}
 		}
 	}
-	return (false);
+	return (true);
 }
 
 bool MainClass::checkCorrectHostPortInRedirection(std::string &src, std::string &name, std::string &port, std::string &ip)
@@ -407,9 +417,4 @@ bool MainClass::checkCorrectHostPortInRedirection(std::string &src, std::string 
 	if (name == "localhost")
 		ip = "127.0.0.1";
 	return (true);
-}
-
-bool MainClass::hasInfLoop(std::map<int, Server *>::iterator it, t_serv *srcSrv, t_loc *srcLoc, std::string dst)
-{
-
 }

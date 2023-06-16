@@ -281,6 +281,7 @@ void Server::setFiles(t_loc *cur, std::string src)
 void Server::setRedirect(t_loc *cur, std::string line1)
 {
 	std::string line2;
+	std::string	tmp;
 	int 		code;
 
 	if (!cur->redirect.empty())
@@ -305,7 +306,9 @@ void Server::setRedirect(t_loc *cur, std::string line1)
 	std::stringstream ss(line1);
 
 	ss >> code;
-	if (!(code <= 309 && code >= 300))
+	tmp.clear();
+	ss >> tmp;
+	if (!tmp.empty() || !(code == 301 || code == 302 || code == 303 || code == 304 || code == 307 || code == 308))
 	{
 		Logger::putMsg("BAD CONFIG 'return':\n" + line1 + " " + line2, FILE_ERR, ERR);
 		MainClass::exitHandler(0);

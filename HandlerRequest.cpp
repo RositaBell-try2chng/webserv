@@ -22,10 +22,31 @@ void HandlerRequest::start(Server &srv)
 	{
 		case 0:
 		case 1: { srv.Stage = 1; break; }
-		case 2: { HandlerRequest::checkHeaders(srv); break; }
+		case 2: { HandlerRequest::checkReadyToHandle(srv); break; }
 		case 3: { srv.Stage = 3; HandlerRequest::handleRequest(srv); break; }
 		case 9: { srv.Stage = 9; HandlerRequest::prepareToSendError(srv); break; }
 		default: { std::cout << "BAD parse Stage: " << srv.parseStage << std::endl; break; }
+	}
+}
+
+void HandlerRequest::parserRequest(Server &srv)
+{
+	HTTP_Request::ft_strtoreq(*(srv->getReq_struct()), srv->getRequest());
+
+	switch (srv->getReq_struct()->stage)
+	{
+		case 50: { srv.Stage = 1; srv.parseStage = 0; return; }
+		case 51: { srv.Stage = 1; srv.parseStage = 1; return; }
+		case 52: {
+			srv.parseStage = 2;
+			if (srv->getReq_struct()->flg_te == 0 || srv->getReq_struct()->body.empty())
+				{ srv.Stage = 1; return; }
+			else
+				{ srv.Stage = 3; HandlerRequest::handleRequest(srv); return;}
+		}
+		case 53: { srv.Stage = 3; HandlerRequest::handleRequest(srv); return; }
+		case 59: { HandlerRequest::prepareToSendError(srv); return; }
+		default: {std::cout << "BAD Stage parser: " << srv->getReq_struct()->stage; return;}
 	}
 }
 
@@ -40,6 +61,67 @@ void HandlerRequest::handleRequest(Server &srv)
 	std::string	locName = srv.getReq_struct()->uri.substr(0, i + 1);
 	t_loc		*locNode = srv.findLocation(locName, servNode);
 
+	//check method
+	std::string method = srv.getReq_struct()->base.start_string.method;
+
+	if ((method == "GET") || (method == "POST" && !locNode->flgPost) || (method == "DELETE" && !locNode->flgDelete))
+	{
+		srv.Stage = 9;
+		HandlerRequest::prepareToSendError(srv);
+		return;
+	}
+	//check redirect
+	if (!locNode->redirect.empty())
+	{
+		HandlerRequest::redirectResponse(srv, locNode);
+		return;
+	}
+	//check CGI
+	std::string	tmp = srv.getReq_struct()->uri;
+	size_t		j = tmp.rfind('.');
+
+	if (j != std::string::npos && j > i)
+	{
+		tmp.erase(0, j);
+		if (locNode->CGIs.find(tmp) != locNode->CGIs.end())
+		{
+			srv.Stage = 4;
+			srv.CGIStage = 0;
+			HandlerRequest::CGIHandler(srv);
+			return;
+		}
+	}
+	//handle methods
+	tmp = srv.getReq_struct()->uri;
+	tmp.erase(0, i + 1);
+
+	if (method == "GET")
+		HandlerRequest::GET(srv, servNode, locNode, tmp);
+	else if (method == "POST")
+		HandlerRequest::POST(srv, servNode, locNode, tmp);
+}
+
+void HandlerRequest::redirectResponse(Server &srv, t_loc *locNode)
+{
+	std::map<int, std::string>::iterator	it = locNode->redirect.begin();
+	int										code = it->first;
+	std::string								dst = it->second;
+	std::string								response("HTTP/1.1 ");
+
+	switch (code)
+	{
+		case 301: { response += std::string("301 Moved Permanently"); break; }
+		case 302: { response += std::string("302 Found"); break; }
+		case 303: { response += std::string("303 See Other"); break; }
+		case 304: { response += std::string("304 Moved Permanently"); break; }
+		case 307: { response += std::string("307 Moved Permanently"); break; }
+		case 308: { response += std::string("308 Moved Permanently"); break; }
+		default: {std::cerr << "BAD CODE REDIRECT: " << code << std::endl; srv.Stage = 9; return; }
+	}
+	response += std::string("\r\nLocation: ") + dst + std::string("\r\n\r\n");
+	srv.setResponse(response);
+	srv.Stage = 5;
+	srv.writeStage = 0;
 }
 
 void HandlerRequest::CGIHandler(Server &srv)
@@ -118,7 +200,7 @@ void HandlerRequest::startCGI(Server &srv)
 		HandlerRequest::prepareToSendCGI(srv);
 }
 
-void HandlerRequest::checkHeaders(Server &srv)
+void HandlerRequest::checkReadyToHandle(Server &srv)
 {
 	if (srv.getReq_struct()->flg_te == 0)
 	{
@@ -134,6 +216,23 @@ void HandlerRequest::checkHeaders(Server &srv)
 	}
 	else
 		srv.Stage = 1;
+}
+
+HandlerRequest::prepareToSendError(Server &srv)
+{
+	HTTP_Answer tmp;
+
+	if (srv.parseStage == 9)
+	{
+		tmp = HTTP_Answer::ft_reqtoansw(*(srv.getReq_struct()));
+		srv.setResponse(HTTP_Answer::ft_answtostr(tmp));
+	}
+	else if (srv.CGIStage == 9)
+	{
+		;//fix me: add creating response for CGI error
+	}
+	srv.Stage = 5;
+	srv.writeStage = 0;
 }
 
 HandlerRequest::HandlerRequest() {}

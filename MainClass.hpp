@@ -36,7 +36,7 @@ public:
     static void				exitHandler(int sig);
     static void				addToSet(int fd, fd_set *dst);
     static void				prepareToSend(Server *src, int Stage);
-	static bool				isRedirectionInARaw(std::map<int, Server *>::iterator it);
+	static bool				isCorrectRedirection(std::map<int, Server *>::iterator it);
 	static bool				checkCorrectHostPortInRedirection(std::string &src, std::string &host, std::string &port);
 };
 
