@@ -90,6 +90,7 @@ struct HTTP_Request {
 		ContentType	content_type;	// media type of the body of the request
 		Date		date;			// the date and time at which the message was originated
 		short int	flg_te;			// 0 - full, 1 - chunked
+		bool		flg_ch_sz_crct;	// 0 - wrong format of chunk size, 1 - correct format of chunk size
 
 		std::string							body;
 

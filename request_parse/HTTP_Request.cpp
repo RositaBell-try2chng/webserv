@@ -160,14 +160,21 @@ void	ft_parse_chunked_body(HTTP_Request &req, std::string &raw, int &end) {
 		Logger::putMsg("Request is too large", FILE_WREQ, WREQ);
 		req.answ_code[0] = 4;
 		req.answ_code[1] = 13;
-		return ;
 	}
 	
 	int	i;
 
 	for (i = 0; i != end && raw[i - 1] != '\r' && raw[i] != '\n'; ++i){}
-	req.content_lngth += ft_hex_to_dec(raw.substr(0, i - 1));
+	req.content_lngth += StringToSize_t(raw.substr(0, i - 1), HEX, req.flg_ch_sz_crct);
 	raw.erase(0, i + 1);
+	if (!req.flg_ch_sz_crct) {
+		Logger::putMsg("Wrong format of chunk size", FILE_WREQ, WREQ);
+		req.answ_code[0] = 4;
+		req.answ_code[1] = 0;
+		for (i = 0; i != end && raw[i - 1] != '\r' && raw[i] != '\n'; ++i){}
+		raw.erase(0, i + 1);
+		continue ;
+	}
 
 }
 

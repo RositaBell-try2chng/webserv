@@ -96,7 +96,6 @@ std::string::size_type StringToSize_t(std::string src, std::string base, bool &f
     std::string::size_type j;
     std::string::size_type res = 0;
 
-    flgCorrect = true;
     delSpaces(src);
     for (size_t i = 0; i < src.length(); i++)
     {
