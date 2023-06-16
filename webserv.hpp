@@ -56,4 +56,10 @@ typedef struct	s_listen
 class Server;
 class Servers;
 
+void delSpaces(std::string &str);
+bool checkCorrectHost(std::string &Host);
+ssize_t strToSSize_t(std::string const &src, ssize_t limit);
+std::string Size_tToString(std::string::size_type src, std::string base);
+std::string::size_type StringToSize_t(std::string src, std::string base, bool &flgCorrect);
+
 #endif
