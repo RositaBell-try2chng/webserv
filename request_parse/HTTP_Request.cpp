@@ -1,4 +1,5 @@
 #include "HTTP_Request.hpp"
+#include "../ConfParser.hpp"
 
 bool ft_if_method_implemented(std::string method) {
 
@@ -130,6 +131,7 @@ bool ft_set_hdr(HTTP_Request &req) {
 
 	std::pair<std::string, std::string>	header = ft_strtopair(req.left, ':');
 	req.left.clear();
+	ConfParser::delSpaces(header.second);
 
 	if (!header.second.compare("")) {
 		Logger::putMsg("Header " + header.first + " Doesn't have a value", FILE_WREQ, WREQ);
@@ -202,7 +204,17 @@ void	ft_parse_headers(HTTP_Request &req, std::string &raw, int &end) {
 		else
 			break ;
 		++i;
-		if (i + 1 < end && raw[i + 1] == '\n' && raw[i] == '\r') {
+		{
+			std::cout << "Before\n" << std::endl;
+
+			std::cout << "	int i:		" << i << std::endl;
+			std::cout << "	int end:		" << end << std::endl;
+			std::cout << "	char raw[i + 1]:	" << raw[i + 1] << std::endl;
+			std::cout << "	char raw[i + 2]:	" << raw[i + 2] << std::endl;
+
+			std::cout << "\nBefore END\n" << std::endl;
+		}
+		if (i + 2 < end && raw[i + 2] == '\n' && raw[i + 1] == '\r') {
 			ft_headers_parse(req);
 			++req.stage;
 			i += 2;

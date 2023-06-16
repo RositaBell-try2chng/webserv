@@ -12,8 +12,11 @@ void	ft_hdr_host(std::string &host, std::string &port, std::string value) {
 
 short int	ft_hdr_connection(std::string value) {
 
-	if (value.compare("close"))
+	
+	if (!value.compare("close")) {
+		std::cout << "\nI WAS HERE\n" << std::endl;
 		return 0;
+	}
 	if (value.compare("keep-alive"))
 		return 1;
 	if (value.compare("Upgrade"))
@@ -22,6 +25,7 @@ short int	ft_hdr_connection(std::string value) {
 }
 
 int	ft_hdr_content_length(std::string value) {
+
 
 	std::stringstream strm(value);
 	int	length;
@@ -160,7 +164,7 @@ void	ft_headers_parse(HTTP_Request &req) {
 
 	for (std::map<std::string, std::string>::iterator it = req.base.headers.begin(); it != end; ++it) {
 		switch (ft_if_basic_hdr(it->first)) {
-			case Host:				{ ; break ; }
+			case Host:				{ ft_hdr_host(req.host, req.port, it->second); break ; }
 			case Connection:		{ req.flg_cnnctn = ft_hdr_connection(it->second); break ;}
 			case Content_Length:	{ req.content_lngth = ft_hdr_content_length(it->second); break ; }
 			case Content_Type:		{ ft_hdr_content_type(req.content_type, it->second); break ; }

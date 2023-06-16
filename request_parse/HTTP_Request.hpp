@@ -99,6 +99,7 @@ struct HTTP_Request {
 		~HTTP_Request() {};
 		HTTP_Request() : stage(50), flg_cnnctn(1), content_lngth(0), flg_te(0) {
 
+			this->content_type = ContentType();
 			answ_code[0] = 2;
 			answ_code[1] = 0;
 		};

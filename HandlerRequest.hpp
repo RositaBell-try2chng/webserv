@@ -16,6 +16,6 @@ private:
 	static void CGIHandler(Server &srv);
 public:
 	static void	mainHandler(Server &srv);
-}
+};
 
 #endif

@@ -38,7 +38,10 @@ re:			fclean all
 log_clean:
 			${RM} logs/errors.txt logs/info.txt logs/requests.txt logs/wrong_requests.txt
 
+prs_test:	all
+			./${NAME} | cat -e
+
 stop:
 			pkill webserv
 
-.PHONY:		all clean fclean re run log_clean
+.PHONY:		all clean fclean re run log_clean prs_test
