@@ -1,5 +1,5 @@
 #include "HTTP_Request.hpp"
-#include "../ConfParser.hpp"
+#include "../utils.cpp"
 
 bool ft_if_method_implemented(std::string method) {
 
@@ -131,7 +131,7 @@ bool ft_set_hdr(HTTP_Request &req) {
 
 	std::pair<std::string, std::string>	header = ft_strtopair(req.left, ':');
 	req.left.clear();
-	ConfParser::delSpaces(header.second);
+	delSpaces(header.second);
 
 	if (!header.second.compare("")) {
 		Logger::putMsg("Header " + header.first + " Doesn't have a value", FILE_WREQ, WREQ);
@@ -154,7 +154,27 @@ bool ft_set_hdr(HTTP_Request &req) {
 	
 }
 
+void	ft_parse_chunked_body(HTTP_Request &req, std::string &raw, int &end) {
+
+	if (req.base.hdrs_total_len + req.base.start_string.len + req.content_lngth > REQ_MAX_SIZE) {
+		Logger::putMsg("Request is too large", FILE_WREQ, WREQ);
+		req.answ_code[0] = 4;
+		req.answ_code[1] = 13;
+		return ;
+	}
+	
+	int	i;
+
+	for (i = 0; i != end && raw[i - 1] != '\r' && raw[i] != '\n'; ++i){}
+	req.content_lngth += ft_hex_to_dec(raw.substr(0, i - 1));
+	raw.erase(0, i + 1);
+
+}
+
 void	ft_parse_body(HTTP_Request &req, std::string &raw, int &end) {
+
+	if (req.flg_te == 1)
+		ft_parse_chunked_body(req, raw, end);
 
 	if (req.base.hdrs_total_len + req.base.start_string.len + req.content_lngth > REQ_MAX_SIZE) {
 		Logger::putMsg("Request is too large", FILE_WREQ, WREQ);
@@ -163,7 +183,7 @@ void	ft_parse_body(HTTP_Request &req, std::string &raw, int &end) {
 		return ;
 	}
 
-	if (end == 0 || req.stage != 52 || req.answ_code[0] > 3)
+	if (end == 0 || req.stage != 52)
 		return ;
 
 	int i;
@@ -171,6 +191,7 @@ void	ft_parse_body(HTTP_Request &req, std::string &raw, int &end) {
 	for (i = 0; i < end && i < req.content_lngth; ++i) {}
 
 	std::string	content = raw.substr(0, i);
+	req.body_left -= i;
 
 	if (i < req.content_lngth)
 		req.left = content;
@@ -185,7 +206,7 @@ void	ft_parse_body(HTTP_Request &req, std::string &raw, int &end) {
 
 void	ft_parse_headers(HTTP_Request &req, std::string &raw, int &end) {
 
-	if (end == 0 || req.stage != 51 || req.answ_code[0] > 3)
+	if (end == 0 || req.stage != 51)
 		return;
 
 	int	i;
@@ -204,20 +225,10 @@ void	ft_parse_headers(HTTP_Request &req, std::string &raw, int &end) {
 		else
 			break ;
 		++i;
-		{
-			std::cout << "Before\n" << std::endl;
-
-			std::cout << "	int i:		" << i << std::endl;
-			std::cout << "	int end:		" << end << std::endl;
-			std::cout << "	char raw[i + 1]:	" << raw[i + 1] << std::endl;
-			std::cout << "	char raw[i + 2]:	" << raw[i + 2] << std::endl;
-
-			std::cout << "\nBefore END\n" << std::endl;
-		}
 		if (i + 2 < end && raw[i + 2] == '\n' && raw[i + 1] == '\r') {
 			ft_headers_parse(req);
 			++req.stage;
-			i += 2;
+			i += 3;
 			break ;
 		}
 	}
@@ -227,7 +238,7 @@ void	ft_parse_headers(HTTP_Request &req, std::string &raw, int &end) {
 
 void	ft_parse_start_string(HTTP_Request &req, std::string &raw, int &end) {
 
-	if (end == 0 || req.stage != 50 || req.answ_code[0] > 3)
+	if (end == 0 || req.stage != 50)
 		return ;
 
 	int i;

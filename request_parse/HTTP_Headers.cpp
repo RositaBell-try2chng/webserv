@@ -13,26 +13,23 @@ void	ft_hdr_host(std::string &host, std::string &port, std::string value) {
 short int	ft_hdr_connection(std::string value) {
 
 	
-	if (!value.compare("close")) {
-		std::cout << "\nI WAS HERE\n" << std::endl;
+	if (!value.compare("close"))
 		return 0;
-	}
-	if (value.compare("keep-alive"))
+	if (!value.compare("keep-alive"))
 		return 1;
-	if (value.compare("Upgrade"))
+	if (!value.compare("Upgrade"))
 		return 2;
 	return 3;
 }
 
-int	ft_hdr_content_length(std::string value) {
+void	ft_hdr_content_length(int &content_length, int &body_left, std::string value) {
 
 
 	std::stringstream strm(value);
-	int	length;
-	
-	strm >> length;
 
-	return length;
+	strm >> content_length;
+
+	body_left = content_length;
 }
 
 void	ft_hdr_content_type(HTTP_Request::ContentType &type, std::string value) {
@@ -152,7 +149,7 @@ void	ft_hdr_date(HTTP_Request::Date &date, std::string str) {
 short int ft_hdr_te(std::string te) {
 
 	if (te.compare("chunked"))
-		return 1;
+		return 1;		
 	return 0;
 }
 
@@ -160,13 +157,21 @@ short int ft_hdr_te(std::string te) {
 
 void	ft_headers_parse(HTTP_Request &req) {
 
+	std::string basic_hdrs[] = {	"Host",
+									"Connection",
+									"Content-Length",
+									"Content-Type",
+									"Date",
+									"Transfer-Encoding",
+									"Stop"              	};
+
 	std::map<std::string, std::string>::iterator end = req.base.headers.end();
 
 	for (std::map<std::string, std::string>::iterator it = req.base.headers.begin(); it != end; ++it) {
-		switch (ft_if_basic_hdr(it->first)) {
+		switch (ft_if_basic_hdr(it->first, basic_hdrs)) {
 			case Host:				{ ft_hdr_host(req.host, req.port, it->second); break ; }
 			case Connection:		{ req.flg_cnnctn = ft_hdr_connection(it->second); break ;}
-			case Content_Length:	{ req.content_lngth = ft_hdr_content_length(it->second); break ; }
+			case Content_Length:	{ ft_hdr_content_length(req.body_left, it->second); break ; }
 			case Content_Type:		{ ft_hdr_content_type(req.content_type, it->second); break ; }
 			case Date:				{ ft_hdr_date(req.date, it->second); break ; }
 			case Transfer_Encoding:	{ req.flg_te = ft_hdr_te(it->second); break ; }
@@ -182,17 +187,16 @@ void	ft_headers_parse(HTTP_Request &req) {
 		req.answ_code[0] = 4;
 		req.answ_code[1] = 0;
 	}
+	if (req.flg_te == 1) {
+		if (req.base.headers.find(basic_hdrs[2]) != req.base.headers.end()) {	//	"Content-Length"
+			Logger::putMsg("Request has both \"length\" headers", FILE_WREQ, WREQ);
+			req.answ_code[0] = 4;
+			req.answ_code[1] = 0;
+		}
+	}
 }
 
-int		ft_if_basic_hdr(std::string key) {
-
-	std::string basic_hdrs[] = {	"Host",
-									"Connection",
-									"Content-Length",
-									"Content-Type",
-									"Date",
-									"Transfer-Encoding",
-									"Stop"              	};
+int		ft_if_basic_hdr(std::string key, std::string basic_hdrs[]) {
 
 	for (int i = 0; ; ++i) {
 		if (!key.compare(basic_hdrs[i]))

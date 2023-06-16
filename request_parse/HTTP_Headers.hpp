@@ -64,7 +64,7 @@ enum Basic_Headers	{	Host,
 
 struct HTTP_Request;
 
-int     ft_if_basic_hdr(std::string key);
+int     ft_if_basic_hdr(std::string key, std::string basic_hdrs[]);
 void    ft_headers_parse(HTTP_Request &req);
 
 #endif

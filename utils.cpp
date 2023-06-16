@@ -91,23 +91,23 @@ std::string Size_tToString(std::string::size_type src, std::string base)
     return(Size_tToString(src / base.length(), base) + std::string(&c, 1));
 }
 
-std::string::size_type StringToSize_t(std::string src, std::string base, bool &flgCorrect)
-{
-    std::string::size_type j;
-    std::string::size_type res = 0;
+// std::string::size_type StringToSize_t(std::string src, std::string base, bool &flgCorrect)
+// {
+//     std::string::size_type j;
+//     std::string::size_type res = 0;
 
-    flgCorrect = true;
-    delSpaces(src);
-    for (size_t i = 0; i < src; i++)
-    {
-        j = base.find(src[i]);
-        if (j == std::string::npos)
-        {
-            flgCorrect = false;
-            return (0);
-        }
-        res *= base.length();
-        res += j;
-    }
-    return (res);
-}
+//     flgCorrect = true;
+//     delSpaces(src);
+//     for (size_t i = 0; i < src; i++)
+//     {
+//         j = base.find(src[i]);
+//         if (j == std::string::npos)
+//         {
+//             flgCorrect = false;
+//             return (0);
+//         }
+//         res *= base.length();
+//         res += j;
+//     }
+//     return (res);
+// }

@@ -80,14 +80,13 @@ struct HTTP_Request {
 							//	53 - body was fully parsed
 							//	59 - errorHTTP_Request
 
-		int			curr_size;
-
 		Base		base;
 
 		std::string	host;
 		std::string	port;
 		short int	flg_cnnctn;		// 0 - close, 1 - keep alive, 2 - upgrade HTTP version
-		int			content_lngth;	// length of request body in bytes						
+		int			content_lngth;	// length of request body in bytes	
+		int			body_left;		// left from body					
 		ContentType	content_type;	// media type of the body of the request
 		Date		date;			// the date and time at which the message was originated
 		short int	flg_te;			// 0 - full, 1 - chunked
@@ -100,6 +99,7 @@ struct HTTP_Request {
 		HTTP_Request() : stage(50), flg_cnnctn(1), content_lngth(0), flg_te(0) {
 
 			this->content_type = ContentType();
+			this->base = Base();
 			answ_code[0] = 2;
 			answ_code[1] = 0;
 		};

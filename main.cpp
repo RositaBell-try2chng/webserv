@@ -59,13 +59,13 @@ int main( void )
 
 	std::cout << "	Left:			" << req.left << "\n" << std::endl;
 	std::cout << "	Stage:			" << req.stage << "\n" << std::endl;
-	std::cout << "	Current size:		" << req.curr_size << std::endl;
 	std::cout << "	Host:			" << req.host << std::endl;
 	std::cout << "	Port:			" << req.port << std::endl;
 	std::cout << "	Connection:		" << req.flg_cnnctn << std::endl;
 	std::cout << std::boolalpha << "	Content Type:		" << req.content_type.media_type << std::endl;
 	std::cout << "	Date:			" << req.date.txt_day_of_week << " " << req.date.day << " " << req.date.txt_month << " " << req.date.year << " " << req.date.sec << " " << req.date.min << " " << req.date.hrs << std::endl;
 	std::cout << "	Transfer encoding:	" << req.flg_te << std::endl;
+	std::cout << "\n	raw:			" << raw << "\n" << std::endl;
 
 	std::cout << "\nPARSED HEADERS END\n" << std::endl;
 
