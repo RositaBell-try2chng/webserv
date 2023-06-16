@@ -85,7 +85,8 @@ struct HTTP_Request {
 		std::string	host;
 		std::string	port;
 		short int	flg_cnnctn;		// 0 - close, 1 - keep alive, 2 - upgrade HTTP version
-		int			content_lngth;	// length of request body in bytes	
+		int			content_lngth;	// length of request body in bytes
+		int			chunk_size;	
 		int			body_left;		// left from body					
 		ContentType	content_type;	// media type of the body of the request
 		Date		date;			// the date and time at which the message was originated
@@ -97,7 +98,7 @@ struct HTTP_Request {
 		int									answ_code[2];
 
 		~HTTP_Request() {};
-		HTTP_Request() : stage(50), flg_cnnctn(1), content_lngth(0), flg_te(0) {
+		HTTP_Request() : stage(50), flg_cnnctn(1), content_lngth(0), flg_te(0), flg_ch_sz_crct(true) {
 
 			this->content_type = ContentType();
 			this->base = Base();

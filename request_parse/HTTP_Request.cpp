@@ -164,51 +164,56 @@ void	ft_parse_chunked_body(HTTP_Request &req, std::string &raw, int &end) {
 	
 	int	i;
 
-	for (i = 0; i != end && raw[i - 1] != '\r' && raw[i] != '\n'; ++i){}
-	req.content_lngth += StringToSize_t(raw.substr(0, i - 1), HEX, req.flg_ch_sz_crct);
-	raw.erase(0, i + 1);
-	if (!req.flg_ch_sz_crct) {
-		Logger::putMsg("Wrong format of chunk size", FILE_WREQ, WREQ);
-		req.answ_code[0] = 4;
-		req.answ_code[1] = 0;
-		for (i = 0; i != end && raw[i - 1] != '\r' && raw[i] != '\n'; ++i){}
+	for (i = 1; i < end && raw[i - 1] != '\r' && raw[i] != '\n') {
+		for (; i < end && raw[i - 1] != '\r' && raw[i] != '\n'; ++i){}
+		req.chunk_size = StringToSize_t(raw.substr(0, i - 1), HEX, req.flg_ch_sz_crct)
+		req.content_lngth += req.chunk_size;
 		raw.erase(0, i + 1);
-		continue ;
+		for (i = 0; i < req.chunk_size && raw[i - 1] != '\r' && raw[i] != '\n'; ++i){}
+		if (!req.flg_ch_sz_crct) {
+			Logger::putMsg("Wrong format of chunk size", FILE_WREQ, WREQ);
+			req.answ_code[0] = 4;
+			req.answ_code[1] = 0;
+			continue ;
+		}
+		if (req.content_lngth == 0)
+			break ;
+		raw.erase(0, i + 1);
 	}
-
 }
 
 void	ft_parse_body(HTTP_Request &req, std::string &raw, int &end) {
 
 	if (req.flg_te == 1)
 		ft_parse_chunked_body(req, raw, end);
-
-	if (req.base.hdrs_total_len + req.base.start_string.len + req.content_lngth > REQ_MAX_SIZE) {
-		Logger::putMsg("Request is too large", FILE_WREQ, WREQ);
-		req.answ_code[0] = 4;
-		req.answ_code[1] = 13;
-		return ;
-	}
-
-	if (end == 0 || req.stage != 52)
-		return ;
-
-	int i;
-
-	for (i = 0; i < end && i < req.content_lngth; ++i) {}
-
-	std::string	content = raw.substr(0, i);
-	req.body_left -= i;
-
-	if (i < req.content_lngth)
-		req.left = content;
 	else {
-		req.body = req.left + content;
-		++req.stage;
-		req.left.clear();
-	}
+		if (req.base.hdrs_total_len + req.base.start_string.len + req.content_lngth > REQ_MAX_SIZE) {
+			Logger::putMsg("Request is too large", FILE_WREQ, WREQ);
+			req.answ_code[0] = 4;
+			req.answ_code[1] = 13;
+			return ;
+		}
 
-	raw.erase(0, i);
+		if (end == 0 || req.stage != 52)
+			return ;
+
+		int i;
+
+		for (i = 0; i < end && i < req.content_lngth; ++i) {}
+
+		std::string	content = raw.substr(0, i);
+		req.body_left -= i;
+
+		if (i < req.content_lngth)
+			req.left = content;
+		else {
+			req.body = req.left + content;
+			++req.stage;
+			req.left.clear();
+		}
+
+		raw.erase(0, i);
+	}
 }
 
 void	ft_parse_headers(HTTP_Request &req, std::string &raw, int &end) {
