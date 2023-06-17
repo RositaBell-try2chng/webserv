@@ -287,7 +287,7 @@ void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_se
         case 50: // read from pipe next chunk
         {
             it->second->CGIStage = it->second->getCGIptr()->readFromPipe(it, reads, false);
-            ;//fix me: handle add chunk size + add NULL-chunk if need
+			it->second->addChunkedSizeToResponse();
             break;
         }
         default: { std:: cout << "BAD Stage CGI: " << it->second->Stage << " - " << it->second->CGIStage << std::endl; return; }

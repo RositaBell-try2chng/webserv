@@ -117,6 +117,7 @@ public:
 
 	void				addToReq(std::string src);
 	void				setResponse(std::string const src);
+	void				addChunkedSizeToResponse();
 
 	bool 				checkCntTryingRecv();
 	bool 				checkCntTryingSend();

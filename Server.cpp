@@ -192,8 +192,7 @@ void Server::fillErrorPages(std::vector<std::string> &E, t_serv *cur)
 			int					code;
 			ss >> code;
 
-			//fix me: use real codes
-			if (!(code <= 505 && code >= 400))
+			if (!(code <= 509 && code >= 400))
 			{
 				Logger::putMsg("BAD ERROR CODE:\n" + line1, FILE_ERR, ERR);
 				MainClass::exitHandler(0);
@@ -555,6 +554,15 @@ void	Server::setSGIptr(CGI *src) {this->ptrCGI = src;}
 void	Server::setMaxBodySize(ssize_t n) {this->maxLimitBodiSize = n;}
 void	Server::setResponse(const std::string src) { this->response = src; }
 void	Server::CntTryingSendZero() {this->cntTryingSend = 0;}
+
+void	Server::addChunkedSizeToResponse()
+{
+	std::string::size_type len = this->response.length();
+	std::string chunkSize = Size_tToString(len, HEX_BASE);
+
+	this->response = chunk_size + std::string("\r\n") + this->response + std::string("\r\n");
+}
+
 //copy structs Answ/Req
 void Server::setAnsw_struct(HTTP_Answer const &src)
 {
