@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>CGIs Page</title>
+    <link href="main.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+
+<header id="body2Obj">
+    <a href="index.html" >Start Page</a>
+	&nbsp;
+	&nbsp;
+	&nbsp;
+    <a href="upload.html">Upload</a>
+	<br>
+	<br>
+	&nbsp;
+	&nbsp;
+	&nbsp;
+	&nbsp;
+	<h>CGIs page</h>
+</header>
+        
+<header id="CGIObj">
+	<form enctype="multipart/form-data" action = "../CGIs/env.sh" method="get" >
+        <p>env.sh:
+			<br>
+            <input id="buttonObj" type="submit" value="Start" href="#"></p>
+    </form>
+	&nbsp;
+	&nbsp;
+	&nbsp;
+	&nbsp;
+	<form enctype="multipart/form-data" action = "../CGIs/getHello.sh" method="get" >
+        <p>getHello.sh:
+			<br>
+            <input id="buttonObj" type="submit" value="Start" href="#"></p>
+    </form>
+	&nbsp;
+	&nbsp;
+	&nbsp;
+	&nbsp;
+	<form enctype="multipart/form-data" action = "../CGIs/getHello.py" method="get" >
+        <p>getHello.py:
+			<br>
+            <input id="buttonObj" type="submit" value="Start" href="#"></p>
+    </form>
+</header>
+
+</body>
+</html>

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Start Page</title>
+    <link href="main.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+
+<header id="bodyObj">
+    <a href="index.html" >Start Page</a>
+	&nbsp;
+	&nbsp;
+	&nbsp;
+    <a href="CGI.html">CGIs</a>
+	<br>
+	<br>
+	&nbsp;
+	&nbsp;
+	&nbsp;
+	&nbsp;
+	<h>Upload page</h>
+	<form id="uploadObj" enctype="multipart/form-data" action = "../CGIs/upload.sh" method="post" >
+        <p>File: <input type="file" name="filename" id="fileid" class="form-control">
+            <input type="submit" value="SEND" href="#"></p>
+    </form>
+</header>
+
+</body>
+</html>
