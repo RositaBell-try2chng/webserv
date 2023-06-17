@@ -22,8 +22,8 @@ Server::Server(const std::string& _host, const std::string& _port)
 	this->serv = NULL;
 	this->cntErrorsSend = 0;
 	this->CGI = NULL;
-	this->lastReadTime.tv_sec = time(NULL);
-	this->lastReadTime.tv_usec = 0;
+	this->lastActionTime.tv_sec = time(NULL);
+	this->lastActionTime.tv_usec = 0;
 	this->Stage = 0;
 	this->readStage = 0;
 	this->writeStage = 0;
@@ -43,6 +43,13 @@ bool Server::checkCntTryingSend()
 	if (this->cntTryingSend < CNT_TRYING)
 		return (false);
 	return (true);
+}
+
+bool Server::checkTimeOut()
+{
+	if (time(NULL).tv_sec - this->lastActionTime.tv_sec > TIMEOUT)
+		return (true);
+	return (false);
 }
 
 //finders
@@ -568,4 +575,10 @@ void Server::setReq_struct(HTTP_Request const &src)
 	this->req_struct.answ_code[1] = src.answ_code[1];
 	this->req_struct.method = src.method;
 	this->req_struct.uri = src.uri;
+}
+
+void Server::updateLastActionTime()
+{
+	this->lastActionTime.tv_sec = time(NULL);
+	this->lastActionTime.tv_usec = 0;
 }

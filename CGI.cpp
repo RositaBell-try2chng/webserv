@@ -143,6 +143,7 @@ int CGI::sendToPipe(std::map<int, Server *>::iterator &it, fd_set *writes, bool 
 		}
 		default:
 		{
+            it->second->updateLastActionTime();
 			this->cntErrorsWriting = 0;
             if (wrRes == it->second->getReq_struct().body.length())
             {
@@ -180,12 +181,14 @@ int CGI::readFromPipe(std::map<int, Server *>::iterator &it, fd_set *reads)
 		}
 		case BUF_SIZE_PIPE: //maybe somthing else in PIPE
 		{
+            it->second->updateLastActionTime();
 			this->cntTryingReading = 0;
 			it->second->setResponse(std::string(buf, rdRes));
 			return (50);
 		}
 		default: //end of file
 		{
+            it->second->updateLastActionTime();
 			this->cntTryingReading = 0;
             return (6);
 		}

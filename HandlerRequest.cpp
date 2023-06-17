@@ -4,12 +4,10 @@ void HandlerRequest::mainHandler(Server &srv)
 {
 	switch (src.Stage)
 	{
-		case 0: { HandlerRequest::start(srv) break; } //start
-		//case 1: //read from socket //nothing to do //server ready to read
+		case 0: { HandlerRequest::start(srv); break; } //start
 		case 2: { HandlerRequest::parserRequest(srv); break; } //need parse request
 		case 3: { HandlerRequest::handleRequest(srv); break; } //need handle HTTP_reqStruct
 		case 4: { HandlerRequest::CGIHandler(srv); break; } //need CGI
-		//case 5: //write to socket //nothing to do //server ready to write
 		case 9: { HandlerRequest::prepareToSendError(srv); break; } //error
 	}
 }
@@ -23,7 +21,7 @@ void HandlerRequest::start(Server &srv)
 		case 0:
 		case 1: { srv.Stage = 1; break; }
 		case 2: { HandlerRequest::checkReadyToHandle(srv); break; }
-		case 3: { srv.Stage = 3; HandlerRequest::handleRequest(srv); break; }
+		case 3: { srv.Stage = 3;  HandlerRequest::handleRequest(srv); break; }
 		case 9: { srv.Stage = 9; HandlerRequest::prepareToSendError(srv); break; }
 		default: { std::cout << "BAD parse Stage: " << srv.parseStage << std::endl; break; }
 	}
@@ -222,15 +220,13 @@ HandlerRequest::prepareToSendError(Server &srv)
 {
 	HTTP_Answer tmp;
 
-	if (srv.parseStage == 9)
+	if (srv.CGIStage == 9) //CGI error
 	{
-		tmp = HTTP_Answer::ft_reqtoansw(*(srv.getReq_struct()));
-		srv.setResponse(HTTP_Answer::ft_answtostr(tmp));
+		srv.getReq_struct()->answ_code[0] = 5;
+		srv.getReq_struct()->answ_code[0] = 0;
 	}
-	else if (srv.CGIStage == 9)
-	{
-		;//fix me: add creating response for CGI error
-	}
+	tmp = HTTP_Answer::ft_reqtoansw(*(srv.getReq_struct()));
+	srv.setResponse(HTTP_Answer::ft_answtostr(tmp));
 	srv.Stage = 5;
 	srv.writeStage = 0;
 }

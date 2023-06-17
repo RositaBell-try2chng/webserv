@@ -5,7 +5,7 @@ int         MainClass::maxFd = 0;
 Servers*    MainClass::allServers = NULL;
 
 //fix me delete this
-void printAllServ(Servers* src)
+/*void printAllServ(Servers* src)
 {
 	std::map<int, Server*>::iterator it;
 
@@ -41,7 +41,7 @@ void printAllServ(Servers* src)
 			cur = cur->next;
 		}
 	}
-}
+}*/
 
 void MainClass::doIt(int args, char **argv, char **env)
 {
@@ -119,6 +119,13 @@ void MainClass::mainLoop()
         it = allServers->getConnections().begin();
         while (it != allServers->getConnections().end())
         {
+			if (it->second->checkTimeOut())
+			{
+				Logger::putMsg(std::string("connetion closed because TIMEOUT has been reached"), it->first, FILE_ERR, ERR);
+				std::cerr << it->first << ": connetion closed because TIMEOUT has been reached!\n";
+				MainClass::closeConnection(it);
+				return;
+			}
             Stage = it->second->getStage();
             switch (Stage)
             {
@@ -185,6 +192,7 @@ void MainClass::readRequest(std::map<int, Server *>::iterator &it, int Stage, fd
             return;
         }
         default: {
+			it->second->updateLastActionTime();
 			it->second->addToReq(std::string(buf, recvRes));
 			it->second->Stage = 2;
 		}
@@ -228,6 +236,7 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *writ
 		}
 		default:
 		{
+			it->second->updateLastActionTime();
 			it->second->CntTryingSendZero();
 			if (static_cast<size_t>(sendRes) == toSend.length())
 			{
@@ -268,13 +277,13 @@ void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_se
             break;
         }
         case 20: { it->second->CGIStage = it->second->getCGIptr()->sendToPipe(it, writes, it->second->getCGIptr()->prevStage == 2); break; } //repeat write
-        case 5:
+        case 5: //read from pipe first
         {
             it->second->CGIStage = it->second->getCGIptr()->readFromPipe(it, reads);
             if (it->second->CGIStage == 50)
                 ;//fix me: find body and add chunk size
             break;
-        }//read from pipe first
+        }
         case 50: // read from pipe next chunk
         {
             it->second->CGIStage = it->second->getCGIptr()->readFromPipe(it, reads, false);

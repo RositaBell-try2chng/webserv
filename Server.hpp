@@ -60,8 +60,6 @@ private:
 
 	CGI				*ptrCGI;
 
-	timeval			lastReadTime;
-
 	static void		setMethods(t_loc* cur, std::string &src);
 	static void		setCGIs(std::set<std::string> &dst, std::string &src);
 	static void		fillErrorPages(std::vector<std::string> &E, t_serv *cur);
@@ -85,6 +83,7 @@ public:
 	int						CGIStage;
 	bool					isChunkedRequest;
 	bool					isChunkedResponse;
+	timeval					lastActionTime;
 
 	std::string 	const&	getHost();
 	std::string 	const&	getPort();
@@ -97,6 +96,7 @@ public:
 	std::string		const&	getChunkToSend();
 
 	bool				checkTimeOut();
+	void				updateLastActionTime();
 
 	ssize_t				getMaxBodySize();
 	CGI					*getCGIptr();
