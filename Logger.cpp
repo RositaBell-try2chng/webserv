@@ -3,9 +3,9 @@
 Logger::Logger() {};
 Logger::~Logger() {};
 
-//msg - message to log
-//filename - name of file in dir ./logs
-//typeOfMsg - type of message
+//	msg			- message to log
+//	filename	- name of file in dir ./logs
+//	typeOfMsg	- type of message
 void	Logger::putMsg(std::string const &msg, std::string const &filename, std::string const &typeOfMsg)
 {
 	std::ofstream	out;

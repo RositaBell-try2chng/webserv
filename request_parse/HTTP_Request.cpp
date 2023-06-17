@@ -155,18 +155,12 @@ bool ft_set_hdr(HTTP_Request &req) {
 }
 
 void	ft_parse_chunked_body(HTTP_Request &req, std::string &raw, int &end) {
-
-	if (req.base.hdrs_total_len + req.base.start_string.len + req.content_lngth > REQ_MAX_SIZE) {
-		Logger::putMsg("Request is too large", FILE_WREQ, WREQ);
-		req.answ_code[0] = 4;
-		req.answ_code[1] = 13;
-	}
 	
-	int	i;
+	int	i = 1;
 
-	for (i = 1; i < end && raw[i - 1] != '\r' && raw[i] != '\n') {
-		for (; i < end && raw[i - 1] != '\r' && raw[i] != '\n'; ++i){}
-		req.chunk_size = StringToSize_t(raw.substr(0, i - 1), HEX, req.flg_ch_sz_crct)
+	for (; i < end && raw[i - 1] != '\r' && raw[i] != '\n';) {
+		for (i = 1; i < end && raw[i - 1] != '\r' && raw[i] != '\n'; ++i){}
+		req.chunk_size = StringToSize_t(raw.substr(0, i - 1), HEX_BASE, req.flg_ch_sz_crct);
 		req.content_lngth += req.chunk_size;
 		raw.erase(0, i + 1);
 		for (i = 0; i < req.chunk_size && raw[i - 1] != '\r' && raw[i] != '\n'; ++i){}
@@ -178,22 +172,26 @@ void	ft_parse_chunked_body(HTTP_Request &req, std::string &raw, int &end) {
 		}
 		if (req.content_lngth == 0)
 			break ;
-		raw.erase(0, i + 1);
+		if (req.base.hdrs_total_len + req.base.start_string.len + req.content_lngth > REQ_MAX_SIZE) {
+			Logger::putMsg("Request is too large", FILE_WREQ, WREQ);
+			req.answ_code[0] = 4;
+			req.answ_code[1] = 13;
+		}
 	}
 }
 
 void	ft_parse_body(HTTP_Request &req, std::string &raw, int &end) {
 
+	if (req.base.hdrs_total_len + req.base.start_string.len + req.content_lngth > REQ_MAX_SIZE) {
+		Logger::putMsg("Request is too large", FILE_WREQ, WREQ);
+		req.answ_code[0] = 4;
+		req.answ_code[1] = 13;
+		return ;
+	}
+	
 	if (req.flg_te == 1)
 		ft_parse_chunked_body(req, raw, end);
 	else {
-		if (req.base.hdrs_total_len + req.base.start_string.len + req.content_lngth > REQ_MAX_SIZE) {
-			Logger::putMsg("Request is too large", FILE_WREQ, WREQ);
-			req.answ_code[0] = 4;
-			req.answ_code[1] = 13;
-			return ;
-		}
-
 		if (end == 0 || req.stage != 52)
 			return ;
 
