@@ -2,7 +2,6 @@
 # define LOGGER_HPP
 
 # include "webserv.hpp"
-# include <ctime>
 
 # define LOGS		"./logs/"
 

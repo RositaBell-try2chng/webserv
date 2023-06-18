@@ -6,16 +6,19 @@
 # include <vector>
 # include <fstream>
 # include <ctime>
+# include <cerrno>
+# include <cstring>
+# include <csignal>
 # include <sys/types.h>
 # include <sys/wait.h>
 # include <sys/socket.h>
 # include <netdb.h>
-# include <csignal>
 # include <unistd.h>
 # include <set>
 # include <map>
 # include <fcntl.h>
 # include <algorithm>
+
 
 # define DEF_HOST "127.0.0.1"
 
@@ -59,7 +62,7 @@ class Servers;
 void delSpaces(std::string &str);
 bool checkCorrectHost(std::string &Host);
 ssize_t strToSSize_t(std::string const &src, ssize_t limit);
-std::string Size_tToString(std::string::size_type src, std::string base);
+std::string Size_tToString(std::string::size_type src, std::string const &base);
 std::string::size_type StringToSize_t(std::string src, std::string base, bool &flgCorrect);
 
 #endif

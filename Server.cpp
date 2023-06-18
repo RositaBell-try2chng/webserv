@@ -20,8 +20,8 @@ Server::Server(const std::string& _host, const std::string& _port)
 	this->request = std::string();
 	this->response = std::string();
 	this->serv = NULL;
-	this->cntErrorsSend = 0;
-	this->CGI = NULL;
+	this->cntTryingSend = 0;
+	this->ptrCGI = NULL;
 	this->lastActionTime.tv_sec = time(NULL);
 	this->lastActionTime.tv_usec = 0;
 	this->Stage = 0;
@@ -47,7 +47,7 @@ bool Server::checkCntTryingSend()
 
 bool Server::checkTimeOut()
 {
-	if (time(NULL).tv_sec - this->lastActionTime.tv_sec > TIMEOUT)
+	if (time(NULL) - this->lastActionTime.tv_sec > TIMEOUT)
 		return (true);
 	return (false);
 }
@@ -85,7 +85,7 @@ std::string Server::findFile(std::string const &str, t_loc *loc)
 {
 	std::vector<std::string>::iterator it;
 	
-	it = loc->files.find("str");
+	it = find(loc->files.begin(), loc->files.end(), "str");
 	
 	if (it != loc->files.end())
 		return (*it);
@@ -256,7 +256,7 @@ t_loc* Server::setLocList(t_serv* s, std::map <std::string, std::map<std::string
 				cur->uploadPath = std::string(it2->second);
 			else if (it2->first == "return")
 				Server::setRedirect(cur, it2->second);
-			else if (it2->firsr == "try_files")
+			else if (it2->first == "try_files")
 				Server::setFiles(cur, it2->second);
 			else
 			{
@@ -358,7 +358,7 @@ void Server::setMethods(t_loc *cur, std::string &src)
 		src.erase(i, 6);
 	}
 
-	ConfParser::delSpaces(src);
+	delSpaces(src);
 	if (src.empty())
 		return;
 	Logger::putMsg("BAD CONFIG:\ntoo many symbols at accepted methods:\n" + src, FILE_ERR, ERR);
@@ -451,23 +451,23 @@ t_loc* Server::cloneLocList(t_loc const *src)
 //clears
 void Server::clearAnsw_struct()
 {
-	this->answ_struct.body.clear();
-	this->answ_struct.headers.clear();
-	this->answ_struct.reason_phrase.clear();
-	this->answ_struct.status_code.clear();
-	this->answ_struct.version.clear();
+	this->answ_struct->body.clear();
+	this->answ_struct->headers.clear();
+	this->answ_struct->reason_phrase.clear();
+	this->answ_struct->status_code.clear();
+	this->answ_struct->version.clear();
 }
 
 //clears
 void Server::clearReq_struct()
 {
-	this->req_struct.version.clear();
-	this->req_struct.headers.clear();
-	this->req_struct.body.clear();
-	this->req_struct.answ_code[0] = -1;
-	this->req_struct.answ_code[1] = -1;
-	this->req_struct.method.clear();
-	this->req_struct.uri.clear();
+	this->req_struct->base.start_string.version.clear();
+	this->req_struct->base.headers.clear();
+	this->req_struct->body.clear();
+	this->req_struct->answ_code[0] = -1;
+	this->req_struct->answ_code[1] = -1;
+	this->req_struct->base.start_string.method.clear();
+	this->req_struct->base.start_string.uri.clear();
 }
 
 //clears
@@ -535,24 +535,18 @@ void    Server::clearServ()
 //getters
 const std::string & Server::getHost() { return (this->host); }
 const std::string & Server::getPort() { return (this->port); }
-const std::string & Server::getRequest() { return (this->request); }
+std::string & Server::getRequest() { return (this->request); }
 const std::string & Server::getResponse() { return (this->response); }
-const std::string &Server::getChunkToSend() {return this->chunkToSend;}
 ssize_t				Server::getMaxBodySize() { return (this->maxLimitBodiSize); }
 HTTP_Answer		*Server::getAnsw_struct() { return (this->answ_struct); }
 HTTP_Request	*Server::getReq_struct() { return (this->req_struct); }
-CGI				*Server::getCGIptr() { return (this->ptrCGI) };
+CGI				*Server::getCGIptr() { return (this->ptrCGI); }
 
 //setters
-void	Server::setSGIptr(CGI *src) {this->ptrCGI = src;}
-{
-	if (this->Stage == n)
-		return;
-	this->prevStage = this->Stage;
-	this->Stage = n;
-}
+void	Server::setCGIptr(CGI *src) {this->ptrCGI = src;}
+
 void	Server::setMaxBodySize(ssize_t n) {this->maxLimitBodiSize = n;}
-void	Server::setResponse(const std::string src) { this->response = src; }
+void	Server::setResponse(const std::string &src) { this->response = src; }
 void	Server::CntTryingSendZero() {this->cntTryingSend = 0;}
 
 void	Server::addChunkedSizeToResponse()
@@ -560,29 +554,29 @@ void	Server::addChunkedSizeToResponse()
 	std::string::size_type len = this->response.length();
 	std::string chunkSize = Size_tToString(len, HEX_BASE);
 
-	this->response = chunk_size + std::string("\r\n") + this->response + std::string("\r\n");
+	this->response = chunkSize + std::string("\r\n") + this->response + std::string("\r\n");
 }
 
 //copy structs Answ/Req
 void Server::setAnsw_struct(HTTP_Answer const &src)
 {
-	this->answ_struct.body = src.body;
-	this->answ_struct.headers = std::map<std::string, std::string>(src.headers);
-	this->answ_struct.reason_phrase = src.reason_phrase;
-	this->answ_struct.status_code = src.status_code;
-	this->answ_struct.version = src.status_code;
+	this->answ_struct->body = src.body;
+	this->answ_struct->headers = std::map<std::string, std::string>(src.headers);
+	this->answ_struct->reason_phrase = src.reason_phrase;
+	this->answ_struct->status_code = src.status_code;
+	this->answ_struct->version = src.status_code;
 }
 
 //copy structs Answ/Req
 void Server::setReq_struct(HTTP_Request const &src)
 {
-	this->req_struct.version = src.version;
-	this->req_struct.headers = src.headers;
-	this->req_struct.body = src.body;
-	this->req_struct.answ_code[0] = src.answ_code[0];
-	this->req_struct.answ_code[1] = src.answ_code[1];
-	this->req_struct.method = src.method;
-	this->req_struct.uri = src.uri;
+	this->req_struct->base.start_string.version = src.base.start_string.version;
+	this->req_struct->base.headers = src.base.headers;
+	this->req_struct->body = src.body;
+	this->req_struct->answ_code[0] = src.answ_code[0];
+	this->req_struct->answ_code[1] = src.answ_code[1];
+	this->req_struct->base.start_string.method = src.base.start_string.method;
+	this->req_struct->base.start_string.uri = src.base.start_string.uri;
 }
 
 void Server::updateLastActionTime()

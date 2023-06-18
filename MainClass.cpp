@@ -43,7 +43,7 @@ Servers*    MainClass::allServers = NULL;
 	}
 }*/
 
-void MainClass::doIt(int args, char **argv, char **env)
+void MainClass::doIt(int args, char **argv)
 {
     bool        flg;
     char*       arg;
@@ -63,7 +63,7 @@ void MainClass::doIt(int args, char **argv, char **env)
         return;
     }
 
-	for (std::map<int, Server *>::iterator it = allServers.begin(); it != allServers.end(); it++)
+	for (std::map<int, Server *>::iterator it = allServers->getConnections(true).begin(); it != allServers->getConnections(true).end(); it++)
 	{
 		if (!MainClass::isCorrectRedirection(it))
 		{
@@ -89,7 +89,6 @@ void MainClass::mainLoop()
     fd_set                              readFds;
     fd_set                              writeFds;
     std::map<int, Server*>::iterator    it;
-    int                                 Stage;
 
     while (true)
     {
@@ -99,7 +98,17 @@ void MainClass::mainLoop()
         MainClass::maxFd = -1;
         //handle all request until read/write or waiting child
         for (it = allServers->getConnections().begin(); it != allServers->getConnections().end(); it++)
-            HandlerRequest::mainHandler(it, &readFds, &writeFds);
+		{
+			HandlerRequest::mainHandler(*it->second);
+			if (it->second->Stage == 1)
+				MainClass::addToSet(it->first, &readFds);
+			else if (it->second->Stage == 5)
+				MainClass::addToSet(it->first, &writeFds);
+			else if (it->second->Stage == 4 && (it->second->CGIStage == 1 || it->second->CGIStage == 2 || it->second->CGIStage == 20))
+				MainClass::addToSet(it->second->getCGIptr()->getPipeOutForward(), &writeFds);
+			else if (it->second->Stage == 4 && (it->second->CGIStage == 5 || it->second->CGIStage == 50))
+				MainClass::addToSet(it->second->getCGIptr()->getPipeInBack(), &readFds);
+		}
         //2.1.2 add listen fds
         for (it = allServers->getConnections(true).begin(); it != allServers->getConnections(true).end(); it++)
             MainClass::addToSet(it->first, &readFds);
@@ -126,18 +135,17 @@ void MainClass::mainLoop()
 				MainClass::closeConnection(it);
 				return;
 			}
-            Stage = it->second->getStage();
-            switch (Stage)
+            switch (it->second->Stage)
             {
                 //read from socket
-                case 1: { MainClass::readRequest(it, Stage, &readFds); break; }
+                case 1: { MainClass::readRequest(it, &readFds); break; }
                 //CGI
                 case 4: { MainClass::CGIHandlerReadWrite(it, &readFds, &writeFds); break; }
                 //write to socket
                 case 5: { MainClass::sendResponse(it, &writeFds); break; }
                 default://all servers should be in write/read stage or CGI, if not then ERROR
                 {
-                    std::cout << "bad stage for server: " << it->first << " stage is: " << Stage << std::endl;
+                    std::cout << "bad stage for server: " << it->first << " stage is: " << it->second->Stage << std::endl;
                 }
             }
         }
@@ -147,10 +155,11 @@ void MainClass::mainLoop()
 
 bool MainClass::acceptConnections(fd_set *readFds)
 {
-    int     fd;
-    bool    flgConnection = false;
+    int									fd;
+    bool								flgConnection = false;
+	std::map<int, Server *>::iterator	it;
 
-    for (std::map<int, Server*>::iterator it = allServers->getConnections(true).begin(); it != allServers->getConnections(true).end(); it++)
+	for (it = allServers->getConnections(true).begin(); it != allServers->getConnections(true).end(); it++)
     {
         if (FD_ISSET(it->first, readFds))
         {
@@ -167,7 +176,7 @@ bool MainClass::acceptConnections(fd_set *readFds)
     return (flgConnection);
 }
 
-void MainClass::readRequest(std::map<int, Server *>::iterator &it, int Stage, fd_set *reads)
+void MainClass::readRequest(std::map<int, Server *>::iterator &it, fd_set *reads)
 {
 	if (!FD_ISSET(it->first, reads))
 		return;
@@ -286,7 +295,7 @@ void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_se
         }
         case 50: // read from pipe next chunk
         {
-            it->second->CGIStage = it->second->getCGIptr()->readFromPipe(it, reads, false);
+            it->second->CGIStage = it->second->getCGIptr()->readFromPipe(it, reads);
 			it->second->addChunkedSizeToResponse();
             break;
         }
@@ -345,7 +354,7 @@ bool MainClass::isCorrectRedirection(std::map<int, Server *>::iterator it)
 				return (false);
 			}
 			redirectString = chNodeLoc->redirect.begin()->second;
-			if (!MainClass::checkCorrectHostPortInRedirection(redirectString, name, port))
+			if (!MainClass::checkCorrectHostPortInRedirection(redirectString, name, port, ip))
 				return (false);
 			//find Server *
 			for (std::map<int, Server *>::iterator itA = allServers->getConnections(true).begin(); itA != allServers->getConnections(true).end(); itA++)
@@ -392,7 +401,7 @@ bool MainClass::checkCorrectHostPortInRedirection(std::string &src, std::string 
 	if (i == 0)
 		src.erase(0, 4);
 	i = src.find('/');
-	tmp = substr(0, i);
+	tmp = src.substr(0, i);
 	src.erase(0, i);
 	i = src.rfind('/');
 	src.resize(i + 1);
@@ -418,7 +427,7 @@ bool MainClass::checkCorrectHostPortInRedirection(std::string &src, std::string 
 		return (false);
 	}
 	//check host/name
-	if (ConfParser::checkCorrectHost(name))
+	if (checkCorrectHost(name))
 	{
 		ip = name;
 		name.clear();

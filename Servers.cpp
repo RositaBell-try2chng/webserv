@@ -116,7 +116,7 @@ void    Servers::createServer(std::string const &host, std::string const &port, 
         tmp.setMaxBodySize(-1);
     else
     {
-        SizeMax = ConfParser::strToSSize_t(it->second, 100000);
+        SizeMax = strToSSize_t(it->second, 100000);
         if (SizeMax == -1)
             throw badConfig();
         else
@@ -189,7 +189,7 @@ void Servers::addToConnection(int fd, std::map<std::string, std::string> &S, std
     it2 = S.find("limitBodySize");
     if (it2 != S.end())
     {
-        SizeMax = ConfParser::strToSSize_t(it->second, 100000);
+        SizeMax = strToSSize_t(*it, 100000);
         if (SizeMax == -1)
             throw badConfig();
         else if (SizeMax > dst->getMaxBodySize())

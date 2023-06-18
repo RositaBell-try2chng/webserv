@@ -30,7 +30,7 @@ bool checkCorrectHost(std::string &Host)
     if (part.empty() || part.length() > 3)
         return (false);
     while (part.length() < 3)
-        part = '0' + part;
+		part.insert(part.begin(), '0');
     if (part > std::string("255"))
         return (false);
     while (i < len)
@@ -46,7 +46,7 @@ bool checkCorrectHost(std::string &Host)
         if (part.empty() || part.length() > 3)
             return (false);
         while (part.length() < 3)
-            part = '0' + part;
+            part.insert(part.begin(), '0');
         if (part > std::string("255"))
             return (false);
     }
@@ -78,7 +78,7 @@ ssize_t strToSSize_t(std::string const &src, ssize_t limit)
     return (res);
 }
 
-std::string Size_tToString(std::string::size_type src, std::string base)
+std::string Size_tToString(std::string::size_type src, std::string const &base)
 {
     char c;
 
@@ -91,7 +91,7 @@ std::string Size_tToString(std::string::size_type src, std::string base)
     return(Size_tToString(src / base.length(), base) + std::string(&c, 1));
 }
 
-std::string::size_type StringToSize_t(std::string src, std::string base, bool &flgCorrect)
+std::string::size_type StringToSize_t(std::string src, std::string const &base, bool &flgCorrect)
 {
     std::string::size_type j;
     std::string::size_type res = 0;

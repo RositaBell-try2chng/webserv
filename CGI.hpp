@@ -41,7 +41,7 @@ public:
 
     char            **setEnv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANSLATED, std::string &SCRIPT_NAME);
     char            **setArgv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANSLATED, std::string &SCRIPT_NAME);
-    static char     *getAllocatedCharPointer(std::string const src);
+    static char     *getAllocatedCharPointer(std::string src);
     
     //getters
     int         getPipeInForward();
@@ -50,6 +50,7 @@ public:
     int         getPipeOutBack();
 
     int checkCntTrying(char c, int stage);
+	int checkTimeout();
 
     int  prevStage; //0 - start CGI
                     //1 - send to pipe

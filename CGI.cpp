@@ -45,11 +45,11 @@ int CGI::ForkCGI(Server &src)
     this->pid = fork();
     switch (this->pid)
     {
-        case -1: { return(this->CGIFailed()); }
+        case -1: { return(this->CGIsFailed()); }
         case 0: { return(this->ParentCGI()); }
         default: { ChildCGI(src); }
     }
-    return (this->CGIFailed()); // -1/0 - return own int, Child exit before
+    return (this->CGIsFailed()); // -1/0 - return own int, Child exit before
 }
 
 int	CGI::ParentCGI()
@@ -68,7 +68,7 @@ int CGI::waitingCGI()
     switch (resPid)
     {
         case -1: { return(this->CGIsFailed()); } //error
-        case 0: { return (this->checkTimout()); } //child not ready
+        case 0: { return (this->checkTimeout()); } //child not ready
         default:
 		{
 			if (resPid == this->pid && stts == 0) //child finished ok
@@ -77,13 +77,13 @@ int CGI::waitingCGI()
 				return (9);
 		}
     }
-    return (this->checkTimout()); //wrong pid returned, need to wait correct pid
+    return (this->checkTimeout()); //wrong pid returned, need to wait correct pid
 }
 
 void	CGI::ChildCGI(Server &src)
 {
-    char **env;
-    char **argv;
+    char **env = NULL;
+    char **argv = NULL;
     std::string PATH_INFO; //virtual path
     std::string PATH_TRANSLATED; //real path
     std::string SCRIPT_NAME;
@@ -128,12 +128,12 @@ int CGI::sendToPipe(std::map<int, Server *>::iterator &it, fd_set *writes, bool 
 
     if (!FD_ISSET(this->PipeOutForward, writes))
         return (20); //repeat write
-	wrRes = write(this->PipeOutForward, it->second->getReq_struct().body.c_str(), it->second->getReq_struct().body.length());
+	wrRes = write(this->PipeOutForward, it->second->getReq_struct()->body.c_str(), it->second->getReq_struct()->body.length());
 	switch (wrRes)
 	{
 		case -1: //error
 		{
-			Logger::putMsg(std::string("ERROR while writing to ") + ConfParser::Size_tToString(this->PipeOutForward) + std::string(":\n") + std::string(strerror(errno)), FILE_ERR, ERR);
+			Logger::putMsg(std::string("ERROR while writing to ") + Size_tToString(this->PipeOutForward, DEC_BASE) + std::string(":\n") + std::string(strerror(errno)), FILE_ERR, ERR);
 			return (this->CGIsFailed());
 		}
 		case 0:
@@ -144,15 +144,15 @@ int CGI::sendToPipe(std::map<int, Server *>::iterator &it, fd_set *writes, bool 
 		default:
 		{
             it->second->updateLastActionTime();
-			this->cntErrorsWriting = 0;
-            if (wrRes == it->second->getReq_struct().body.length())
+			this->cntTryingWriting = 0;
+            if (wrRes == it->second->getReq_struct()->body.length())
             {
                 if (flgLast)
                     return (4);
                 else
                     return (2);
             }
-			it->second->getReq_struct().body.erase(0, wrRes);
+			it->second->getReq_struct()->body.erase(0, wrRes);
 			return (20); //repeat write
 		}
 	}
@@ -171,12 +171,12 @@ int CGI::readFromPipe(std::map<int, Server *>::iterator &it, fd_set *reads)
 	{
 		case -1: //error
 		{
-			Logger::putMsg(std::string("ERROR while reading from "), this->PipeInBack + std::string(":\n") + std::string(strerror(errno)));
-			return (this->CGIFailed());
+			Logger::putMsg(std::string("ERROR while reading from PipeInBack:\n") + std::string(strerror(errno)), FILE_ERR, ERR);
+			return (this->CGIsFailed());
 		}
 		case 0:
 		{
-			Logger::putMsg(std::string("read 0 bytes"), this->PipeInBack + std::string(":\n") + std::string(strerror(errno)));
+			Logger::putMsg(std::string("read 0 bytes from PipeInBack:\n") + std::string(strerror(errno)), FILE_ERR, ERR);
 			return (this->checkCntTrying('r', it->second->CGIStage));
 		}
 		case BUF_SIZE_PIPE: //maybe somthing else in PIPE
@@ -209,27 +209,26 @@ int CGI::checkCntTrying(char c, int stage)
 	++(*checks);
 	if (*checks < CNT_TRYING)
 		return (stage);
-	Logger::putMsg(std::string("read/write 0 bytes 3 times in a raw: ") + std::string(&c, 1), this->PipeInBack + std::string(":\n") + std::string(strerror(errno)));
-	return (this->CGIFailed());
+	Logger::putMsg(std::string("read/write 0 bytes 3 times in a raw: ") + std::string(strerror(errno)), FILE_ERR, ERR);
+	return (this->CGIsFailed());
 }
-
 
 char** CGI::setArgv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANSLATED, std::string &SCRIPT_NAME)
 {
     char **res = NULL;
-    PATH_INFO = src.getReq_struct().uri; //fix me: need to substr after '?' ?
+    PATH_INFO = src.getReq_struct()->base.start_string.uri; //fix me: need to substr after '?' ?
     std::string loc;
     std::string::size_type i;
     //find server
-    t_serv *curServ = src.findServer(src.getReq_struct().host);
+    t_serv *curServ = src.findServer(src.getReq_struct()->host);
     //find location
     i = PATH_INFO.rfind('/');
     loc = PATH_INFO.substr(0, i + 1);
     t_loc *curLoc = src.findLocation(loc, curServ);
-    SCRIPT_NAME = Server::findFile(PATH_INFO.substr(i + 1, PATH_INFO.length() - i));
+    SCRIPT_NAME = Server::findFile(PATH_INFO.substr(i + 1, PATH_INFO.length() - i), curLoc);
     PATH_TRANSLATED = curServ->root + loc + curLoc->root + SCRIPT_NAME;
     try {
-        res = new char[2];
+        res = new char*[2];
         res[0] = NULL;
         res[0] = CGI::getAllocatedCharPointer(PATH_TRANSLATED);
         res[1] = NULL;
@@ -245,6 +244,8 @@ char** CGI::setArgv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANS
         }
         res = NULL;
     }
+	if (!res)
+		return NULL;
     return res;
 }
 
@@ -252,20 +253,30 @@ char**  CGI::setEnv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANS
 {
     char **res = NULL;
     size_t i = 0;
-    size_t size = src->getAnsw_struct().headers.size() + STANDART_ENV_VARS_CNT + 1;
-    std::map<std::string, std::string>::iterator it = src.getAnsw_struct().headers.begin();
+    size_t size = src.getAnsw_struct()->headers.size() + STANDART_ENV_VARS_CNT + 1;
+    std::map<std::string, std::string>::iterator it = src.getAnsw_struct()->headers.begin();
     try
     {
-        res = new char**[size](NULL);
+        res = new char*[size];
+		res[i] = NULL;
         res[i++] = CGI::getAllocatedCharPointer(std::string("SERVER_SOFTWARE=AMANIX"));
+		res[i] = NULL;
         res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("SERVER_NAME=") + src.getReq_struct()->host));
+		res[i] = NULL;
         res[i++] = CGI::getAllocatedCharPointer(std::string("GATEWAY_INTERFACE=CGI/1.1"));
+		res[i] = NULL;
         res[i++] = CGI::getAllocatedCharPointer(std::string("SERVER_PROTOCOL=HTTP/1.1"));
+		res[i] = NULL;
         res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("SERVER_PORT=") + src.getReq_struct()->port));
+		res[i] = NULL;
         res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("REQUEST_METHOD=") + src.getReq_struct()->base.start_string.method));
+		res[i] = NULL;
         res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("SCRIPT_NAME=") + SCRIPT_NAME));
-        res[i++] = CGI::getAllocatedCharPointer(std::string("REMOTE_ADDR=");
-        res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("PATH_INFO=") + PATH_INFO);
+		res[i] = NULL;
+        res[i++] = CGI::getAllocatedCharPointer(std::string("REMOTE_ADDR="));
+		res[i] = NULL;
+        res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("PATH_INFO=") + PATH_INFO));
+		res[i] = NULL;
         res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("PATH_TRANSLATED=") + PATH_TRANSLATED));
         res[size] = NULL;
         for (; i < size; i++)
@@ -288,7 +299,7 @@ char**  CGI::setEnv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANS
     return res;
 }
 
-char    CGI::getAllocatedCharPointer(std::string const src)
+char    *CGI::getAllocatedCharPointer(std::string src)
 {
     size_t len = src.length();
     char *res = new char[len + 1];
@@ -301,10 +312,10 @@ char    CGI::getAllocatedCharPointer(std::string const src)
 //getters
 int     CGI::getPipeInForward() { return this->PipeInForward; }
 int     CGI::getPipeOutForward() { return this->PipeOutForward; }
-int     CGI::getPipeInBack()) { return this->PipeInBack; }
-int     CGI::getPipeOutBack()) { return this->PipeOutBack; }
+int     CGI::getPipeInBack() { return this->PipeInBack; }
+int     CGI::getPipeOutBack() { return this->PipeOutBack; }
 
-int CGI::checkTimout()
+int CGI::checkTimeout()
 {
     if (time(NULL) - this->timeCGIStarted.tv_sec > TIMEOUT)
         return (9);

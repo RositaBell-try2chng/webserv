@@ -2,7 +2,7 @@
 
 void HandlerRequest::mainHandler(Server &srv)
 {
-	switch (src.Stage)
+	switch (srv.Stage)
 	{
 		case 0: { HandlerRequest::start(srv); break; } //start
 		case 2: { HandlerRequest::parserRequest(srv); break; } //need parse request
@@ -29,22 +29,22 @@ void HandlerRequest::start(Server &srv)
 
 void HandlerRequest::parserRequest(Server &srv)
 {
-	HTTP_Request::ft_strtoreq(*(srv->getReq_struct()), srv->getRequest());
+	HTTP_Request::ft_strtoreq(*(srv.getReq_struct()), srv.getRequest());
 
-	switch (srv->getReq_struct()->stage)
+	switch (srv.getReq_struct()->stage)
 	{
 		case 50: { srv.Stage = 1; srv.parseStage = 0; return; }
 		case 51: { srv.Stage = 1; srv.parseStage = 1; return; }
 		case 52: {
 			srv.parseStage = 2;
-			if (srv->getReq_struct()->flg_te == 0 || srv->getReq_struct()->body.empty())
+			if (srv.getReq_struct()->flg_te == 0 || srv.getReq_struct()->body.empty())
 				{ srv.Stage = 1; return; }
 			else
 				{ srv.Stage = 3; HandlerRequest::handleRequest(srv); return;}
 		}
 		case 53: { srv.Stage = 3; HandlerRequest::handleRequest(srv); return; }
 		case 59: { HandlerRequest::prepareToSendError(srv); return; }
-		default: {std::cout << "BAD Stage parser: " << srv->getReq_struct()->stage; return;}
+		default: {std::cout << "BAD Stage parser: " << srv.getReq_struct()->stage; return;}
 	}
 }
 
@@ -55,8 +55,8 @@ void HandlerRequest::handleRequest(Server &srv)
 	if (srv.getReq_struct()->flg_te == 0 && srv.getReq_struct()->content_lngth > servNode->limitCLientBodySize)
 		;//fix me: add error limiting
 
-	size_t		i = srv.getReq_struct()->uri.rfind('/');
-	std::string	locName = srv.getReq_struct()->uri.substr(0, i + 1);
+	size_t		i = srv.getReq_struct()->base.start_string.uri.rfind('/');
+	std::string	locName = srv.getReq_struct()->base.start_string.uri.substr(0, i + 1);
 	t_loc		*locNode = srv.findLocation(locName, servNode);
 
 	//check method
@@ -75,7 +75,7 @@ void HandlerRequest::handleRequest(Server &srv)
 		return;
 	}
 	//check CGI
-	std::string	tmp = srv.getReq_struct()->uri;
+	std::string	tmp = srv.getReq_struct()->base.start_string.uri;
 	size_t		j = tmp.rfind('.');
 
 	if (j != std::string::npos && j > i)
@@ -90,7 +90,7 @@ void HandlerRequest::handleRequest(Server &srv)
 		}
 	}
 	//handle methods
-	tmp = srv.getReq_struct()->uri;
+	tmp = srv.getReq_struct()->base.start_string.uri;
 	tmp.erase(0, i + 1);
 
 	if (method == "GET")
@@ -143,7 +143,7 @@ void HandlerRequest::CGIHandler(Server &srv)
 		}
 		case 4: //wait end of pid
 		{
-			srv.CGIStage = srv.getCGIptr()->waitingCGI(it);
+			srv.CGIStage = srv.getCGIptr()->waitingCGI();
 			if (srv.CGIStage == 9)
 				HandlerRequest::CGIerrorManager(srv);
 			break;
@@ -161,11 +161,11 @@ void HandlerRequest::CGIHandler(Server &srv)
 
 void HandlerRequest::prepareToSendCGI(Server &srv)
 {
-	if (!srv.getReq_struct().body.empty())
+	if (!srv.getReq_struct()->body.empty())
 		return;
 	if (srv.parseStage == 3)
 	{
-		srv.getReq_struct().body = std::string("\r\n\r\n");
+		srv.getReq_struct()->body = std::string("\r\n\r\n");
 		srv.CGIStage = 2;
 	}
 	srv.Stage = 2;
@@ -193,7 +193,7 @@ void HandlerRequest::startCGI(Server &srv)
 		srv.CGIStage = 9;
 	}
 	if (srv.CGIStage == 9)
-		MainClass::CGIerrorManager(srv);
+		HandlerRequest::CGIerrorManager(srv);
 	else
 		HandlerRequest::prepareToSendCGI(srv);
 }
@@ -216,7 +216,7 @@ void HandlerRequest::checkReadyToHandle(Server &srv)
 		srv.Stage = 1;
 }
 
-HandlerRequest::prepareToSendError(Server &srv)
+void HandlerRequest::prepareToSendError(Server &srv)
 {
 	HTTP_Answer tmp;
 
