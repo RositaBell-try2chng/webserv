@@ -26,6 +26,7 @@ private:
 	static void startCGI(Server &srv);
 	static void CGIHandler(Server &srv);
 	static void redirectResponse(Server &srv, t_loc *locNode);
+	bool HandlerRequest::haveErrorPage(t_serv *servNode, std::string codeStr, int code);
 public:
 	static void	mainHandler(Server &srv);
 };

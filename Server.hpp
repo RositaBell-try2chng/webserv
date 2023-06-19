@@ -116,7 +116,7 @@ public:
 	void				clearReq_struct();
 
 	void				addToReq(std::string src);
-	void				setResponse(std::string const &src);
+	void				setResponse(std::string const &src, bool flgReWrite = false);
 	void				addChunkedSizeToResponse();
 
 	bool 				checkCntTryingRecv();

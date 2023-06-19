@@ -16,7 +16,7 @@ Stage:
     9 - error
 readStage:
     0 - новое чтение
-    1 - читаем чанки
+    1 - читаем чанки fix me: need???
 parseStage:
     0 - start
     1 - start string ready
@@ -31,6 +31,7 @@ CGIStage:
     3 - fork + launch script
     4 - wait end of pid
     5 - read from PipeInBack
+        50 - read next chunk from PipeInBack
     6 - end of pipe reached
     9 - CGIerror
 writeStage:
@@ -48,35 +49,15 @@ writeStage:
 
 2. Запускаем mainloop
     2.0 чистим readset и writeset
-    2.1 в зависимости от stage добавляем fd в readset/writeset
-        2.1.1 идем по всем используемым подключениям проверяем stage
-            2.1.1.1 stage 0/1 - добавляем fdKey в readset
-                    stage 10/11/12 - добавляем fdKey в writeset
-                    stage 20 - добавляем fdPipeOut в writeset
-                    stage 23 - добавляем fdPipeIN в readset
-            2.1.1.2 Считаем maxFd
-        2.1.2 идем по всем слушающим fd и добавляем в readset, проверяем не нужно ли поменять maxFd
+    2.1 идем по всем Server*, доводим их до Stage чтения / записи / ожидания для CGI
+    2.2 добавляем в readFds/writeFds fd сокета или пайпа в зависимости от stage
+    2.3 добавляем слушающие сокеты в readFds
 SELECT
-    2.2 идем циклом по слушающим fd:
-        2.2.1 если в readset - добавляем подключение + клонируем server
-    2.3 идем циклом по используемым fd:
-        2.3.1 если fdKey в readset:
-            2.3.1.1 если resRecv == -1 проверяем stage:
-                        // 0/1 Закрываем connection
-            2.3.1.2 если resRecv == 0 проверяем stage:
-                        // 0 - Закрываем connection
-                        // 1 - Закрываем если таймаут
-            2.3.1.3 если resRecv > 0 проверяем stage:
-                        // 0 - читаем запрос дописываем к стринге запроса
-                        // 1 - добавляем чанк к запросу, если чанк последний (==0) - переходим к обработке запроса
-        2.3.2 если fdPipeIN в readset смотрим stage
-                        // 22 - записываем ответ (// 22 - записываем в ответ ошибку 5XX/отдаем стандартную ошибку html)
-        2.3.3 если fdKey в writeset:
-            2.3.3.1 отправляем и проверяем результат
-            2.3.3.2 <0 - close connection
-            2.3.3.3 <len - ресайз ответа
-            2.3.3.4 выствляем stage 1;
-        2.3.4 если fdPipeOut в writeset смотрим stage, если есть что отправить - отправляем
-        2.4 проверяем для всех используемых connection timeout и закрывают то что не обновлялось
-
+    2.4 идем циклом по слушающим fd - > accept connection
+    2.5 идем циклом по всем Server* в зависимости от stage делаем:
+        //1 - читаем из сокета + Stage = 2
+        //4 - В зависимости от SGIStage:
+            //1,2,20 - посылаем body в PipeOutForward
+            //5, 50 - читаем из PipeInBack
+        //5 - посылаем ответ на сокет
 

@@ -40,7 +40,7 @@ void HandlerRequest::parserRequest(Server &srv)
 			if (srv.getReq_struct()->flg_te == 0 || srv.getReq_struct()->body.empty())
 				{ srv.Stage = 1; return; }
 			else
-				{ srv.Stage = 3; HandlerRequest::handleRequest(srv); return;}
+				{ srv.Stage = 3; srv.isChunkedRequest = true; HandlerRequest::handleRequest(srv); return;}
 		}
 		case 53: { srv.Stage = 3; HandlerRequest::handleRequest(srv); return; }
 		case 59: { HandlerRequest::prepareToSendError(srv); return; }
@@ -52,8 +52,13 @@ void HandlerRequest::handleRequest(Server &srv)
 {
 	t_serv		*servNode = srv.findServer(srv.getReq_struct()->host);
 
-	if (srv.getReq_struct()->flg_te == 0 && srv.getReq_struct()->content_lngth > servNode->limitCLientBodySize)
-		;//fix me: add error limiting
+	if (!srv.isChunkedRequest && srv.getReq_struct()->content_lngth > servNode->limitCLientBodySize)
+	{
+			srv.getReq_struct()->answ_code[0] = 4;
+			srv.getReq_struct()->answ_code[1] = 13;
+			HandlerRequest::prepareToSendError(srv);
+			return;
+	}
 
 	size_t		i = srv.getReq_struct()->base.start_string.uri.rfind('/');
 	std::string	locName = srv.getReq_struct()->base.start_string.uri.substr(0, i + 1);
@@ -74,6 +79,60 @@ void HandlerRequest::handleRequest(Server &srv)
 		HandlerRequest::redirectResponse(srv, locNode);
 		return;
 	}
+	//handle methods
+	tmp = srv.getReq_struct()->base.start_string.uri;
+	tmp.erase(0, i + 1);
+
+	if (method == "GET")
+		HandlerRequest::GET(srv, servNode, locNode, tmp);
+	else if (method == "POST")
+		HandlerRequest::POST(srv, servNode, locNode, tmp);
+	else (method == "DELETE")
+		HandlerRequest::DELETE(srv, servNode, locNode, tmp);
+}
+
+HandlerRequest::GET(Server &srv, t_serv *servNode, t_loc *locNode, std::string tmp)
+{
+	std::string fullPath;
+	std::string 
+
+	if (!servNode->root.empty())
+		fullPath = servNode->root;
+	else
+		fullPath = std::string(".");
+	if (locNode->location != "/")
+		fullPath += locNode->location;
+	fullPath += locNode->upload_path + std::string("/") + fileName;
+	if (access(fullPath.c_str(), R_OK) != 0)
+	{
+		if (HandlerRequest::haveErrorPage(servNode, "403", 403))
+			return;
+		srv.getReq_struct()->answ_code[0] = 4;
+		srv.getReq_struct()->answ_code[0] = 3;
+		srv.Stage = 9;
+		HandlerRequest::prepareToSendError(srv);
+		return;
+	}
+	srv.getReq_struct()->headers.push(std::pair<std::string, std::string>(std::string("FILENAME"), fullPath));
+	srv.getReq_struct->base->uri = std::string("/CGIs/download.py");
+	srv.Stage = 4;
+	srv.CGIStage = 0;
+	HandlerRequest::CGIHandler(srv);
+}
+
+HandlerRequest::POST(Server &srv, t_serv *servNode, t_loc *locNode, std::string tmp)
+{
+	//check access to upload
+	if (locNode->upload_path.empty()
+	{
+		if (HandlerRequest::haveErrorPage(servNode, "403", 403))
+			return;
+		srv.getReq_struct()->answ_code[0] = 4;
+		srv.getReq_struct()->answ_code[0] = 3;
+		srv.Stage = 9;
+		HandlerRequest::prepareToSendError(srv);
+		return;
+	}
 	//check CGI
 	std::string	tmp = srv.getReq_struct()->base.start_string.uri;
 	size_t		j = tmp.rfind('.');
@@ -89,14 +148,63 @@ void HandlerRequest::handleRequest(Server &srv)
 			return;
 		}
 	}
-	//handle methods
-	tmp = srv.getReq_struct()->base.start_string.uri;
-	tmp.erase(0, i + 1);
+	//can't POST without CGI
+	if (HandlerRequest::haveErrorPage(servNode, "501", 501))
+			return;
+	srv.getReq_struct()->answ_code[0] = 5;
+	srv.getReq_struct()->answ_code[0] = 1;
+	srv.Stage = 9;
+	HandlerRequest::prepareToSendError(srv);
+}
 
-	if (method == "GET")
-		HandlerRequest::GET(srv, servNode, locNode, tmp);
-	else if (method == "POST")
-		HandlerRequest::POST(srv, servNode, locNode, tmp);
+HandlerRequest::DELETE(Server &srv, t_serv *servNode, t_loc *locNode, std::string fileName)
+{
+	std::string fullPath;
+
+	if (locNode->upload_path.empty()
+	{
+		if (HandlerRequest::haveErrorPage(servNode, "403", 403))
+			return;
+		srv.getReq_struct()->answ_code[0] = 4;
+		srv.getReq_struct()->answ_code[0] = 3;
+		srv.Stage = 9;
+		HandlerRequest::prepareToSendError(srv);
+		return;
+	}
+	if (!servNode->root.empty())
+		fullPath = servNode->root;
+	else
+		fullPath = std::string(".");
+	if (locNode->location != "/")
+		fullPath += locNode->location;
+	fullPath += locNode->upload_path + std::string("/") + fileName;
+	if (access(fullPath.c_str(), W_OK) != 0)
+	{
+		if (HandlerRequest::haveErrorPage(servNode, "403", 403))
+			return;
+		srv.getReq_struct()->answ_code[0] = 4;
+		srv.getReq_struct()->answ_code[0] = 3;
+		srv.Stage = 9;
+		HandlerRequest::prepareToSendError(srv);
+		return;
+	}
+	srv.getReq_struct()->headers.push(std::pair<std::string, std::string>(std::string("FILENAME"), fullPath));
+	srv.getReq_struct->base->uri = std::string("/CGIs/delete.sh");
+	srv.Stage = 4;
+	srv.CGIStage = 0;
+	HandlerRequest::CGIHandler(srv);
+}
+
+bool HandlerRequest::haveErrorPage(t_serv *servNode, std::string codeStr, int code)
+{
+	std::map<int, std::string>::iterator	it = servNode->errPages.find(code);
+
+	if (it == servNode->errPages.end())
+		return (false);
+	std::string	response("HTTP/1.1 303 See Other\r\nLocation: ");
+	response += it->second + std::string("\r\n\r\n");
+	srv.Stage = 5;
+	return (true);
 }
 
 void HandlerRequest::redirectResponse(Server &srv, t_loc *locNode)
@@ -111,9 +219,11 @@ void HandlerRequest::redirectResponse(Server &srv, t_loc *locNode)
 		case 301: { response += std::string("301 Moved Permanently"); break; }
 		case 302: { response += std::string("302 Found"); break; }
 		case 303: { response += std::string("303 See Other"); break; }
-		case 304: { response += std::string("304 Moved Permanently"); break; }
-		case 307: { response += std::string("307 Moved Permanently"); break; }
-		case 308: { response += std::string("308 Moved Permanently"); break; }
+		case 304: { response += std::string("304 Not Modified"); break; }
+		case 305: { response += std::string("305 Use Proxy"); break; }
+		case 306: { response += std::string("306 Switch Proxy"); break; }
+		case 307: { response += std::string("307 Temporary Redirect"); break; }
+		case 308: { response += std::string("308 Permanent Redirect"); break; }
 		default: {std::cerr << "BAD CODE REDIRECT: " << code << std::endl; srv.Stage = 9; return; }
 	}
 	response += std::string("\r\nLocation: ") + dst + std::string("\r\n\r\n");
@@ -156,7 +266,19 @@ void HandlerRequest::CGIHandler(Server &srv)
 			srv.Stage = 5;
 		}
 		case 9: { HandlerRequest::CGIerrorManager(srv); break; }
+		default: {std::cout << "bad stage in cgi handler\n";}
 	}
+}
+
+void	HandlerRequest::CGIerrorManager(Server &srv)
+{
+	if (srv.getCGIptr())
+	{
+		delete srv.getCGIptr();
+		srv.setCGIptr(NULL);
+	}
+	srv.Stage = 9;
+	srv.CGIStage = 9;
 }
 
 void HandlerRequest::prepareToSendCGI(Server &srv)
@@ -219,16 +341,22 @@ void HandlerRequest::checkReadyToHandle(Server &srv)
 void HandlerRequest::prepareToSendError(Server &srv)
 {
 	HTTP_Answer tmp;
+	t_serv		*servNode = srv.findServer(srv.getReq_struct()->host);;
 
 	if (srv.CGIStage == 9) //CGI error
 	{
 		srv.getReq_struct()->answ_code[0] = 5;
-		srv.getReq_struct()->answ_code[0] = 0;
+		srv.getReq_struct()->answ_code[1] = 0;
 	}
+	int code = srv.getReq_struct()->answ_code[0] * 100 + srv.getReq_struct()->answ_code[1];
+
+	if (HandlerRequest::haveErrorPage(servNode, Size_tToString(code, DEC_BASE), code))
+		return;
 	tmp = HTTP_Answer::ft_reqtoansw(*(srv.getReq_struct()));
 	srv.setResponse(HTTP_Answer::ft_answtostr(tmp));
 	srv.Stage = 5;
 	srv.writeStage = 0;
+	srv.isChunkedResponse = false;
 }
 
 HandlerRequest::HandlerRequest() {}

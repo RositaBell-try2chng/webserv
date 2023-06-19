@@ -150,7 +150,10 @@ int CGI::sendToPipe(std::map<int, Server *>::iterator &it, fd_set *writes, bool 
                 if (flgLast)
                     return (4);
                 else
+                {
+                    it->second->Stage = 1;
                     return (2);
+                }
             }
 			it->second->getReq_struct()->body.erase(0, wrRes);
 			return (20); //repeat write
@@ -179,18 +182,16 @@ int CGI::readFromPipe(std::map<int, Server *>::iterator &it, fd_set *reads)
 			Logger::putMsg(std::string("read 0 bytes from PipeInBack:\n") + std::string(strerror(errno)), FILE_ERR, ERR);
 			return (this->checkCntTrying('r', it->second->CGIStage));
 		}
-		case BUF_SIZE_PIPE: //maybe somthing else in PIPE
+		default: //maybe somthing else in PIPE
 		{
             it->second->updateLastActionTime();
 			this->cntTryingReading = 0;
 			it->second->setResponse(std::string(buf, rdRes));
-			return (50);
-		}
-		default: //end of file
-		{
-            it->second->updateLastActionTime();
-			this->cntTryingReading = 0;
-            return (6);
+            it->second->Stage = 5;
+            if (rdRes == BUF_SIZE)
+			    return (50);
+            else
+                return (6);
 		}
 	}
 }
@@ -216,7 +217,7 @@ int CGI::checkCntTrying(char c, int stage)
 char** CGI::setArgv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANSLATED, std::string &SCRIPT_NAME)
 {
     char **res = NULL;
-    PATH_INFO = src.getReq_struct()->base.start_string.uri; //fix me: need to substr after '?' ?
+    PATH_INFO = src.getReq_struct()->base.start_string.uri;
     std::string loc;
     std::string::size_type i;
     //find server
@@ -225,7 +226,7 @@ char** CGI::setArgv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANS
     i = PATH_INFO.rfind('/');
     loc = PATH_INFO.substr(0, i + 1);
     t_loc *curLoc = src.findLocation(loc, curServ);
-    SCRIPT_NAME = Server::findFile(PATH_INFO.substr(i + 1, PATH_INFO.length() - i), curLoc);
+    SCRIPT_NAME = PATH_INFO.substr(i + 1, PATH_INFO.length() - i);
     PATH_TRANSLATED = curServ->root + loc + curLoc->root + SCRIPT_NAME;
     try {
         res = new char*[2];

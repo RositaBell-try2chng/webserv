@@ -314,7 +314,7 @@ void Server::setRedirect(t_loc *cur, std::string line1)
 	ss >> code;
 	tmp.clear();
 	ss >> tmp;
-	if (!tmp.empty() || !(code == 301 || code == 302 || code == 303 || code == 304 || code == 307 || code == 308))
+	if (!tmp.empty() || !(code >= 301 && code <= 308))
 	{
 		Logger::putMsg("BAD CONFIG 'return':\n" + line1 + " " + line2, FILE_ERR, ERR);
 		MainClass::exitHandler(0);
@@ -546,13 +546,20 @@ CGI				*Server::getCGIptr() { return (this->ptrCGI); }
 void	Server::setCGIptr(CGI *src) {this->ptrCGI = src;}
 
 void	Server::setMaxBodySize(ssize_t n) {this->maxLimitBodiSize = n;}
-void	Server::setResponse(const std::string &src) { this->response = src; }
+
+void	Server::setResponse(const std::string &src, bool flgReWrite)
+{
+	if (!flgReWrite)
+		this->response += src;
+	else
+		this->response = src;
+}
+
 void	Server::CntTryingSendZero() {this->cntTryingSend = 0;}
 
 void	Server::addChunkedSizeToResponse()
 {
-	std::string::size_type len = this->response.length();
-	std::string chunkSize = Size_tToString(len, HEX_BASE);
+	std::string chunkSize = Size_tToString(this->response.length(), HEX_BASE);
 
 	this->response = chunkSize + std::string("\r\n") + this->response + std::string("\r\n");
 }
