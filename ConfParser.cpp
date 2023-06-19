@@ -158,15 +158,15 @@ void ConfParser::parseForOneServ(std::string &src, Servers *allServers)
 bool ConfParser::fillLocations(std::map <std::string, std::string> &paramL, std::map <std::string, std::map<std::string, std::string> > &locations)
 {
 	std::map<std::string, std::string>::iterator	it;
-	std::map<std::string, std::string>			  part2;
-	std::stringstream							   sStream;
-	std::string									 line;
-	std::string									 line2;
+	std::map<std::string, std::string>				part2;
+	std::string										line;
+	std::string										line2;
 
 	for (it = paramL.begin(); it != paramL.end(); it++)
 	{
 		part2.clear();
-		sStream << it->second;
+		std::stringstream	sStream(it->second);
+		std::cout << it->second << std::endl;
 		while (std::getline(sStream, line))
 		{
 			ConfParser::splitLine(line, line2);
