@@ -70,6 +70,10 @@ void HandlerRequest::handleRequest(Server &srv)
 	if ((method == "GET") || (method == "POST" && !locNode->flgPost) || (method == "DELETE" && !locNode->flgDelete))
 	{
 		srv.Stage = 9;
+		if (HandlerRequest::haveErrorPage(srv, servNode, 405))
+			return;
+		srv.getReq_struct()->answ_code[0] = 4;
+		srv.getReq_struct()->answ_code[1] = 5;
 		HandlerRequest::prepareToSendError(srv);
 		return;
 	}
@@ -80,21 +84,20 @@ void HandlerRequest::handleRequest(Server &srv)
 		return;
 	}
 	//handle methods
-	tmp = srv.getReq_struct()->base.start_string.uri;
+	std::string tmp = srv.getReq_struct()->base.start_string.uri;
 	tmp.erase(0, i + 1);
 
 	if (method == "GET")
 		HandlerRequest::GET(srv, servNode, locNode, tmp);
 	else if (method == "POST")
 		HandlerRequest::POST(srv, servNode, locNode, tmp);
-	else (method == "DELETE")
+	else
 		HandlerRequest::DELETE(srv, servNode, locNode, tmp);
 }
 
-HandlerRequest::GET(Server &srv, t_serv *servNode, t_loc *locNode, std::string tmp)
+void HandlerRequest::GET(Server &srv, t_serv *servNode, t_loc *locNode, std::string fileName)
 {
 	std::string fullPath;
-	std::string 
 
 	if (!servNode->root.empty())
 		fullPath = servNode->root;
@@ -102,10 +105,10 @@ HandlerRequest::GET(Server &srv, t_serv *servNode, t_loc *locNode, std::string t
 		fullPath = std::string(".");
 	if (locNode->location != "/")
 		fullPath += locNode->location;
-	fullPath += locNode->upload_path + std::string("/") + fileName;
+	fullPath += locNode->uploadPath + std::string("/") + fileName;
 	if (access(fullPath.c_str(), R_OK) != 0)
 	{
-		if (HandlerRequest::haveErrorPage(servNode, "403", 403))
+		if (HandlerRequest::haveErrorPage(srv, servNode, 403))
 			return;
 		srv.getReq_struct()->answ_code[0] = 4;
 		srv.getReq_struct()->answ_code[0] = 3;
@@ -113,19 +116,19 @@ HandlerRequest::GET(Server &srv, t_serv *servNode, t_loc *locNode, std::string t
 		HandlerRequest::prepareToSendError(srv);
 		return;
 	}
-	srv.getReq_struct()->headers.push(std::pair<std::string, std::string>(std::string("FILENAME"), fullPath));
-	srv.getReq_struct->base->uri = std::string("/CGIs/download.py");
+	srv.getReq_struct()->base.headers.insert(std::pair<std::string, std::string>(std::string("FILENAME"), fullPath));
+	srv.getReq_struct()->base.start_string.uri = std::string("/CGIs/download.py");
 	srv.Stage = 4;
 	srv.CGIStage = 0;
 	HandlerRequest::CGIHandler(srv);
 }
 
-HandlerRequest::POST(Server &srv, t_serv *servNode, t_loc *locNode, std::string tmp)
+void HandlerRequest::POST(Server &srv, t_serv *servNode, t_loc *locNode, std::string fileName)
 {
 	//check access to upload
-	if (locNode->upload_path.empty()
+	if (locNode->uploadPath.empty())
 	{
-		if (HandlerRequest::haveErrorPage(servNode, "403", 403))
+		if (HandlerRequest::haveErrorPage(srv, servNode, 403))
 			return;
 		srv.getReq_struct()->answ_code[0] = 4;
 		srv.getReq_struct()->answ_code[0] = 3;
@@ -134,10 +137,10 @@ HandlerRequest::POST(Server &srv, t_serv *servNode, t_loc *locNode, std::string 
 		return;
 	}
 	//check CGI
-	std::string	tmp = srv.getReq_struct()->base.start_string.uri;
+	std::string	tmp = fileName;
 	size_t		j = tmp.rfind('.');
 
-	if (j != std::string::npos && j > i)
+	if (j != std::string::npos)
 	{
 		tmp.erase(0, j);
 		if (locNode->CGIs.find(tmp) != locNode->CGIs.end())
@@ -149,7 +152,7 @@ HandlerRequest::POST(Server &srv, t_serv *servNode, t_loc *locNode, std::string 
 		}
 	}
 	//can't POST without CGI
-	if (HandlerRequest::haveErrorPage(servNode, "501", 501))
+	if (HandlerRequest::haveErrorPage(srv, servNode, 501))
 			return;
 	srv.getReq_struct()->answ_code[0] = 5;
 	srv.getReq_struct()->answ_code[0] = 1;
@@ -157,13 +160,13 @@ HandlerRequest::POST(Server &srv, t_serv *servNode, t_loc *locNode, std::string 
 	HandlerRequest::prepareToSendError(srv);
 }
 
-HandlerRequest::DELETE(Server &srv, t_serv *servNode, t_loc *locNode, std::string fileName)
+void HandlerRequest::DELETE(Server &srv, t_serv *servNode, t_loc *locNode, std::string fileName)
 {
 	std::string fullPath;
 
-	if (locNode->upload_path.empty()
+	if (locNode->uploadPath.empty())
 	{
-		if (HandlerRequest::haveErrorPage(servNode, "403", 403))
+		if (HandlerRequest::haveErrorPage(srv, servNode, 403))
 			return;
 		srv.getReq_struct()->answ_code[0] = 4;
 		srv.getReq_struct()->answ_code[0] = 3;
@@ -177,10 +180,10 @@ HandlerRequest::DELETE(Server &srv, t_serv *servNode, t_loc *locNode, std::strin
 		fullPath = std::string(".");
 	if (locNode->location != "/")
 		fullPath += locNode->location;
-	fullPath += locNode->upload_path + std::string("/") + fileName;
+	fullPath += locNode->uploadPath + std::string("/") + fileName;
 	if (access(fullPath.c_str(), W_OK) != 0)
 	{
-		if (HandlerRequest::haveErrorPage(servNode, "403", 403))
+		if (HandlerRequest::haveErrorPage(srv, servNode, 403))
 			return;
 		srv.getReq_struct()->answ_code[0] = 4;
 		srv.getReq_struct()->answ_code[0] = 3;
@@ -188,14 +191,14 @@ HandlerRequest::DELETE(Server &srv, t_serv *servNode, t_loc *locNode, std::strin
 		HandlerRequest::prepareToSendError(srv);
 		return;
 	}
-	srv.getReq_struct()->headers.push(std::pair<std::string, std::string>(std::string("FILENAME"), fullPath));
-	srv.getReq_struct->base->uri = std::string("/CGIs/delete.sh");
+	srv.getReq_struct()->base.headers.insert(std::pair<std::string, std::string>(std::string("FILENAME"), fullPath));
+	srv.getReq_struct()->base.start_string.uri = std::string("/CGIs/delete.sh");
 	srv.Stage = 4;
 	srv.CGIStage = 0;
 	HandlerRequest::CGIHandler(srv);
 }
 
-bool HandlerRequest::haveErrorPage(t_serv *servNode, std::string codeStr, int code)
+bool HandlerRequest::haveErrorPage(Server &srv, t_serv *servNode, int code)
 {
 	std::map<int, std::string>::iterator	it = servNode->errPages.find(code);
 
@@ -350,7 +353,7 @@ void HandlerRequest::prepareToSendError(Server &srv)
 	}
 	int code = srv.getReq_struct()->answ_code[0] * 100 + srv.getReq_struct()->answ_code[1];
 
-	if (HandlerRequest::haveErrorPage(servNode, Size_tToString(code, DEC_BASE), code))
+	if (HandlerRequest::haveErrorPage(srv, servNode, code))
 		return;
 	tmp = HTTP_Answer::ft_reqtoansw(*(srv.getReq_struct()));
 	srv.setResponse(HTTP_Answer::ft_answtostr(tmp));

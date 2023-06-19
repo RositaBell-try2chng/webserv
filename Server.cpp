@@ -85,7 +85,7 @@ std::string Server::findFile(std::string const &str, t_loc *loc)
 {
 	std::vector<std::string>::iterator it;
 	
-	it = find(loc->files.begin(), loc->files.end(), "str");
+	it = find(loc->files.begin(), loc->files.end(), str);
 	
 	if (it != loc->files.end())
 		return (*it);
@@ -153,7 +153,7 @@ void Server::setServList(std::map<std::string, std::string> &S, std::map <std::s
 		//fill err pages map
 		this->fillErrorPages(E, cur);
 		//set location
-		cur->locList = Server::setLocList(cur, L);
+		cur->locList = Server::setLocList(L);
 		it++;
 		if (it == SN.end())
 			continue;
@@ -209,7 +209,7 @@ void Server::fillErrorPages(std::vector<std::string> &E, t_serv *cur)
 }
 
 //for configs
-t_loc* Server::setLocList(t_serv* s, std::map <std::string, std::map<std::string, std::string> > L)
+t_loc* Server::setLocList(std::map <std::string, std::map<std::string, std::string> > L)
 {
 	std::map <std::string, std::map<std::string, std::string> >::iterator it;
 	std::map <std::string, std::string>::iterator it2;

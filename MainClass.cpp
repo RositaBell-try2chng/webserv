@@ -341,14 +341,14 @@ int	MainClass::setChunkedResponse(Server &srv)
 		else
 			StartStringHeaders.erase(i, StartStringHeaders.length() - i);
 	}
-	StartStringHeaders.push_back(std::string("Transfer-Encoding: chunked\r\n\r\n"));
+	StartStringHeaders.append(std::string("Transfer-Encoding: chunked\r\n\r\n"));
 	Body.erase(0, i + 4);
-	if (!body.empty())
+	if (!Body.empty())
 	{
 		BodySize = Size_tToString(Body.length(), HEX_BASE) + std::string("\r\n");
-		StartStringHeaders.push_back(BodySize + Body + std::string("\r\n"));
+		StartStringHeaders.append(BodySize + Body + std::string("\r\n"));
 	}
-	srv.setResponse(StartStringHeaders), true);
+	srv.setResponse((StartStringHeaders), true);
 	return (5);
 }
 

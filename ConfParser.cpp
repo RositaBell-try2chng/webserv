@@ -177,7 +177,7 @@ bool ConfParser::fillLocations(std::map <std::string, std::string> &paramL, std:
 			if (line == "root" || line == "upload_path")
 			{
 				if (line2[0] != '/')
-					line2.insert(0, '/');
+					line2.insert(line2.begin(), '/');
                 if (line2[line2.length() - 1] == '/')
                     line2.erase(line2.length() - 1, 1);
 			}
@@ -226,7 +226,7 @@ bool ConfParser::fillServParam(std::string &src, std::map <std::string, std::str
 			if (line == "root")
             {
                 if (line2[0] != '/')
-				    line2.insert(0, '/');
+				    line2.insert(line2.begin(), '/');
                 if (line2[line2.length() - 1] != '/')
                     line2.erase(line2.length() - 1, 1);
             }
@@ -297,7 +297,7 @@ bool ConfParser::getLocations(std::string &src, std::map<std::string, std::strin
 		throw badConfig();
     }
 	if (part1[0] != '/')
-        part1.insert(0, '/');
+        part1.insert(part1.begin(), '/');
     if (part1.length() > 1 && part1[part1.length() - 1] == '/')
         part1.erase(part1.length() - 1, 1);
 	from = i + 1;

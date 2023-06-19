@@ -145,7 +145,7 @@ int CGI::sendToPipe(std::map<int, Server *>::iterator &it, fd_set *writes, bool 
 		{
             it->second->updateLastActionTime();
 			this->cntTryingWriting = 0;
-            if (wrRes == it->second->getReq_struct()->body.length())
+            if (static_cast<size_t>(wrRes) == it->second->getReq_struct()->body.length())
             {
                 if (flgLast)
                     return (4);
@@ -201,12 +201,10 @@ int CGI::checkCntTrying(char c, int stage)
 {
 	char *checks;
 
-	switch (c)
-	{
-		case 'r': {checks = &cntTryingReading; break;} //read count
-		case 'w': {checks = &cntTryingWriting; break;} //write count
-		default: {std::cout << "wrong c in CGI check counter: " << static_cast<int>(c);}
-	}
+    if (c == 'r')
+        checks = &this->cntTryingReading;
+    else
+        checks = &this->cntTryingWriting;
 	++(*checks);
 	if (*checks < CNT_TRYING)
 		return (stage);
@@ -254,11 +252,11 @@ char**  CGI::setEnv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANS
 {
     char **res = NULL;
     size_t i = 0;
-    size_t size = src.getAnsw_struct()->headers.size() + STANDART_ENV_VARS_CNT + 1;
+    size_t size = src.getAnsw_struct()->headers.size() + STANDART_ENV_VARS_CNT;
     std::map<std::string, std::string>::iterator it = src.getAnsw_struct()->headers.begin();
     try
     {
-        res = new char*[size];
+        res = new char*[size + 1];
 		res[i] = NULL;
         res[i++] = CGI::getAllocatedCharPointer(std::string("SERVER_SOFTWARE=AMANIX"));
 		res[i] = NULL;

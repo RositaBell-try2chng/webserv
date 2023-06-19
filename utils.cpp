@@ -1,4 +1,5 @@
 #include "webserv.hpp"
+#include "Logger.hpp"
 
 void delSpaces(std::string &str)
 {

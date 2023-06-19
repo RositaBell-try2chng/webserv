@@ -19,6 +19,7 @@ private:
 	static void prepareToSendError(Server &srv);
 	static void GET(Server &srv, t_serv *servNode, t_loc *locNode, std::string tmp);
 	static void POST(Server &srv, t_serv *servNode, t_loc *locNode, std::string tmp);
+	static void DELETE(Server &srv, t_serv *servNode, t_loc *locNode, std::string tmp);
 	static void CGIerrorManager(Server &srv);
 	//CGIs
 	static void	checkReadyToHandle(Server &srv);
@@ -26,7 +27,7 @@ private:
 	static void startCGI(Server &srv);
 	static void CGIHandler(Server &srv);
 	static void redirectResponse(Server &srv, t_loc *locNode);
-	bool HandlerRequest::haveErrorPage(t_serv *servNode, std::string codeStr, int code);
+	static bool haveErrorPage(Server &srv, t_serv *servNode, int code);
 public:
 	static void	mainHandler(Server &srv);
 };

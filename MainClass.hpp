@@ -26,6 +26,7 @@ private:
     static void     sendResponse(std::map<int, Server*>::iterator &it, fd_set *writes);
     static void     closeConnection(std::map<int, Server *>::iterator &it);
     static void     CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_set *reads, fd_set *writes);
+    static int      setChunkedResponse(Server &srv);
 public:
     static void				doIt(int args, char** argv);
     static void				exitHandler(int sig);

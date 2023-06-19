@@ -171,7 +171,7 @@ void	ft_headers_parse(HTTP_Request &req) {
 		switch (ft_if_basic_hdr(it->first, basic_hdrs)) {
 			case Host:				{ ft_hdr_host(req.host, req.port, it->second); break ; }
 			case Connection:		{ req.flg_cnnctn = ft_hdr_connection(it->second); break ;}
-			case Content_Length:	{ ft_hdr_content_length(req.body_left, it->second); break ; }
+			case Content_Length:	{ ft_hdr_content_length(req.content_lngth, req.body_left, it->second); break ; } //fix me: add req.content_lngth as first param
 			case Content_Type:		{ ft_hdr_content_type(req.content_type, it->second); break ; }
 			case Date:				{ ft_hdr_date(req.date, it->second); break ; }
 			case Transfer_Encoding:	{ req.flg_te = ft_hdr_te(it->second); break ; }
