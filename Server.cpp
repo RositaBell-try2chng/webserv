@@ -63,6 +63,7 @@ t_serv *Server::findServer(std::string const &str)
     {
         if (curServ->ServerName == host)
             return (curServ);
+		curServ = curServ->next;
     }
     return(this->serv);
 }
@@ -76,6 +77,7 @@ t_loc *Server::findLocation(std::string const &str, t_serv *src)
 	{
 		if (cur->location == str)
 			return(cur);
+		cur = cur->next;
 	}
 	return (src->locList);
 }

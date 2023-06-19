@@ -5,7 +5,7 @@ int		 MainClass::maxFd = 0;
 Servers*	MainClass::allServers = NULL;
 
 //fix me delete this
-/*void printAllServ(Servers* src)
+void printAllServ(Servers* src)
 {
 	std::map<int, Server*>::iterator it;
 
@@ -41,7 +41,7 @@ Servers*	MainClass::allServers = NULL;
 			cur = cur->next;
 		}
 	}
-}*/
+}
 
 void MainClass::doIt(int args, char **argv)
 {
@@ -55,7 +55,6 @@ void MainClass::doIt(int args, char **argv)
 	try
 	{
 		ConfParser::parseConf(arg, &MainClass::allServers);
-		std::cout << "parse config SUCCESS\n";
 	}
 	catch (std::exception &e)
 	{
@@ -71,7 +70,7 @@ void MainClass::doIt(int args, char **argv)
 			return;
 		}
 	}
-
+	std::cout << "parse config SUCCESS\n";
 	if (!MainClass::allServers || MainClass::allServers->getConnections(true).empty())
 	{
 		std::cerr << "NO SERVER CREATED, CHECK YOUR CONFIG\n";
@@ -79,8 +78,8 @@ void MainClass::doIt(int args, char **argv)
 	}
 	std::cout << "Server has been launched!\n";
 
-	MainClass::mainLoop();
-	//printAllServ(MainClass::allServers);
+	//MainClass::mainLoop();
+	printAllServ(MainClass::allServers);
 }
 
 void MainClass::mainLoop()
@@ -370,7 +369,7 @@ void MainClass::exitHandler(int sig)
 		std::cout << "ExitHandler: SIGTERM received\n";
 	else
 		std::cout << "EXCEPTION exit. check LOGS\n";
-	system("leaks webserv");
+	//system("leaks webserv");
 	exit(0);
 }
 
@@ -414,7 +413,7 @@ bool MainClass::isCorrectRedirection(std::map<int, Server *>::iterator it)
 					t_loc	*curLoc = Server::findLocation(redirectString, curServ);
 					if (!curLoc->redirect.empty())
 					{
-						Logger::putMsg("Two or more redirection in a raw: " + ip + name + ":" + port, FILE_ERR, ERR);
+						Logger::putMsg("Two or more redirection in a raw: " + ip + ":" + port, FILE_ERR, ERR);
 						return (false);
 					}
 				}
@@ -428,7 +427,7 @@ bool MainClass::checkCorrectHostPortInRedirection(std::string &src, std::string 
 {
 	std::string::size_type	i;
 	std::string				tmp;
-
+	
 	i = src.find("http://");
 	if (i != 0)
 	{
@@ -453,34 +452,32 @@ bool MainClass::checkCorrectHostPortInRedirection(std::string &src, std::string 
 	tmp = src.substr(0, i);
 	src.erase(0, i);
 	i = src.rfind('/');
-	src.resize(i + 1);
+	src.resize(i);
 	i = tmp.find(':');
 	name = tmp.substr(0, i);
 	tmp.erase(0, i + 1);
 	if (!tmp.empty())
 		port = tmp;
 	//check port
-	for (i = 0; i < 6; i++)
+	for (i = 0; i < 6 && i < port.length(); i++)
 	{
 		if (i >= 5 || !std::isdigit(port[i]))
 		{
-			Logger::putMsg("BAD Port in redirection: " + port + "host", FILE_ERR, ERR);
+			Logger::putMsg("BAD Port in redirection: " + port, FILE_ERR, ERR);
 			return (false);
 		}
 	}
-	while (port.length() < 5)
-		port = '0' + port;
-	if (port > "65535")
+	std::string portTmp(port);
+	while (portTmp.length() < 5)
+		portTmp.insert(portTmp.begin(), '0');
+	if (portTmp > "65535")
 	{
-		Logger::putMsg("BAD Port in redirection: " + port + "host", FILE_ERR, ERR);
+		Logger::putMsg("BAD Port in redirection: " + port, FILE_ERR, ERR);
 		return (false);
 	}
 	//check host/name
 	if (checkCorrectHost(name))
-	{
 		ip = name;
-		name.clear();
-	}
 	if (name == "localhost")
 		ip = "127.0.0.1";
 	return (true);
