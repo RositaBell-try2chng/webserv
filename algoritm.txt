@@ -5,35 +5,39 @@ ConfParser - статик класс. Парсит конфиг файл.
 Servers - обычный класс. Содержит map <sockFd, class Server> обозначающий все коннекты.
 Server  - обычный класс. содержит данные о хосте/порте/запрос/ответ/принадлежность к cgi
 Stage - поле внутри класса Server, показывающий текущий статус обработки запроса.
-						// 0-9 - чтение запроса
-							// 0 - только создан / закончил с предыдущим
-							// 1 - chunked запрос, ожидаем очередной chunk //выясняем в парсере
-							// 2 - не весь запрос считан //выясняем в парсере не chunk
-							// 3 - чанк не полный
-							// 4 - последний чанк считан
-						// 10-19 - отправка ответа клиенту
-							//10 - первичная отправка
-							//11 - отправка очередного чанка
-							//12 - отправка последнего чанка
-						// 20-29 - коммуникация с CGI 
-							//20 - первичная работа с CGI(создание PIPES / CGI)
-							//21 - форк + запуск скрипта
-							//22 - ожидаем ответ скрипта(+ таймер на досрочный выход)
-							//23 - читаем ответ из PipeInBack
-							//24 - отправляем запрос в PipeOutForward
-							//25 - CGI chunked response (из пайпа считано не все) первичка
-							//26 - CGI chunked response очередной
-							//27 - ответ считан полностью после чанка
-							//28 - ответ считан полностью
-							//29 - CGI failed
-							//подготовка ответа
-						//50-59 - parsing requests
-							//	50 - start
-							//	51 - start string was fully parsed
-							//	52 - headers was fully parsed
-							//	53 - body was fully parsed
-							//	59 - error
-						// 99 - runtime error
+
+Stage:
+    0 - старт обработки
+    1 - read
+    2 - parse
+    3 - handle
+    4 - CGI
+    5 - write
+    9 - error
+readStage:
+    0 - новое чтение
+    1 - читаем чанки
+parseStage:
+    0 - start
+    1 - start string ready
+    2 - headers ready
+    3 - body full
+    9 - error
+CGIStage:
+    0 - start
+    1 - send to pipe PipeOutForward
+    2 - last send to PipeOutForward
+        20 - not all sent
+    3 - fork + launch script
+    4 - wait end of pid
+    5 - read from PipeInBack
+    6 - end of pipe reached
+    9 - CGIerror
+writeStage:
+    0 - новая запись
+    1 - досылаем чанк
+    2 - шлем последний чанк
+
 
 алгоритм:
 1. Парсим конфиг файл, создаем слушающие фд для кождого хоста:порта записываем в Servers::map
