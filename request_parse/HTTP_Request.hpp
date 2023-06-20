@@ -78,6 +78,7 @@ struct HTTP_Request {
 							//	51 - start string was fully parsed
 							//	52 - headers was fully parsed
 							//	53 - body was fully parsed
+							//	54 - CLOSE
 							//	59 - errorHTTP_Request
 
 		Base		base;
@@ -98,7 +99,7 @@ struct HTTP_Request {
 		int									answ_code[2];
 
 		~HTTP_Request() {};
-		HTTP_Request() : stage(50), flg_cnnctn(1), content_lngth(0), flg_te(0), flg_ch_sz_crct(true) {
+		HTTP_Request() : stage(50), flg_cnnctn(1), content_lngth(0), body_left(0), flg_te(0), flg_ch_sz_crct(true) {
 
 			this->content_type = ContentType();
 			this->base = Base();
