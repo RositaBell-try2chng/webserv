@@ -1,6 +1,6 @@
 R_PARS		= ./request_parse/
 
-HTTP		=	${R_PARS}HTTP_Request.cpp	${R_PARS}HTTP_Answer.cpp	${R_PARS}HTTP_Headers.cpp \
+HTTP		=	${R_PARS}HTTP_Request_new.cpp	${R_PARS}HTTP_Answer.cpp	${R_PARS}HTTP_Headers.cpp \
 				${R_PARS}HTTP_Methods.cpp		${R_PARS}HTTP_Utils.cpp		${R_PARS}Specific_Codes.cpp
 
 MAIN		= Server.cpp Exceptions.cpp ConfParser.cpp MainClass.cpp Servers.cpp Logger.cpp CGI.cpp HandlerRequest.cpp

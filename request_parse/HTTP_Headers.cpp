@@ -148,7 +148,7 @@ void	ft_hdr_date(HTTP_Request::Date &date, std::string str) {
 
 short int ft_hdr_te(std::string te) {
 
-	if (te.compare("chunked"))
+	if (!te.compare("chunked"))
 		return 1;		
 	return 0;
 }
@@ -187,11 +187,20 @@ void	ft_headers_parse(HTTP_Request &req) {
 		req.answ_code[0] = 4;
 		req.answ_code[1] = 0;
 	}
+	if (!req.base.start_string.method.compare("POST")
+			&& req.base.headers.find("Content-Length") == req.base.headers.end()
+			&& (req.base.headers.find("Transfer-Encoding") == req.base.headers.end()
+			|| req.base.headers.find("Transfer-Encoding")->second.compare("chunked"))) {
+		Logger::putMsg("Request must had length but didn\'t", FILE_WREQ, WREQ);
+		req.answ_code[0] = 4;
+		req.answ_code[1] = 11;
+	}
 	if (req.flg_te == 1) {
 		if (req.base.headers.find(basic_hdrs[2]) != req.base.headers.end()) {	//	"Content-Length"
 			Logger::putMsg("Request has both \"length\" headers", FILE_WREQ, WREQ);
 			req.answ_code[0] = 4;
 			req.answ_code[1] = 0;
+			req.stage = 53;
 		}
 	}
 }
