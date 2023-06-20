@@ -6,6 +6,8 @@
 Server::Server() {};
 Server::~Server()
 {
+	if (this->ptrCGI)
+		delete this->ptrCGI;
 	delete this->req_struct;
 	delete this->answ_struct;
 	if (!this->serv)

@@ -166,7 +166,7 @@ bool ConfParser::fillLocations(std::map <std::string, std::string> &paramL, std:
 	{
 		part2.clear();
 		std::stringstream	sStream(it->second);
-		std::cout << it->second << std::endl;
+		
 		while (std::getline(sStream, line))
 		{
 			ConfParser::splitLine(line, line2);

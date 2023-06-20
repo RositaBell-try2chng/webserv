@@ -14,6 +14,7 @@ Stage:
     4 - CGI
     5 - write
     9 - error
+    99 - fatal ->close connection after response
 readStage:
     0 - новое чтение
     1 - читаем чанки fix me: need???
@@ -38,6 +39,7 @@ writeStage:
     0 - новая запись
     1 - досылаем чанк
     2 - шлем последний чанк
+    3 - закрыть после отправки
 
 
 алгоритм:

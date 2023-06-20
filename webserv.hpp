@@ -26,7 +26,7 @@
 
 # define DEF_RESPONSE "HTTP/1.1 200 OK\r\nContent-Length: 13\r\nConnection: close\r\n\r\nHello, world!"
 
-# define STANDART_ENV_VARS_CNT 10;
+# define STANDART_ENV_VARS_CNT 11;
 
 # define BINARY_BASE std::string("01", 2)
 # define OCT_BASE  std::string("01234567", 8)

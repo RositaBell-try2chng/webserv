@@ -1,11 +1,11 @@
 #include "MainClass.hpp"
 
 //инициализируем static vars
-int		 MainClass::maxFd = 0;
+int			MainClass::maxFd = 0;
 Servers*	MainClass::allServers = NULL;
 
 //fix me delete this
-void printAllServ(Servers* src)
+/*void printAllServ(Servers* src)
 {
 	std::map<int, Server*>::iterator it;
 
@@ -41,7 +41,7 @@ void printAllServ(Servers* src)
 			cur = cur->next;
 		}
 	}
-}
+}*/
 
 void MainClass::doIt(int args, char **argv)
 {
@@ -78,15 +78,15 @@ void MainClass::doIt(int args, char **argv)
 	}
 	std::cout << "Server has been launched!\n";
 
-	//MainClass::mainLoop();
-	printAllServ(MainClass::allServers);
+	MainClass::mainLoop();
+	//printAllServ(MainClass::allServers);
 }
 
 void MainClass::mainLoop()
 {
-	timeval							 timeout = {15, 0};
-	fd_set							  readFds;
-	fd_set							  writeFds;
+	timeval								timeout = {1, 0};
+	fd_set								readFds;
+	fd_set								writeFds;
 	std::map<int, Server*>::iterator	it;
 
 	while (true)
@@ -94,9 +94,11 @@ void MainClass::mainLoop()
 		//2.0 clean sets
 		FD_ZERO(&readFds);
 		FD_ZERO(&writeFds);
+		
 		MainClass::maxFd = -1;
 		timeout.tv_sec = 15;
 		//handle all request until read/write or waiting child
+		// std::cout << "handle start in main LOOP\n";
 		for (it = allServers->getConnections().begin(); it != allServers->getConnections().end(); it++)
 		{
 			HandlerRequest::mainHandler(*it->second);
@@ -111,10 +113,12 @@ void MainClass::mainLoop()
 			else if (it->second->Stage == 4 && (it->second->CGIStage == 5 || it->second->CGIStage == 50))
 				MainClass::addToSet(it->second->getCGIptr()->getPipeInBack(), &readFds);
 		}
+		// std::cout << "add listen in main LOOP\n";
 		//2.1.2 add listen fds
 		for (it = allServers->getConnections(true).begin(); it != allServers->getConnections(true).end(); it++)
 			MainClass::addToSet(it->first, &readFds);
 		//select ловим готовые
+		std::cout << "select in main LOOP\nMAX fd = " << MainClass::maxFd << std::endl;
 		switch (select(MainClass::maxFd + 1, &readFds, &writeFds, NULL, &timeout))
 		{
 			case -1: { //select error
@@ -122,35 +126,29 @@ void MainClass::mainLoop()
 				std::cout << "bad select!!!\n";
 				continue; //fix me: need to continue or exit from server?
 			}
-			case 0: {continue;} //timeout. try another select
-			default: {break;} //have something to do
+			case 0: {std::cout << "timeout select\n"; continue;} //timeout. try another select
+			default: {std::cout << "goahead select\n"; break;} //have something to do
 		}
-		acceptConnections(&readFds);
 		// doing write/read depend on stage for all servers
 		it = allServers->getConnections().begin();
+		// std::cout << "while read/write in main LOOP\n";
 		while (it != allServers->getConnections().end())
 		{
-			if (it->second->checkTimeOut())
-			{
-				Logger::putMsg(std::string("connetion closed because TIMEOUT has been reached"), it->first, FILE_ERR, ERR);
-				std::cerr << it->first << ": connetion closed because TIMEOUT has been reached!\n";
-				MainClass::closeConnection(it);
-				return;
-			}
 			switch (it->second->Stage)
 			{
 				//read from socket
+				case 0: { ++it; continue;}
 				case 1: { MainClass::readRequest(it, &readFds); break; }
 				//CGI
-				case 4: { MainClass::CGIHandlerReadWrite(it, &readFds, &writeFds); break; }
+				case 4: { MainClass::CGIHandlerReadWrite(it, &readFds, &writeFds); ++it; break; }
 				//write to socket
 				case 5: { MainClass::sendResponse(it, &writeFds); break; }
 				default://all servers should be in write/read stage or CGI, if not then ERROR
-				{
-					std::cout << "bad stage for server: " << it->first << " stage is: " << it->second->Stage << std::endl;
-				}
+				{std::cout << "bad stage for server: " << it->first << " stage is: " << it->second->Stage << std::endl;}
 			}
 		}
+		// std::cout << "accept in main LOOP\n";
+		acceptConnections(&readFds);
 	}
 }
 
@@ -181,12 +179,13 @@ bool MainClass::acceptConnections(fd_set *readFds)
 void MainClass::readRequest(std::map<int, Server *>::iterator &it, fd_set *reads)
 {
 	if (!FD_ISSET(it->first, reads))
+	{
+		++it;
 		return;
-
+	}
 	ssize_t	recvRes;
 	char	buf[BUF_SIZE];
 
-	std::cout << "RECV request from: " << it->first << std::endl;
 	recvRes = recv(it->first, buf, BUF_SIZE, 0);
 	switch (recvRes)
 	{
@@ -214,9 +213,10 @@ void MainClass::readRequest(std::map<int, Server *>::iterator &it, fd_set *reads
 void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *writes)
 {
 	if (!FD_ISSET(it->first, writes))
+	{
+		++it;
 		return;
-	std::cout << "SEND response to: " << it->first << std::endl;
-
+	}
 	ssize_t sendRes;
 	std::string toSend(it->second->getResponse());
 
@@ -227,6 +227,7 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *writ
 		MainClass::closeConnection(it);
 		return;
 	}
+	Logger::putMsg(toSend, FILE_REQ, REQ);
 	sendRes = send(it->first, toSend.c_str(), toSend.length(), 0);
 	switch (sendRes)
 	{
@@ -252,6 +253,12 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *writ
 			it->second->CntTryingSendZero();
 			if (static_cast<size_t>(sendRes) == toSend.length())
 			{
+				if (it->second->writeStage == 3)
+				{
+					std::cerr << it->first << " has been closed by TIMEOUT\n";
+					MainClass::closeConnection(it);
+					return;
+				}
 				it->second->resClear();
 				if (!it->second->isChunkedResponse || it->second->writeStage == 2)
 					it->second->reqClear();
@@ -273,6 +280,7 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *writ
 
 void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_set *reads, fd_set *writes)
 {
+	std::cout << "write/read CGICGI. CGIStage is " << it->second->CGIStage << std::endl;
 	switch (it->second->CGIStage)
 	{
 		case 1: //1 - send to pipe
@@ -292,7 +300,6 @@ void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_se
 		case 20: //repeat write
 		{
 			it->second->CGIStage = it->second->getCGIptr()->sendToPipe(it, writes, it->second->getCGIptr()->prevStage == 2);
-			if (it->second->CGIStage == 1)
 			break;
 		} 
 		case 5: //read from pipe first
@@ -302,6 +309,7 @@ void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_se
 				it->second->Stage = MainClass::setChunkedResponse(*it->second);
 			else if (it->second->CGIStage == 6)
 				it->second->setResponse(std::string("\r\n\r\n"));
+			// std::cout << "stage is " << it->second->Stage << "  CGIStage = " << it->second->CGIStage << std::endl;
 			break;
 		}
 		case 50: // read from pipe next chunk
@@ -312,7 +320,14 @@ void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_se
 				it->second->setResponse(std::string("0\r\n\r\n"));
 			break;
 		}
-		default: { std:: cout << "BAD Stage CGI: " << it->second->Stage << " - " << it->second->CGIStage << std::endl; return; }
+		case 9:
+		{
+			std::cout << "ERROR CGI\n";
+			std::cout << strerror(errno) << std::endl;
+			it->second->Stage = 9;
+			break;
+		}
+		default: { std:: cout << "BAD Stage CGI: " << it->second->Stage << " - " << it->second->CGIStage << std::endl;}
 	}
 }
 
@@ -361,20 +376,9 @@ void MainClass::closeConnection(std::map<int, Server *>::iterator &it)
 	std::cout << "close connection: " << fd << std::endl;
 }
 
-void MainClass::exitHandler(int sig)
-{
-	if (sig != SIGTERM && sig != 0)
-		return;
-	if (sig == SIGTERM)
-		std::cout << "ExitHandler: SIGTERM received\n";
-	else
-		std::cout << "EXCEPTION exit. check LOGS\n";
-	//system("leaks webserv");
-	exit(0);
-}
-
 void MainClass::addToSet(int fd, fd_set *dst)
 {
+	std::cout << "add to SET: " << fd << std::endl;
 	FD_SET(fd, dst);
 	if (fd > MainClass::maxFd)
 		MainClass::maxFd = fd;
@@ -427,7 +431,7 @@ bool MainClass::checkCorrectHostPortInRedirection(std::string &src, std::string 
 {
 	std::string::size_type	i;
 	std::string				tmp;
-	
+
 	i = src.find("http://");
 	if (i != 0)
 	{
@@ -481,4 +485,16 @@ bool MainClass::checkCorrectHostPortInRedirection(std::string &src, std::string 
 	if (name == "localhost")
 		ip = "127.0.0.1";
 	return (true);
+}
+
+void MainClass::exitHandler(int sig)
+{
+	if (sig != SIGTERM && sig != 0)
+		return;
+	if (sig == SIGTERM)
+		std::cout << "ExitHandler: SIGTERM received\n";
+	else
+		std::cout << "EXCEPTION exit. check LOGS\n";
+	//system("leaks webserv");
+	exit(0);
 }

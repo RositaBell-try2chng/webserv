@@ -2,7 +2,7 @@
 
 CGI::CGI() 
 {
-    this->pid = 0;
+    this->pid = -1;
     this->PipeInForward = 0;
     this->PipeOutForward = 0;
     this->PipeInBack = 0;
@@ -12,8 +12,8 @@ CGI::CGI()
 
 CGI::~CGI()
 {
-    if (this->pid != 0)
-        kill(pid, SIGTERM);
+    if (this->pid > 0)
+        kill(this->pid, SIGTERM);
     if (this->PipeInForward != 0)
         close(this->PipeInForward);
     if (this->PipeOutForward != 0)
@@ -29,11 +29,11 @@ int CGI::startCGI()
     int         fdsForward[2];
     int         fdsBack[2];
     
-    if (pipe(fdsForward) == -1 || fcntl(fdsForward[0], F_SETFL, O_NONBLOCK) == -1)// || fcntl(fdsForward[1], F_SETFL, O_NONBLOCK) == -1) fix me: need?
+    if (pipe(fdsForward) == -1)
         return (this->CGIsFailed());
     this->PipeInForward = fdsForward[0];
     this->PipeOutForward = fdsForward[1];
-    if (pipe(fdsBack) == -1 /*|| fcntl(fdsBack[0], F_SETFL, O_NONBLOCK) == -1*/ || fcntl(fdsBack[1], F_SETFL, O_NONBLOCK) == -1)
+    if (pipe(fdsBack) == -1)
         return (this->CGIsFailed());
     this->PipeInBack = fdsBack[0];
     this->PipeOutBack = fdsBack[1];
@@ -46,8 +46,8 @@ int CGI::ForkCGI(Server &src)
     switch (this->pid)
     {
         case -1: { return(this->CGIsFailed()); }
-        case 0: { return(this->ParentCGI()); }
-        default: { ChildCGI(src); }
+        case 0: { this->ChildCGI(src); }
+        default: { return(this->ParentCGI()); }
     }
     return (this->CGIsFailed()); // -1/0 - return own int, Child exit before
 }
@@ -56,25 +56,32 @@ int	CGI::ParentCGI()
 {
 	this->timeCGIStarted.tv_sec = time(NULL);
 	this->timeCGIStarted.tv_usec = 0;
+    if (fcntl(this->PipeOutForward, F_SETFL, O_NONBLOCK) == -1 || fcntl(this->PipeInBack, F_SETFL, O_NONBLOCK) == -1)
+        return(this->CGIsFailed());
 	return (4);
 }
 
 int CGI::waitingCGI()
 {
+    std::cout << "WAITING FOR PID: " << this->pid << std::endl;
     int		stts;
 	pid_t	resPid;
 
 	resPid = waitpid(this->pid, &stts, WNOHANG);
+    std::cout << "resPid = " << resPid << " stts = " << (stts) << std::endl;
     switch (resPid)
     {
         case -1: { return(this->CGIsFailed()); } //error
         case 0: { return (this->checkTimeout()); } //child not ready
         default:
 		{
-			if (resPid == this->pid && stts == 0) //child finished ok
-				return (5);
-			else if (resPid == this->pid && stts != 0) //child finished bad
-				return (9);
+            if (resPid == this->pid)
+            {
+                this->pid = -1;
+                if (stts == 0) //child finished ok
+				    return (5);
+			    return (9);//child finished bad
+            }
 		}
     }
     return (this->checkTimeout()); //wrong pid returned, need to wait correct pid
@@ -89,13 +96,15 @@ void	CGI::ChildCGI(Server &src)
     std::string SCRIPT_NAME;
 
     //change STDIN and STDOUT
-    if (!dup2(this->PipeInForward, STDIN_FILENO) || !dup2(this->PipeOutBack, STDOUT_FILENO))
+    if (dup2(this->PipeInForward, 0) == -1 || dup2(this->PipeOutBack, 1) == -1)
     {
         Logger::putMsg("dup2 failed:\n" + std::string(strerror(errno)));
         exit(1);
     }
     close(this->PipeInBack);
+    close(this->PipeOutBack);
     close(this->PipeOutForward);
+    close(this->PipeInForward);
     //set argv/env
     argv = this->setArgv(src, PATH_INFO, PATH_TRANSLATED, SCRIPT_NAME);
     if (!argv)
@@ -104,12 +113,13 @@ void	CGI::ChildCGI(Server &src)
     if (!env)
         exit(1);
     //start script
-    execve(argv[0], argv, env);
-    exit(1);
+    exit(execve(argv[0], argv, env));
 }
 
 int    CGI::CGIsFailed()
 {
+    if (this->pid != -1)
+        kill(this->pid, SIGTERM);
     if (PipeInForward > 0)
         close(PipeInForward);
     if (PipeOutForward > 0)
@@ -165,7 +175,7 @@ int CGI::readFromPipe(std::map<int, Server *>::iterator &it, fd_set *reads)
 {
     if (!FD_ISSET(this->PipeInBack, reads))
         return (it->second->CGIStage);
-
+    std::cout << "PIPE READY TO READ\n";
 	ssize_t		rdRes;
 	char		buf[BUF_SIZE_PIPE];
 
@@ -184,9 +194,11 @@ int CGI::readFromPipe(std::map<int, Server *>::iterator &it, fd_set *reads)
 		}
 		default: //maybe somthing else in PIPE
 		{
+
             it->second->updateLastActionTime();
 			this->cntTryingReading = 0;
 			it->second->setResponse(std::string(buf, rdRes));
+            // std::cout << std::endl << it->second->getResponse() << std::endl;
             it->second->Stage = 5;
             if (rdRes == BUF_SIZE)
 			    return (50);
@@ -216,20 +228,29 @@ char** CGI::setArgv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANS
 {
     char **res = NULL;
     PATH_INFO = src.getReq_struct()->base.start_string.uri;
+    
     std::string loc;
     std::string::size_type i;
     //find server
     t_serv *curServ = src.findServer(src.getReq_struct()->host);
     //find location
     i = PATH_INFO.rfind('/');
-    loc = PATH_INFO.substr(0, i + 1);
+    loc = PATH_INFO.substr(0, i);
     t_loc *curLoc = src.findLocation(loc, curServ);
     SCRIPT_NAME = PATH_INFO.substr(i + 1, PATH_INFO.length() - i);
-    PATH_TRANSLATED = curServ->root + loc + curLoc->root + SCRIPT_NAME;
+    if (curServ->root.empty() || curServ->root == "/")
+        PATH_TRANSLATED = std::string(".");
+    else
+        PATH_TRANSLATED = curServ->root;
+    if (curLoc->location != "/")
+        PATH_TRANSLATED += curLoc->location;
+    if (curLoc->root != "/")
+        PATH_TRANSLATED += curLoc->root;
+    PATH_TRANSLATED += std::string("/") + SCRIPT_NAME;
     try {
         res = new char*[2];
         res[0] = NULL;
-        res[0] = CGI::getAllocatedCharPointer(PATH_TRANSLATED);
+        res[0] = CGI::getAllocatedCharPointer(std::string("./CGIs/env.sh"));//(PATH_TRANSLATED);
         res[1] = NULL;
     }
     catch (std::exception &e)
@@ -252,13 +273,13 @@ char**  CGI::setEnv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANS
 {
     char **res = NULL;
     size_t i = 0;
-    size_t size = src.getAnsw_struct()->headers.size() + STANDART_ENV_VARS_CNT;
-    std::map<std::string, std::string>::iterator it = src.getAnsw_struct()->headers.begin();
+    size_t size = src.getReq_struct()->base.headers.size() + STANDART_ENV_VARS_CNT;
+    std::map<std::string, std::string>::iterator it = src.getReq_struct()->base.headers.begin();
     try
     {
         res = new char*[size + 1];
 		res[i] = NULL;
-        res[i++] = CGI::getAllocatedCharPointer(std::string("SERVER_SOFTWARE=AMANIX"));
+        res[i++] = CGI::getAllocatedCharPointer(std::string("SERVER_SOFTWARE=RBELLSCOACH"));
 		res[i] = NULL;
         res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("SERVER_NAME=") + src.getReq_struct()->host));
 		res[i] = NULL;
@@ -280,6 +301,7 @@ char**  CGI::setEnv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANS
         res[size] = NULL;
         for (; i < size; i++)
         {
+            std::cout << std::string(it->first + std::string("=") + it->second) << std::endl;
             res[i] = CGI::getAllocatedCharPointer(std::string(it->first + std::string("=") + it->second));
             it++;
         }
@@ -305,6 +327,7 @@ char    *CGI::getAllocatedCharPointer(std::string src)
 
     for (size_t i = 0; i < len; i++)
         res[i] = src[i];
+    res[len] = 0;
     return (res);
 }
 

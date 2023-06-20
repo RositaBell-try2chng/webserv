@@ -21,6 +21,7 @@ private:
 	static void POST(Server &srv, t_serv *servNode, t_loc *locNode, std::string tmp);
 	static void DELETE(Server &srv, t_serv *servNode, t_loc *locNode, std::string tmp);
 	static void CGIerrorManager(Server &srv);
+	static bool isBodyNeed(Server &srv);
 	//CGIs
 	static void	checkReadyToHandle(Server &srv);
 	static void prepareToSendCGI(Server &srv);
