@@ -12,12 +12,14 @@
 # include <sys/types.h>
 # include <sys/wait.h>
 # include <sys/socket.h>
+# include <sys/stat.h>
 # include <netdb.h>
 # include <unistd.h>
 # include <set>
 # include <map>
 # include <fcntl.h>
 # include <algorithm>
+# include <dirent.h>
 
 
 # define DEF_HOST "127.0.0.1"
