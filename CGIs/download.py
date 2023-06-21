@@ -13,9 +13,9 @@ def printFile(fileToGet):
 	extention = os.path.splitext(fileToGet)[1]
 	extention = extention[1:]
 	if (extention in extentionsImage):
-		print("HTTP/1.1 200 OK\r\n" + "Content-type: image" + extention + "\r\n\r\n" + AllContent)
+		print("HTTP/1.1 200 OK\r\n" + "Content-type: image/" + extention + "\r\n\r\n" + AllContent)
 	else:
-		print("HTTP/1.1 200 OK\r\n" + "Content-type: text" + extention + "\r\n\r\n" + AllContent)
+		print("HTTP/1.1 200 OK\r\n" + "Content-type: text/" + extention + "\r\n\r\n" + AllContent)
 
 
 fileToGet = os.environ.get('FILENAME')

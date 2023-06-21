@@ -280,7 +280,6 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *writ
 
 void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_set *reads, fd_set *writes)
 {
-	std::cout << "write/read CGICGI. CGIStage is " << it->second->CGIStage << std::endl;
 	switch (it->second->CGIStage)
 	{
 		case 1: //1 - send to pipe

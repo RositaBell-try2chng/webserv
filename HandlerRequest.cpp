@@ -301,7 +301,6 @@ void HandlerRequest::redirectResponse(Server &srv, t_loc *locNode)
 
 void HandlerRequest::CGIHandler(Server &srv)
 {
-	std::cout << "CGIhandler Start. stage = " << srv.CGIStage <<std::endl;
 	if (!(srv.CGIStage == 0 || srv.CGIStage == 6) && srv.getCGIptr() == NULL)
     {
         std::cout << "BAD stages or ptr in CGI Handler: " << srv.CGIStage << std::endl;

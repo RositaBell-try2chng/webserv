@@ -94,11 +94,10 @@ void	CGI::ChildCGI(Server &src)
     std::string PATH_INFO; //virtual path
     std::string PATH_TRANSLATED; //real path
     std::string SCRIPT_NAME;
-
     //change STDIN and STDOUT
     if (dup2(this->PipeInForward, 0) == -1 || dup2(this->PipeOutBack, 1) == -1)
     {
-        Logger::putMsg("dup2 failed:\n" + std::string(strerror(errno)));
+        Logger::putMsg("dup2 failed:\n" + std::string(strerror(errno)), FILE_ERR, ERR);
         exit(1);
     }
     close(this->PipeInBack);
@@ -250,7 +249,7 @@ char** CGI::setArgv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANS
     try {
         res = new char*[2];
         res[0] = NULL;
-        res[0] = CGI::getAllocatedCharPointer(std::string("./CGIs/env.sh"));//(PATH_TRANSLATED);
+        res[0] = CGI::getAllocatedCharPointer(PATH_TRANSLATED);
         res[1] = NULL;
     }
     catch (std::exception &e)
@@ -273,11 +272,12 @@ char**  CGI::setEnv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANS
 {
     char **res = NULL;
     size_t i = 0;
+    std::cout << "headers size = " << src.getReq_struct()->base.headers.size() << std::endl;
     size_t size = src.getReq_struct()->base.headers.size() + STANDART_ENV_VARS_CNT;
     std::map<std::string, std::string>::iterator it = src.getReq_struct()->base.headers.begin();
     try
     {
-        res = new char*[size + 1];
+        res = new char*[size];
 		res[i] = NULL;
         res[i++] = CGI::getAllocatedCharPointer(std::string("SERVER_SOFTWARE=RBELLSCOACH"));
 		res[i] = NULL;
@@ -287,7 +287,7 @@ char**  CGI::setEnv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANS
 		res[i] = NULL;
         res[i++] = CGI::getAllocatedCharPointer(std::string("SERVER_PROTOCOL=HTTP/1.1"));
 		res[i] = NULL;
-        res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("SERVER_PORT=") + src.getReq_struct()->port));
+        res[i++] = CGI::getAllocatedCharPointer(std::string("SERVER_PORT=") + src.getReq_struct()->port);
 		res[i] = NULL;
         res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("REQUEST_METHOD=") + src.getReq_struct()->base.start_string.method));
 		res[i] = NULL;
@@ -298,10 +298,9 @@ char**  CGI::setEnv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANS
         res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("PATH_INFO=") + PATH_INFO));
 		res[i] = NULL;
         res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("PATH_TRANSLATED=") + PATH_TRANSLATED));
-        res[size] = NULL;
-        for (; i < size; i++)
+        res[size - 1] = NULL;
+        for (; i < size && it != src.getReq_struct()->base.headers.end(); i++)
         {
-            std::cout << std::string(it->first + std::string("=") + it->second) << std::endl;
             res[i] = CGI::getAllocatedCharPointer(std::string(it->first + std::string("=") + it->second));
             it++;
         }
