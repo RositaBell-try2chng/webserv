@@ -4,45 +4,6 @@
 int			MainClass::maxFd = 0;
 Servers*	MainClass::allServers = NULL;
 
-//fix me delete this
-/*void printAllServ(Servers* src)
-{
-	std::map<int, Server*>::iterator it;
-
-	for (it = src->getConnections(true).begin(); it != src->getConnections(true).end(); it++)
-	{
-		std::cout << "fd is: " << it->first << "; config is:\n";
-		std::cout << "host:port is: " << it->second->getHost() << ":" << it->second->getPort() << std::endl;
-		t_serv* cur;
-		cur = it->second->serv;
-		while (cur)
-		{
-			std::cout << "servername is: |" << cur->ServerName << "|" << std::endl;
-			std::cout << "limit client body size is: " << cur->limitCLientBodySize << std::endl;
-			std::cout << "root is: " << cur->root << std::endl;
-			std::cout << "err pages is:\n";
-			for (std::map<int, std::string>::iterator it2 = cur->errPages.begin(); it2 != cur->errPages.end(); it2++)
-				std::cout << "code is: " << it2->first << "; page is: " << it2->second << std::endl;
-			t_loc *cur2 = cur->locList;
-			while (cur2)
-			{
-				std::cout << "location is: |" << cur2->location << "|" << std::endl;
-				std::cout << "GET/POST/DELETE is :" << cur2->flgGet << "/" << cur2->flgPost << "/" << cur2->flgDelete << "\n";
-				for (std::map<int, std::string>::iterator itR = cur2->redirect.begin(); itR != cur2->redirect.end(); itR++)
-					std::cout << "redirect is: " << itR->first << " - " << itR->second << std::endl;
-				std::cout << "root is: |" << cur2->root << "|\n";
-				std::cout << "dirListFlg is: |" << cur2->dirListFlg << "|\n";
-				std::cout << "defFileIfDir is: |" << cur2->defFileIfDir << "|\n";
-				std::cout << "uploadPath is: |" << cur2->uploadPath << "|\n";
-				for (std::set<std::string>::iterator it3 = cur2->CGIs.begin(); it3 != cur2->CGIs.end(); it3++)
-					std::cout << "CGIs extention is: |" << *it3 << "|\n";
-				cur2 = cur2->next;
-			}
-			cur = cur->next;
-		}
-	}
-}*/
-
 void MainClass::doIt(int args, char **argv)
 {
 	bool		flg;
@@ -98,7 +59,6 @@ void MainClass::mainLoop()
 		MainClass::maxFd = -1;
 		timeout.tv_sec = 15;
 		//handle all request until read/write or waiting child
-		// std::cout << "handle start in main LOOP\n";
 		for (it = allServers->getConnections().begin(); it != allServers->getConnections().end(); it++)
 		{
 			HandlerRequest::mainHandler(*it->second);
@@ -107,18 +67,19 @@ void MainClass::mainLoop()
 			else if (it->second->Stage == 5)
 				MainClass::addToSet(it->first, &writeFds);
 			else if (it->second->Stage == 4 && it->second->CGIStage == 4)
-				timeout.tv_sec = 1;
+			{
+				timeout.tv_sec = 0;
+				timeout.tv_usec = 15;
+			}
 			else if (it->second->Stage == 4 && (it->second->CGIStage == 1 || it->second->CGIStage == 2 || it->second->CGIStage == 20))
 				MainClass::addToSet(it->second->getCGIptr()->getPipeOutForward(), &writeFds);
 			else if (it->second->Stage == 4 && (it->second->CGIStage == 5 || it->second->CGIStage == 50))
 				MainClass::addToSet(it->second->getCGIptr()->getPipeInBack(), &readFds);
 		}
-		// std::cout << "add listen in main LOOP\n";
 		//2.1.2 add listen fds
 		for (it = allServers->getConnections(true).begin(); it != allServers->getConnections(true).end(); it++)
 			MainClass::addToSet(it->first, &readFds);
-		//select ловим готовые
-		std::cout << "select in main LOOP\nMAX fd = " << MainClass::maxFd << std::endl;
+		//select
 		switch (select(MainClass::maxFd + 1, &readFds, &writeFds, NULL, &timeout))
 		{
 			case -1: { //select error
@@ -126,8 +87,8 @@ void MainClass::mainLoop()
 				std::cout << "bad select!!!\n";
 				continue; //fix me: need to continue or exit from server?
 			}
-			case 0: {std::cout << "timeout select\n"; continue;} //timeout. try another select
-			default: {std::cout << "goahead select\n"; break;} //have something to do
+			case 0: {continue;} //timeout. try another select
+			default: {break;} //have something to do
 		}
 		// doing write/read depend on stage for all servers
 		it = allServers->getConnections().begin();
@@ -163,9 +124,7 @@ bool MainClass::acceptConnections(fd_set *readFds)
 	{
 		if (FD_ISSET(it->first, readFds))
 		{
-			std::cout << "accept from " << it->first << " to ";
 			fd = accept(it->first, NULL, NULL);
-			std::cout << fd << std::endl;
 			if (fd < 0 || fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
 				Logger::putMsg(strerror(errno), FILE_ERR, ERR);
 			else
@@ -307,8 +266,7 @@ void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_se
 			if (it->second->CGIStage == 50) //find body and add chunk size
 				it->second->Stage = MainClass::setChunkedResponse(*it->second);
 			else if (it->second->CGIStage == 6)
-				it->second->setResponse(std::string("\r\n\r\n"));
-			// std::cout << "stage is " << it->second->Stage << "  CGIStage = " << it->second->CGIStage << std::endl;
+				it->second->Stage = MainClass::setContentLengthResponse(*it->second);
 			break;
 		}
 		case 50: // read from pipe next chunk
@@ -328,6 +286,18 @@ void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_se
 		}
 		default: { std:: cout << "BAD Stage CGI: " << it->second->Stage << " - " << it->second->CGIStage << std::endl;}
 	}
+}
+
+int	MainClass::setContentLengthResponse(Server &srv)
+{
+	std::string	resp(srv.getResponse());
+	size_t		i = resp.find("\r\n\r\n");
+	size_t		bodyLen = resp.length() - (i + 4);
+	std::string	bodyLenStr = Size_tToString(bodyLen, DEC_BASE);
+	
+	resp.insert(i, std::string("\r\nContent-Length: ") + bodyLenStr);
+	srv.setResponse(resp, true);
+	return (5);
 }
 
 int	MainClass::setChunkedResponse(Server &srv)
@@ -372,12 +342,10 @@ void MainClass::closeConnection(std::map<int, Server *>::iterator &it)
 	it++;
 	close(fd);
 	MainClass::allServers->removeConnection(fd);
-	std::cout << "close connection: " << fd << std::endl;
 }
 
 void MainClass::addToSet(int fd, fd_set *dst)
 {
-	std::cout << "add to SET: " << fd << std::endl;
 	FD_SET(fd, dst);
 	if (fd > MainClass::maxFd)
 		MainClass::maxFd = fd;
@@ -387,10 +355,10 @@ bool MainClass::isCorrectRedirection(std::map<int, Server *>::iterator it)
 {
 	t_serv		*chNodeServ;
 	t_loc		*chNodeLoc;
-	std::string	redirectString;
 	std::string name;
-	std::string ip;
-	std::string port;
+	std::string ip(it->second->getHost());
+	std::string port(it->second->getPort());
+	std::string location;
 
 	for (chNodeServ = it->second->serv; chNodeServ != NULL; chNodeServ = chNodeServ->next)
 	{
@@ -404,16 +372,16 @@ bool MainClass::isCorrectRedirection(std::map<int, Server *>::iterator it)
 				Logger::putMsg("Bad configs with redirection: if 'return is set you should't use other parameters in location" + it->second->getHost() + ":" + it->second->getPort(), FILE_ERR, ERR);
 				return (false);
 			}
-			redirectString = chNodeLoc->redirect.begin()->second;
-			if (!MainClass::checkCorrectHostPortInRedirection(redirectString, name, port, ip))
+			name = std::string(chNodeServ->ServerName);
+			if (!MainClass::checkCorrectHostPortInRedirection(chNodeLoc, name, port, ip, location))
 				return (false);
 			//find Server *
 			for (std::map<int, Server *>::iterator itA = allServers->getConnections(true).begin(); itA != allServers->getConnections(true).end(); itA++)
 			{
-				if (ip == itA->second->getHost())
+				if (ip == itA->second->getHost() && port == itA->second->getPort())
 				{
 					t_serv	*curServ = itA->second->findServer(name);
-					t_loc	*curLoc = Server::findLocation(redirectString, curServ);
+					t_loc	*curLoc = Server::findLocation(location, curServ);
 					if (!curLoc->redirect.empty())
 					{
 						Logger::putMsg("Two or more redirection in a raw: " + ip + ":" + port, FILE_ERR, ERR);
@@ -426,41 +394,48 @@ bool MainClass::isCorrectRedirection(std::map<int, Server *>::iterator it)
 	return (true);
 }
 
-bool MainClass::checkCorrectHostPortInRedirection(std::string &src, std::string &name, std::string &port, std::string &ip)
+bool MainClass::checkCorrectHostPortInRedirection(t_loc *locNode, std::string &name, std::string &port, std::string &ip, std::string &location)
 {
 	std::string::size_type	i;
 	std::string				tmp;
+	std::string				src = locNode->redirect.begin()->second;
+	std::string				tmpPort;
 
 	i = src.find("http://");
-	if (i != 0)
+	if (i == 0)
 	{
-		i = src.find("https://");
-		if (i != 0)
-			return (false);
-		else
-		{
-			src.erase(0, 8);
-			port = "443";
-		}
+		tmpPort = "80";
+		src.erase(0, 7);
 	}
 	else
 	{
-		port = "80";
-		src.erase(0, 7);
+		i = src.find("https://");
+		if (i == 0)
+		{
+			tmpPort = "443";
+			src.erase(0, 8);
+		}
 	}
 	i = src.find("www.");
 	if (i == 0)
 		src.erase(0, 4);
+	//separate host:port = tmp && location = src
 	i = src.find('/');
 	tmp = src.substr(0, i);
 	src.erase(0, i);
 	i = src.rfind('/');
 	src.resize(i);
-	i = tmp.find(':');
-	name = tmp.substr(0, i);
-	tmp.erase(0, i + 1);
+	location = src;
 	if (!tmp.empty())
-		port = tmp;
+	{
+		i = tmp.find(':');
+		name = tmp.substr(0, i);
+		tmp.erase(0, i + 1);
+		if (!tmp.empty())
+			port = tmp;
+		else if (!tmpPort.empty())
+			port = tmpPort;
+	}
 	//check port
 	for (i = 0; i < 6 && i < port.length(); i++)
 	{

@@ -63,12 +63,10 @@ int	CGI::ParentCGI()
 
 int CGI::waitingCGI()
 {
-    std::cout << "WAITING FOR PID: " << this->pid << std::endl;
     int		stts;
 	pid_t	resPid;
 
 	resPid = waitpid(this->pid, &stts, WNOHANG);
-    std::cout << "resPid = " << resPid << " stts = " << (stts) << std::endl;
     switch (resPid)
     {
         case -1: { return(this->CGIsFailed()); } //error
@@ -174,7 +172,6 @@ int CGI::readFromPipe(std::map<int, Server *>::iterator &it, fd_set *reads)
 {
     if (!FD_ISSET(this->PipeInBack, reads))
         return (it->second->CGIStage);
-    std::cout << "PIPE READY TO READ\n";
 	ssize_t		rdRes;
 	char		buf[BUF_SIZE_PIPE];
 
@@ -197,7 +194,6 @@ int CGI::readFromPipe(std::map<int, Server *>::iterator &it, fd_set *reads)
             it->second->updateLastActionTime();
 			this->cntTryingReading = 0;
 			it->second->setResponse(std::string(buf, rdRes));
-            // std::cout << std::endl << it->second->getResponse() << std::endl;
             it->second->Stage = 5;
             if (rdRes == BUF_SIZE)
 			    return (50);
@@ -272,7 +268,6 @@ char**  CGI::setEnv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANS
 {
     char **res = NULL;
     size_t i = 0;
-    std::cout << "headers size = " << src.getReq_struct()->base.headers.size() << std::endl;
     size_t size = src.getReq_struct()->base.headers.size() + STANDART_ENV_VARS_CNT;
     std::map<std::string, std::string>::iterator it = src.getReq_struct()->base.headers.begin();
     try

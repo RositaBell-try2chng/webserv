@@ -2,7 +2,6 @@
 
 void HandlerRequest::mainHandler(Server &srv)
 {
-	std::cout << "main handler stage = " << srv.Stage << std::endl;
 	if (srv.checkTimeOut())
 		srv.Stage = 99;
 	switch (srv.Stage)
@@ -14,7 +13,7 @@ void HandlerRequest::mainHandler(Server &srv)
 		case 9: 
 		case 99: { HandlerRequest::prepareToSendError(srv); break; } //error
 		case 1: //read/write to socket stage
-		case 5: {std::cout << srv.getResponse(); break;}
+		case 5: {break;}
 		default:
 		{std::cout << "bad stage in mainHandler\n";}
 	}
@@ -35,56 +34,12 @@ void HandlerRequest::start(Server &srv)
 	}
 }
 
-void ParserGAG(HTTP_Request &req, std::string &raw)
-{
-	raw.clear();
-	req.stage = 53;
-	req.host = std::string("127.0.0.1");
-	req.port = std::string("8081");
-	req.flg_cnnctn = 1;
-	req.flg_te = 0;
-	req.base.start_string.method = std::string("GET");
-	req.base.start_string.uri = std::string("/html/index.html");
-	req.base.start_string.prmtrs = std::string("");
-	req.base.start_string.version = std::string("HTTP/1.1");
-	req.base.headers.insert(std::pair<std::string, std::string>(std::string("Connection"), std::string("keep-alive")));
-	req.base.headers.insert(std::pair<std::string, std::string>(std::string("Cache-Control"), std::string("max-age=0")));
-	req.base.headers.insert(std::pair<std::string, std::string>(std::string("sec-ch-ua"), std::string("Chromium;v=110,123")));
-	req.base.headers.insert(std::pair<std::string, std::string>(std::string("sec-ch-ua-mobile"), std::string("?0")));
-	req.base.headers.insert(std::pair<std::string, std::string>(std::string("sec-ch-ua-platform"), std::string("macOS")));
-	req.base.headers.insert(std::pair<std::string, std::string>(std::string("Upgrade-Insecure-Requests"), std::string("1")));
-	req.base.headers.insert(std::pair<std::string, std::string>(std::string("User-Agent"), std::string("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36")));
-	req.base.headers.insert(std::pair<std::string, std::string>(std::string("Accept"), std::string("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")));
-	req.base.headers.insert(std::pair<std::string, std::string>(std::string("Sec-Fetch-Site"), std::string("none")));
-	req.base.headers.insert(std::pair<std::string, std::string>(std::string("Sec-Fetch-Mode"), std::string("navigate")));
-	req.base.headers.insert(std::pair<std::string, std::string>(std::string("Sec-Fetch-User"), std::string("?1")));
-	req.base.headers.insert(std::pair<std::string, std::string>(std::string("Sec-Fetch-Dest"), std::string("document")));
-	req.base.headers.insert(std::pair<std::string, std::string>(std::string("Accept-Encoding"), std::string("gzip, deflate, br")));
-	req.base.headers.insert(std::pair<std::string, std::string>(std::string("Accept-Language"), std::string("en-US,en;q=0.9")));
-	req.base.headers.insert(std::pair<std::string, std::string>(std::string("Cookie"), std::string("wp-settings-1=mfold%3Df; wp-settings-time-1=1682074510; user=Ahmed160.jpeg")));
-// GET /html/index.html HTTP/1.1
-// Connection: keep-alive
-// Cache-Control: max-age=0
-// sec-ch-ua: "Chromium";v="110", "Not A(Brand";v="24", "Google Chrome";v="110"
-// sec-ch-ua-mobile: ?0
-// sec-ch-ua-platform: "macOS"
-// Upgrade-Insecure-Requests: 1
-// User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36
-// Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7
-// Sec-Fetch-Site: none
-// Sec-Fetch-Mode: navigate
-// Sec-Fetch-User: ?1
-// Sec-Fetch-Dest: document
-// Accept-Encoding: gzip, deflate, br
-// Accept-Language: en-US,en;q=0.9
-// Cookie: wp-settings-1=mfold%3Df; wp-settings-time-1=1682074510; user=Ahmed160.jpeg
-}
-
 void HandlerRequest::parserRequest(Server &srv)
 {
-	// Logger::putMsg(srv.getRequest(), FILE_REQ, REQ);
-	//HTTP_Request::ft_strtoreq(*(srv.getReq_struct()), srv.getRequest());
-	ParserGAG(*(srv.getReq_struct()), srv.getRequest());
+	Logger::putMsg(srv.getRequest(), FILE_REQ, REQ);
+	HTTP_Request::ft_strtoreq(*(srv.getReq_struct()), srv.getRequest());
+//	Logger::putMsg(std::string("uri after parsing is ") + srv.getReq_struct()->base.start_string.uri, FILE_REQ, REQ);
+//	std::cout << "uri after parsing is " << srv.getReq_struct()->base.start_string.uri << std::endl;
 	switch (srv.getReq_struct()->stage)
 	{
 		case 50: { srv.Stage = 1; srv.parseStage = 0; return; }
@@ -94,7 +49,7 @@ void HandlerRequest::parserRequest(Server &srv)
 			if (!HandlerRequest::isBodyNeed(srv))
 			{ srv.getReq_struct()->stage = 53; srv.Stage = 3; srv.isChunkedRequest = false; HandlerRequest::handleRequest(srv); return;}
 			else if (srv.getReq_struct()->flg_te == 0 || srv.getReq_struct()->body.empty())
-			{ srv.Stage = 1; return; }
+				{ srv.Stage = 1; return; }
 			else
 				{ srv.Stage = 3; srv.isChunkedRequest = true; HandlerRequest::handleRequest(srv); return;}
 		}
@@ -127,6 +82,7 @@ void HandlerRequest::handleRequest(Server &srv)
 	size_t		i = srv.getReq_struct()->base.start_string.uri.rfind('/');
 	std::string	locName = srv.getReq_struct()->base.start_string.uri.substr(0, i);
 	t_loc		*locNode = srv.findLocation(locName, servNode);
+	std::cout << "location is " << locNode->location << std::endl;
 
 	//check method
 	std::string method = srv.getReq_struct()->base.start_string.method;
@@ -147,10 +103,9 @@ void HandlerRequest::handleRequest(Server &srv)
 		HandlerRequest::redirectResponse(srv, locNode);
 		return;
 	}
-	//handle methods
 	std::string tmp = srv.getReq_struct()->base.start_string.uri;
 	tmp.erase(0, i + 1);
-
+	std::cout << "tmp = " << tmp << std::endl;
 	if (method == "GET")
 		HandlerRequest::GET(srv, servNode, locNode, tmp);
 	else if (method == "POST")
@@ -180,6 +135,8 @@ void HandlerRequest::GET(Server &srv, t_serv *servNode, t_loc *locNode, std::str
 		HandlerRequest::prepareToSendError(srv);
 		return;
 	}
+//	std::cout << "uri is: " << srv.getReq_struct()->base.start_string.uri << std::endl;
+//	std::cout << "fullPath is: " << fullPath << std::endl;
 	srv.getReq_struct()->base.headers.insert(std::pair<std::string, std::string>(std::string("FILENAME"), fullPath));
 	srv.getReq_struct()->base.start_string.uri = std::string("/CGIs/download.py");
 	srv.Stage = 4;
@@ -437,7 +394,6 @@ void HandlerRequest::prepareToSendError(Server &srv)
 	tmp = HTTP_Answer::ft_reqtoansw(*(srv.getReq_struct()));
 	srv.setResponse(HTTP_Answer::ft_answtostr(tmp));
 	srv.setResponse("\r\n\r\n");
-	std::cout << "response is |" << srv.getResponse() << "|"<< std::endl;
 	if (srv.Stage == 9)
 		srv.writeStage = 0;
 	else

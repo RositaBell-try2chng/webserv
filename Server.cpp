@@ -477,6 +477,8 @@ void Server::clearReq_struct()
 //clears
 void Server::reqClear()
 {
+	delete this->req_struct;
+	this->req_struct = new HTTP_Request;
 	this->Stage = 0;
 	this->readStage = 0;
 	this->writeStage = 0;

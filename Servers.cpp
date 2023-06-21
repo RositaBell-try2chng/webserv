@@ -15,9 +15,15 @@ Servers::~Servers()
     std::map<int, Server *>::iterator it;
 
     for (it = this->lst.begin(); it != this->lst.end(); it++)
-        delete it->second;
+	{
+		delete it->second;
+		close(it->first);
+	}
     for (it = this->connections.begin(); it != this->connections.end(); it++)
-        delete it->second;
+	{
+		delete it->second;
+		close(it->first);
+	}
     Servers::flgCreate = false;
     Logger::putMsg("delete obj of servers");
 }
