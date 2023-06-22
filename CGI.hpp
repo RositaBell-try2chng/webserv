@@ -39,8 +39,8 @@ public:
     int     sendToPipe(std::map<int, Server *>::iterator &it, fd_set *writes, bool flgLast);
     int     readFromPipe(std::map<int, Server *>::iterator &it, fd_set *reads);
 
-    char            **setEnv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANSLATED, std::string &SCRIPT_NAME);
-    char            **setArgv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANSLATED, std::string &SCRIPT_NAME);
+    char            **setEnv(Server &src);
+    char            **setArgv(Server &src);
     static char     *getAllocatedCharPointer(std::string src);
     
     //getters
@@ -51,6 +51,10 @@ public:
 
     int checkCntTrying(char c, int stage);
 	int checkTimeout();
+
+    std::string PATH_INFO;
+    std::string PATH_TRANSLATED;
+    std::string SCRIPT_NAME;
 
     int  prevStage; //0 - start CGI
                     //1 - send to pipe

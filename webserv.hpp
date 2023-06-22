@@ -24,7 +24,8 @@
 
 # define DEF_HOST "127.0.0.1"
 
-# define BUF_SIZE 16384
+# define BUF_SIZE 15000
+# define BUF_SIZE_PIPE 1024
 
 # define DEF_RESPONSE "HTTP/1.1 200 OK\r\nContent-Length: 13\r\nConnection: close\r\n\r\nHello, world!"
 
@@ -36,8 +37,6 @@
 # define HEX_BASE  std::string("0123456789ABCDEF", 16)
 
 # define LAST_CHUNK std::string("0\r\n\r\n", 5);
-
-# define BUF_SIZE_PIPE 1024
 
 # define CNT_TRYING 3
 # define TIMEOUT 15 //in sec

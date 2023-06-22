@@ -11,6 +11,8 @@
 # include "request_parse/HTTP_Answer.hpp"
 # include "HandlerRequest.hpp"
 
+typedef struct s_loc t_loc;
+
 class MainClass
 {
 private:

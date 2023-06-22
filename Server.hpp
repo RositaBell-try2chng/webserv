@@ -18,7 +18,7 @@ typedef struct s_loc
 
 	std::string					location;
 	std::map<int, std::string>	redirect;
-	std::vector<std::string>	files;
+	std::string					indexFile;
 	std::string					root;
 	bool			        	dirListFlg;
 	std::string		 			defFileIfDir;
@@ -64,7 +64,6 @@ private:
 	static void		setCGIs(std::set<std::string> &dst, std::string &src);
 	static void		fillErrorPages(std::vector<std::string> &E, t_serv *cur);
 	static void		setRedirect(t_loc *cur, std::string line1);
-	static void		setFiles(t_loc *cur, std::string src);
 
 //clears
 	static t_serv*	cloneServList(t_serv const *src);
@@ -100,9 +99,9 @@ public:
 	ssize_t				getMaxBodySize();
 	CGI					*getCGIptr();
 
-	static t_loc*		findLocation(std::string const &str, t_serv *src);
+	static t_loc*		findLocation(std::string &str, t_serv *src);
 	t_serv*				findServer(std::string const &str);
-	static std::string	findFile(std::string const &str, t_loc *loc);
+	static bool			findFile(std::string &str, t_serv *servNode, t_loc *loc);
 
 	void				setCGIptr(CGI *src);
 	void				setAnsw_struct(HTTP_Answer const &src);

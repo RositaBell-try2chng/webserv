@@ -58,7 +58,7 @@ struct HTTP_Request {
 
 				std::string	method;
 				std::string	uri;
-				std::string	prmtrs;						
+				std::string	prmtrs;
 				std::string	version;
 
 				int	len;

@@ -5,7 +5,7 @@ HTTP		=	${R_PARS}HTTP_Request_new.cpp	${R_PARS}HTTP_Answer.cpp	${R_PARS}HTTP_Hea
 
 MAIN		= Server.cpp Exceptions.cpp ConfParser.cpp MainClass.cpp Servers.cpp CGI.cpp HandlerRequest.cpp
 
-SRCS		= main.cpp ./dir_listing/DirListing.cpp Logger.cpp #utils.cpp ${MAIN} ${HTTP}
+SRCS		= main.cpp ./dir_listing/DirListing.cpp Logger.cpp utils.cpp ${MAIN} ${HTTP}
 
 OBJS		= ${SRCS:.cpp=.o}
 

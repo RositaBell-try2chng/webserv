@@ -36,10 +36,10 @@ int ft_set_method(HTTP_Request &req, std::string url, int end) {
 }
 
 int	ft_set_uri(HTTP_Request &req, std::string url, int end, int i) {
-
-	for (++i; url[i] != ' ' && i != end ; ++i)
+	
+	for (++i; url[i] != ' ' && i != end; ++i)
 		req.base.start_string.uri.push_back(url[i]);
-
+	
 	end = req.base.start_string.uri.size();
 
 	if (end == 0) {
@@ -50,11 +50,14 @@ int	ft_set_uri(HTTP_Request &req, std::string url, int end, int i) {
 	}
 
 	int	j = 0;
+	int	newSizeUri;
 
 	for (++j; req.base.start_string.uri[j] != '?' && j < end ; ++j){}
+	newSizeUri = j;
 	for (++j; j < end; ++j)
 		req.base.start_string.prmtrs.push_back(req.base.start_string.uri[j]);
-
+	
+	req.base.start_string.uri.resize(newSizeUri);
 	return (i);
 }
 

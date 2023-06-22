@@ -71,7 +71,7 @@ t_serv *Server::findServer(std::string const &str)
 }
 
 //finders
-t_loc *Server::findLocation(std::string const &str, t_serv *src)
+t_loc *Server::findLocation(std::string &str, t_serv *src)
 {
 	t_loc *cur = src->locList;
 	
@@ -85,15 +85,24 @@ t_loc *Server::findLocation(std::string const &str, t_serv *src)
 }
 
 //finders
-std::string Server::findFile(std::string const &str, t_loc *loc)
+bool	Server::findFile(std::string &str, t_serv *servNode, t_loc *loc)
 {
-	std::vector<std::string>::iterator it;
-	
-	it = find(loc->files.begin(), loc->files.end(), str);
-	
-	if (it != loc->files.end())
-		return (*it);
-	return(*loc->files.begin());
+	std::string	fullPath;
+
+	if (!servNode->root.empty() && servNode->root != "/")
+		fullPath = servNode->root;
+	else
+		fullPath = std::string(".");
+	if (loc->location != "/")
+		fullPath += loc->location;
+	if (!loc->root.empty() && loc->root != "/")
+		fullPath += loc->root;
+	fullPath += std::string("/") + str;
+	std::cout << "ful path in findFile is " << fullPath << std::endl;
+	if (access(fullPath.c_str(), F_OK) != 0)
+		return (false);
+	str = fullPath;
+	return (true);
 }
 
 //for configs
@@ -231,8 +240,8 @@ t_loc* Server::setLocList(std::map <std::string, std::map<std::string, std::stri
 		cur->location = it->first;
 		cur->root = std::string("");
 		cur->dirListFlg = false;
-		cur->defFileIfDir = std::string("");
 		cur->uploadPath = std::string("");
+		cur->indexFile = std::string("");
 		cur->flgGet = true;
 		cur->flgDelete = true;
 		cur->flgPost = true;
@@ -252,16 +261,14 @@ t_loc* Server::setLocList(std::map <std::string, std::map<std::string, std::stri
 					MainClass::exitHandler(0);
 				}
 			}
-			else if (it2->first == "defFileIfdir")
-				cur->defFileIfDir = it2->second;
 			else if (it2->first == "CGIs")
 				Server::setCGIs(cur->CGIs, it2->second);
 			else if (it2->first == "upload_path")
 				cur->uploadPath = std::string(it2->second);
 			else if (it2->first == "return")
 				Server::setRedirect(cur, it2->second);
-			else if (it2->first == "try_files")
-				Server::setFiles(cur, it2->second);
+			else if (it2->first == "index")
+				cur->indexFile = it2->second;
 			else
 			{
 				Logger::putMsg("BAD LOCATION CONFIG:\n" + it2->first, FILE_ERR, ERR);
@@ -275,16 +282,6 @@ t_loc* Server::setLocList(std::map <std::string, std::map<std::string, std::stri
 		cur = cur->next;
 	}
 	return (res);
-}
-
-//for configs
-void Server::setFiles(t_loc *cur, std::string src)
-{
-	std::stringstream ss(src);
-	std::string	word;
-
-	while (ss >> word)
-		cur->files.push_back(word);
 }
 
 //for configs
@@ -437,11 +434,10 @@ t_loc* Server::cloneLocList(t_loc const *src)
 		currRes->flgDelete = src->flgDelete;
 		currRes->redirect = src->redirect;
 		currRes->root = src->root;
-		currRes->defFileIfDir = src->defFileIfDir;
 		currRes->CGIs = src->CGIs;
 		currRes->uploadPath = src->uploadPath;
 		currRes->dirListFlg = src->dirListFlg;
-		currRes->files = src->files;
+		currRes->indexFile = src->indexFile;
 		currRes->next = NULL;
 		src = src->next;
 		if (!src)

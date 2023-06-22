@@ -83,7 +83,7 @@ void MainClass::mainLoop()
 		switch (select(MainClass::maxFd + 1, &readFds, &writeFds, NULL, &timeout))
 		{
 			case -1: { //select error
-				Logger::putMsg(strerror(errno), FILE_ERR, ERR); 
+				//Logger::putMsg(strerror(errno), FILE_ERR, ERR); 
 				std::cout << "bad select!!!\n";
 				continue; //fix me: need to continue or exit from server?
 			}
@@ -105,7 +105,7 @@ void MainClass::mainLoop()
 				//write to socket
 				case 5: { MainClass::sendResponse(it, &writeFds); break; }
 				default://all servers should be in write/read stage or CGI, if not then ERROR
-				{std::cout << "bad stage for server: " << it->first << " stage is: " << it->second->Stage << std::endl;}
+				{ ++it; std::cout << "bad stage for server: " << it->first << " stage is: " << it->second->Stage << std::endl;}
 			}
 		}
 		// std::cout << "accept in main LOOP\n";
@@ -126,7 +126,7 @@ bool MainClass::acceptConnections(fd_set *readFds)
 		{
 			fd = accept(it->first, NULL, NULL);
 			if (fd < 0 || fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
-				Logger::putMsg(strerror(errno), FILE_ERR, ERR);
+				std::cout << "BAD ACCEPT\n";
 			else
 				MainClass::allServers->addConnection(fd, *(it->second));
 			flgConnection = true;
@@ -150,13 +150,13 @@ void MainClass::readRequest(std::map<int, Server *>::iterator &it, fd_set *reads
 	{
 		case -1: //ошибка чтения
 		{
-			Logger::putMsg(std::string("error while recv ") + std::string(strerror(errno)), it->first, FILE_ERR, ERR);
+			//Logger::putMsg(std::string("error while recv ") + std::string(strerror(errno)), it->first, FILE_ERR, ERR);
 			MainClass::closeConnection(it);
 			return;
 		}
 		case 0: //нечего читать
 		{
-			Logger::putMsg(std::string("User closed connection ", it->first));
+			//Logger::putMsg(std::string("User closed connection ", it->first));
 			MainClass::closeConnection(it);
 			return;
 		}
@@ -178,10 +178,11 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *writ
 	}
 	ssize_t sendRes;
 	std::string toSend(it->second->getResponse());
+	// std::cout << "toSend = |" << toSend << "|\n";
 
 	if (toSend.empty()) // nothing to send = ERROR //should not to happen //fix me: test this
 	{
-		Logger::putMsg(std::string("NOTHING TO SEND"), it->first, FILE_ERR, ERR);
+		//Logger::putMsg(std::string("NOTHING TO SEND"), it->first, FILE_ERR, ERR);
 		std::cout << it->first << ": ERROR, NOTHING TO SEND\n";
 		MainClass::closeConnection(it);
 		return;
@@ -192,7 +193,7 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *writ
 	{
 		case -1: //error
 		{
-			Logger::putMsg(std::string("error while send ") + std::string(strerror(errno)), it->first, FILE_ERR, ERR);
+			//Logger::putMsg(std::string("error while send ") + std::string(strerror(errno)), it->first, FILE_ERR, ERR);
 			MainClass::closeConnection(it);
 			return;
 		}
@@ -200,7 +201,7 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *writ
 		{
 			if (it->second->checkCntTryingSend())
 			{
-				Logger::putMsg(std::string("error while send:\n3 times zero send in a raw"), it->first, FILE_ERR, ERR);
+				//Logger::putMsg(std::string("error while send:\n3 times zero send in a raw"), it->first, FILE_ERR, ERR);
 				MainClass::closeConnection(it);
 				return;
 			}
@@ -214,11 +215,10 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *writ
 			{
 				if (it->second->writeStage == 3)
 				{
-					std::cerr << it->first << " has been closed by TIMEOUT\n";
+					std::cerr << it->first << " has been closed because FATAL ERROR\n";
 					MainClass::closeConnection(it);
 					return;
 				}
-				it->second->resClear();
 				if (!it->second->isChunkedResponse || it->second->writeStage == 2)
 					it->second->reqClear();
 				else if (it->second->writeStage == 1 || (it->second->writeStage == 0 && it->second->isChunkedResponse))
@@ -226,11 +226,8 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *writ
 				else
 					std::cout << it->first << ": bad stages in send:\nStage is: " << it->second->Stage << ". CGIStage is: " << it->second->CGIStage << std::endl;
 			}
-			else
-			{
-				toSend.erase(0, sendRes);
-				it->second->setResponse(toSend);
-			}
+			toSend.erase(0, sendRes);
+			it->second->setResponse(toSend, true);
 			break;
 		}
 	}
@@ -263,6 +260,7 @@ void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_se
 		case 5: //read from pipe first
 		{
 			it->second->CGIStage = it->second->getCGIptr()->readFromPipe(it, reads);
+			Logger::putMsg(it->second->getResponse(), FILE_REQ, REQ);
 			if (it->second->CGIStage == 50) //find body and add chunk size
 				it->second->Stage = MainClass::setChunkedResponse(*it->second);
 			else if (it->second->CGIStage == 6)
@@ -277,6 +275,7 @@ void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_se
 				it->second->setResponse(std::string("0\r\n\r\n"));
 			break;
 		}
+		case 4: {break;} //waiting for child
 		case 9:
 		{
 			std::cout << "ERROR CGI\n";
@@ -313,25 +312,28 @@ int	MainClass::setChunkedResponse(Server &srv)
 		srv.CGIStage = 5;
 		return (4);
 	}
-	StartStringHeaders = Body.substr(0, i);
+	StartStringHeaders = Body.substr(0, i + 4);
+	Body.erase(0, i + 4);
 	//erase Content-Length because chunked response + add chunked Header
+	std::cout << "ststrHead1 = |" << StartStringHeaders << "|\n";
 	i = StartStringHeaders.find("Content-Length");
 	if (i != std::string::npos)
 	{
 		size_t j = StartStringHeaders.find("\r\n", i + 13);
-		if (j != std::string::npos)
-			StartStringHeaders.erase(i, j + 2 - i);
-		else
-			StartStringHeaders.erase(i, StartStringHeaders.length() - i);
+		StartStringHeaders.erase(i, j + 2 - i);
 	}
-	StartStringHeaders.append(std::string("Transfer-Encoding: chunked\r\n\r\n"));
-	Body.erase(0, i + 4);
+	std::cout << "ststrHead2 = |" << StartStringHeaders << "|\n";
+	i = StartStringHeaders.find("\r\n");
+	StartStringHeaders.insert(i + 2, std::string("Transfer-Encoding: chunked\r\n"));
+	std::cout << "ststrHead2 = |" << StartStringHeaders << "|\n";
 	if (!Body.empty())
 	{
 		BodySize = Size_tToString(Body.length(), HEX_BASE) + std::string("\r\n");
 		StartStringHeaders.append(BodySize + Body + std::string("\r\n"));
 	}
 	srv.setResponse((StartStringHeaders), true);
+	srv.isChunkedResponse = true;
+	srv.writeStage = 0;
 	return (5);
 }
 
@@ -366,10 +368,9 @@ bool MainClass::isCorrectRedirection(std::map<int, Server *>::iterator it)
 		{
 			if (chNodeLoc->redirect.empty())
 				continue;
-			if (!(chNodeLoc->files.empty() && chNodeLoc->root.empty() && chNodeLoc->files.empty() \
-					&& !chNodeLoc->dirListFlg && chNodeLoc->defFileIfDir.empty() && chNodeLoc->CGIs.empty() && chNodeLoc->uploadPath.empty()))
+			if (!(chNodeLoc->root.empty() && !chNodeLoc->dirListFlg && chNodeLoc->defFileIfDir.empty() && chNodeLoc->CGIs.empty() && chNodeLoc->uploadPath.empty()))
 			{
-				Logger::putMsg("Bad configs with redirection: if 'return is set you should't use other parameters in location" + it->second->getHost() + ":" + it->second->getPort(), FILE_ERR, ERR);
+				//Logger::putMsg("Bad configs with redirection: if 'return' is set you can use only 'try_files' and 'acceptedMethods': " + it->second->getHost() + ":" + it->second->getPort(), FILE_ERR, ERR);
 				return (false);
 			}
 			name = std::string(chNodeServ->ServerName);
@@ -384,7 +385,7 @@ bool MainClass::isCorrectRedirection(std::map<int, Server *>::iterator it)
 					t_loc	*curLoc = Server::findLocation(location, curServ);
 					if (!curLoc->redirect.empty())
 					{
-						Logger::putMsg("Two or more redirection in a raw: " + ip + ":" + port, FILE_ERR, ERR);
+						//Logger::putMsg("Two or more redirection in a raw: " + ip + ":" + port, FILE_ERR, ERR);
 						return (false);
 					}
 				}
@@ -441,7 +442,7 @@ bool MainClass::checkCorrectHostPortInRedirection(t_loc *locNode, std::string &n
 	{
 		if (i >= 5 || !std::isdigit(port[i]))
 		{
-			Logger::putMsg("BAD Port in redirection: " + port, FILE_ERR, ERR);
+			//Logger::putMsg("BAD Port in redirection: " + port, FILE_ERR, ERR);
 			return (false);
 		}
 	}
@@ -450,7 +451,7 @@ bool MainClass::checkCorrectHostPortInRedirection(t_loc *locNode, std::string &n
 		portTmp.insert(portTmp.begin(), '0');
 	if (portTmp > "65535")
 	{
-		Logger::putMsg("BAD Port in redirection: " + port, FILE_ERR, ERR);
+		//Logger::putMsg("BAD Port in redirection: " + port, FILE_ERR, ERR);
 		return (false);
 	}
 	//check host/name

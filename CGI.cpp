@@ -89,13 +89,11 @@ void	CGI::ChildCGI(Server &src)
 {
     char **env = NULL;
     char **argv = NULL;
-    std::string PATH_INFO; //virtual path
-    std::string PATH_TRANSLATED; //real path
-    std::string SCRIPT_NAME;
+
     //change STDIN and STDOUT
     if (dup2(this->PipeInForward, 0) == -1 || dup2(this->PipeOutBack, 1) == -1)
     {
-        Logger::putMsg("dup2 failed:\n" + std::string(strerror(errno)), FILE_ERR, ERR);
+        std::cout << "bad dup2\n";
         exit(1);
     }
     close(this->PipeInBack);
@@ -103,10 +101,10 @@ void	CGI::ChildCGI(Server &src)
     close(this->PipeOutForward);
     close(this->PipeInForward);
     //set argv/env
-    argv = this->setArgv(src, PATH_INFO, PATH_TRANSLATED, SCRIPT_NAME);
+    argv = this->setArgv(src);
     if (!argv)
         exit(1);
-    env = this->setEnv(src, PATH_INFO, PATH_TRANSLATED, SCRIPT_NAME);
+    env = this->setEnv(src);
     if (!env)
         exit(1);
     //start script
@@ -190,12 +188,11 @@ int CGI::readFromPipe(std::map<int, Server *>::iterator &it, fd_set *reads)
 		}
 		default: //maybe somthing else in PIPE
 		{
-
             it->second->updateLastActionTime();
 			this->cntTryingReading = 0;
 			it->second->setResponse(std::string(buf, rdRes));
             it->second->Stage = 5;
-            if (rdRes == BUF_SIZE)
+            if (rdRes == BUF_SIZE_PIPE)
 			    return (50);
             else
                 return (6);
@@ -219,33 +216,17 @@ int CGI::checkCntTrying(char c, int stage)
 	return (this->CGIsFailed());
 }
 
-char** CGI::setArgv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANSLATED, std::string &SCRIPT_NAME)
+char** CGI::setArgv(Server &src)
 {
     char **res = NULL;
     PATH_INFO = src.getReq_struct()->base.start_string.uri;
     
     std::string loc;
-    std::string::size_type i;
-    //find server
-    t_serv *curServ = src.findServer(src.getReq_struct()->host);
-    //find location
-    i = PATH_INFO.rfind('/');
-    loc = PATH_INFO.substr(0, i);
-    t_loc *curLoc = src.findLocation(loc, curServ);
-    SCRIPT_NAME = PATH_INFO.substr(i + 1, PATH_INFO.length() - i);
-    if (curServ->root.empty() || curServ->root == "/")
-        PATH_TRANSLATED = std::string(".");
-    else
-        PATH_TRANSLATED = curServ->root;
-    if (curLoc->location != "/")
-        PATH_TRANSLATED += curLoc->location;
-    if (curLoc->root != "/")
-        PATH_TRANSLATED += curLoc->root;
-    PATH_TRANSLATED += std::string("/") + SCRIPT_NAME;
+
     try {
         res = new char*[2];
         res[0] = NULL;
-        res[0] = CGI::getAllocatedCharPointer(PATH_TRANSLATED);
+        res[0] = CGI::getAllocatedCharPointer(this->PATH_TRANSLATED);
         res[1] = NULL;
     }
     catch (std::exception &e)
@@ -264,7 +245,7 @@ char** CGI::setArgv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANS
     return res;
 }
 
-char**  CGI::setEnv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANSLATED, std::string &SCRIPT_NAME)
+char**  CGI::setEnv(Server &src)
 {
     char **res = NULL;
     size_t i = 0;
@@ -286,13 +267,13 @@ char**  CGI::setEnv(Server &src, std::string &PATH_INFO, std::string &PATH_TRANS
 		res[i] = NULL;
         res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("REQUEST_METHOD=") + src.getReq_struct()->base.start_string.method));
 		res[i] = NULL;
-        res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("SCRIPT_NAME=") + SCRIPT_NAME));
+        res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("SCRIPT_NAME=") + this->SCRIPT_NAME));
 		res[i] = NULL;
         res[i++] = CGI::getAllocatedCharPointer(std::string("REMOTE_ADDR="));
 		res[i] = NULL;
-        res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("PATH_INFO=") + PATH_INFO));
+        res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("PATH_INFO=") + this->PATH_INFO));
 		res[i] = NULL;
-        res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("PATH_TRANSLATED=") + PATH_TRANSLATED));
+        res[i++] = CGI::getAllocatedCharPointer(std::string(std::string("PATH_TRANSLATED=") + this->PATH_TRANSLATED));
         res[size - 1] = NULL;
         for (; i < size && it != src.getReq_struct()->base.headers.end(); i++)
         {
