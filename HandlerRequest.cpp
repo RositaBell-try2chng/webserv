@@ -15,22 +15,12 @@ void HandlerRequest::mainHandler(Server &srv)
 		case 1: //read/write to socket stage
 		case 5: {break;}
 		default:
-		{ std::cout << "bad stage in mainHandler\n"; } //fix me: delete this or change on something
+		{ std::cout << "bad stage in mainHandler\n"; } //fix me: send FATAL
 	}
 }
 
 void HandlerRequest::start(Server &srv)
 {
-	//create CGIptr
-	try { srv.setCGIptr(new CGI()); }
-	catch (std::exception &e)
-	{ 
-		srv.Stage = 9;
-		srv.getReq_struct()->answ_code[0] = 5;
-		srv.getReq_struct()->answ_code[0] = 0;
-		HandlerRequest::prepareToSendError(srv);
-		return;
-	}
 	//check if somthing else in request
 	if (srv.getRequest().empty()) { srv.Stage = 1; return; }
 	HandlerRequest::parserRequest(srv);
@@ -41,7 +31,7 @@ void HandlerRequest::start(Server &srv)
 		case 2: { HandlerRequest::checkReadyToHandle(srv); break; }
 		case 3: { srv.Stage = 3;  HandlerRequest::handleRequest(srv); break; }
 		case 9: { srv.Stage = 9; HandlerRequest::prepareToSendError(srv); break; }
-		default: { std::cout << "BAD parse Stage: " << srv.parseStage << std::endl; break; }
+		default: { std::cout << "BAD parse Stage: " << srv.parseStage << std::endl; break; } // fix me: send FATAL ERROR
 	}
 }
 
@@ -56,7 +46,7 @@ void HandlerRequest::parserRequest(Server &srv)
 		case 52: { srv.parseStage = 2; break; }
 		case 53: { srv.parseStage = 3; break; }
 		case 59: { HandlerRequest::prepareToSendError(srv); return; }
-		default: {std::cout << "BAD Stage parser: " << srv.getReq_struct()->stage; return;}
+		default: {std::cout << "BAD Stage parser: " << srv.getReq_struct()->stage; return;} //fix me: send error
 	}
 	//check body need/exists to handle
 	if (srv.parseStage == 2 && HandlerRequest::isBodyNeed(srv) && (srv.getReq_struct()->flg_te == 0 || srv.getReq_struct()->body.empty()))
@@ -83,7 +73,6 @@ bool HandlerRequest::isBodyNeed(Server &srv)
 
 void HandlerRequest::handleRequest(Server &srv)
 {
-	std::cout << "handle request\n";
 	//find serv
 	t_serv		*servNode = srv.findServer(srv.getReq_struct()->host);
 	//check too large body
@@ -121,7 +110,8 @@ void HandlerRequest::handleRequest(Server &srv)
 		return;
 	}
 	//try to find file
-	if (!Server::findFile(fileName, servNode, locNode))
+	bool	CGIflg = false;
+	if (!Server::findFile(fileName, servNode, locNode, CGIflg))
 	{
 		//check redirect
 		if (!locNode->redirect.empty())
@@ -137,7 +127,7 @@ void HandlerRequest::handleRequest(Server &srv)
 	}
 	//start handle methods
 	if (method == "GET")
-		HandlerRequest::GET(srv, fileName);
+		HandlerRequest::GET(srv, fileName, CGIflg);
 	else if (method == "POST")
 		HandlerRequest::POST(srv, locNode, fileName);
 	else
@@ -146,7 +136,6 @@ void HandlerRequest::handleRequest(Server &srv)
 
 void HandlerRequest::handleDirectoryResponse(Server &srv, t_loc *locNode)
 {
-	std::cout << "handle directory request\n";
 	if (locNode->dirListFlg)
 	{
 		;//do some from Egor's file
@@ -170,9 +159,9 @@ void HandlerRequest::handleDirectoryResponse(Server &srv, t_loc *locNode)
 	HandlerRequest::prepareToSendError(srv);
 }
 
-void HandlerRequest::GET(Server &srv, std::string &fileName)
+void HandlerRequest::GET(Server &srv, std::string &fileName, bool CGIflg)
 {
-	if (access(fileName.c_str(), R_OK) != 0)
+	if ((!CGIflg && access(fileName.c_str(), R_OK) == -1) || (CGIflg && access(fileName.c_str(), X_OK) == -1))
 	{
 		srv.getReq_struct()->answ_code[0] = 4;
 		srv.getReq_struct()->answ_code[0] = 3;
@@ -180,10 +169,15 @@ void HandlerRequest::GET(Server &srv, std::string &fileName)
 		HandlerRequest::prepareToSendError(srv);
 		return;
 	}
-	srv.getReq_struct()->base.headers.insert(std::pair<std::string, std::string>(std::string("FILENAME"), fileName));
-	srv.getCGIptr()->PATH_TRANSLATED = std::string("./CGIs/download.py");
-	srv.getCGIptr()->PATH_INFO = std::string("/CGIs/download.py");
-	srv.getCGIptr()->SCRIPT_NAME = std::string("download.py");
+	if (!CGIflg)
+	{
+		srv.getReq_struct()->base.headers.insert(std::pair<std::string, std::string>(std::string("FILENAME"), fileName));
+		srv.getCGIptr()->PATH_TRANSLATED = std::string("./CGIs/download.py");
+		srv.getCGIptr()->PATH_INFO = std::string("/CGIs/download.py");
+		srv.getCGIptr()->SCRIPT_NAME = std::string("download.py");
+	}
+	else
+		srv.getCGIptr()->PATH_TRANSLATED = fileName;
 	srv.Stage = 4;
 	srv.CGIStage = 0;
 	HandlerRequest::CGIHandler(srv);
@@ -261,9 +255,13 @@ bool HandlerRequest::haveErrorPage(Server &srv, t_serv *servNode, int code)
 		Logger::putMsg("download.py have no access to execute => error pages can't be open", FILE_ERR, ERR);
 		return(false);
 	}
-	std::string	response("HTTP/1.1 303 See Other\r\nLocation: ");
-	response += it->second + std::string("\r\n\r\n");
-	srv.Stage = 5;
+	if (access(it->second.c_str(), R_OK) == -1)
+	{
+		Logger::putMsg("can't find error FILE or FILE have no access to read", FILE_ERR, ERR);
+		servNode->errPages.erase(it);
+		return(false);
+	}
+	HandlerRequest::GET(srv, it->second, false);
 	return (true);
 }
 
@@ -294,11 +292,6 @@ void HandlerRequest::redirectResponse(Server &srv, t_loc *locNode)
 
 void HandlerRequest::CGIHandler(Server &srv)
 {
-	if (!(srv.CGIStage == 0 || srv.CGIStage == 6) && srv.getCGIptr() == NULL)
-    {
-        std::cout << "BAD stages or ptr in CGI Handler: " << srv.CGIStage << std::endl;
-        return;
-    }
 	switch (srv.CGIStage)
 	{
 		case 0: { HandlerRequest::startCGI(srv); break; }
@@ -324,9 +317,10 @@ void HandlerRequest::CGIHandler(Server &srv)
 			srv.setCGIptr(NULL);
 			srv.CGIStage = 0;
 			srv.Stage = 5;
+			break;
 		}
 		case 9: { HandlerRequest::CGIerrorManager(srv); break; }
-		default: {std::cout << "bad stage in cgi handler\n";}
+		default: { std::cout << "bad stage in cgi handler\n"; } //fix me: send 500 error
 	}
 }
 
@@ -334,6 +328,7 @@ void HandlerRequest::startCGI(Server &srv)
 {
 	if (access(srv.getCGIptr()->PATH_TRANSLATED.c_str(), F_OK) == -1)
 	{
+		std::cout << "BAD startCGI. PATHTRANS = " << srv.getCGIptr()->PATH_TRANSLATED << std::endl;
 		srv.Stage = 9;
 		srv.getReq_struct()->answ_code[0] = 4;
 		srv.getReq_struct()->answ_code[1] = 4;
@@ -357,11 +352,7 @@ void HandlerRequest::startCGI(Server &srv)
 
 void	HandlerRequest::CGIerrorManager(Server &srv)
 {
-	if (srv.getCGIptr())
-	{
-		delete srv.getCGIptr();
-		srv.setCGIptr(NULL);
-	}
+	srv.getCGIptr()->clearCGI();
 	srv.Stage = 9;
 	srv.CGIStage = 9;
 	HandlerRequest::prepareToSendError(srv);
@@ -390,7 +381,6 @@ void HandlerRequest::prepareToSendCGI(Server &srv)
 
 void HandlerRequest::checkReadyToHandle(Server &srv)
 {
-	std::cout << "checkReadyToHandle Start\n";
 	if (srv.getReq_struct()->flg_te == 0)
 	{
 		srv.Stage = 1;
@@ -426,12 +416,10 @@ void HandlerRequest::prepareToSendError(Server &srv)
 	}
 	int code = srv.getReq_struct()->answ_code[0] * 100 + srv.getReq_struct()->answ_code[1];
 
-	std::cout << "prepare to send error start. code = " << code << std::endl;
 	if (HandlerRequest::haveErrorPage(srv, servNode, code))
 		return;
 	tmp = HTTP_Answer::ft_reqtoansw(*(srv.getReq_struct()));
 	srv.setResponse(HTTP_Answer::ft_answtostr(tmp), true);
-	srv.setResponse("\r\n\r\n");
 	srv.Stage = 5;
 	srv.isChunkedResponse = false;
 }

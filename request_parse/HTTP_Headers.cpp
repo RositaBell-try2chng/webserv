@@ -43,11 +43,9 @@ void	ft_hdr_content_type(HTTP_Request::ContentType &type, std::string value) {
 		type.type.push_back(value[i]);
 	for (++i; i != end && value[i] != ';'; ++i)
 		type.subtype.push_back(value[i]);
-
 	std::string	option;
-
-	for (; i != end; ++i) {
-		for (++i; i != end && value[i] != ';'; ++i)
+	for (; i < end; ++i) {
+		for (++i; i < end && value[i] != ';'; ++i)
 			option.push_back(value[i]);
 		type.options.insert(ft_strtopair(option, '='));
 		option.clear();

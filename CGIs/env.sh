@@ -18,3 +18,5 @@ echo '<pre>'
 hostname
 echo '</pre>'
 echo '</html>'
+
+echo "123" >> logs.txt

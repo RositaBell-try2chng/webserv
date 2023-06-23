@@ -10,6 +10,26 @@ CGI::CGI()
     this->prevStage = -1;
 }
 
+void CGI::clearCGI()
+{
+	if (this->pid > 0)
+		kill(this->pid, SIGTERM);
+	this->pid = -1;
+	if (this->PipeInForward != 0)
+		close(this->PipeInForward);
+	if (this->PipeOutForward != 0)
+		close(this->PipeOutForward);
+	if (this->PipeInBack != 0)
+		close(this->PipeInBack);
+	if (this->PipeOutBack != 0)
+		close(this->PipeOutBack);
+	this->PipeInForward = 0;
+	this->PipeOutForward = 0;
+	this->PipeInBack = 0;
+	this->PipeOutBack = 0;
+	this->prevStage = -1;
+}
+
 CGI::~CGI()
 {
     if (this->pid > 0)
@@ -45,9 +65,9 @@ int CGI::ForkCGI(Server &src)
     this->pid = fork();
     switch (this->pid)
     {
-        case -1: { return(this->CGIsFailed()); }
-        case 0: { this->ChildCGI(src); }
-        default: { return(this->ParentCGI()); }
+		case -1: { return(this->CGIsFailed()); }
+		case 0: { this->ChildCGI(src); break; }
+		default: { return(this->ParentCGI()); }
     }
     return (this->CGIsFailed()); // -1/0 - return own int, Child exit before
 }
@@ -56,8 +76,8 @@ int	CGI::ParentCGI()
 {
 	this->timeCGIStarted.tv_sec = time(NULL);
 	this->timeCGIStarted.tv_usec = 0;
-    if (fcntl(this->PipeOutForward, F_SETFL, O_NONBLOCK) == -1 || fcntl(this->PipeInBack, F_SETFL, O_NONBLOCK) == -1)
-        return(this->CGIsFailed());
+	if (fcntl(this->PipeOutForward, F_SETFL, O_NONBLOCK) == -1 || fcntl(this->PipeInBack, F_SETFL, O_NONBLOCK) == -1)
+		return(this->CGIsFailed());
 	return (4);
 }
 
@@ -115,6 +135,7 @@ int    CGI::CGIsFailed()
 {
     if (this->pid != -1)
         kill(this->pid, SIGTERM);
+	this->pid = -1;
     if (PipeInForward > 0)
         close(PipeInForward);
     if (PipeOutForward > 0)
@@ -131,8 +152,8 @@ int CGI::sendToPipe(std::map<int, Server *>::iterator &it, fd_set *writes, bool 
 {
 	ssize_t		wrRes;
 
-    if (!FD_ISSET(this->PipeOutForward, writes))
-        return (20); //repeat write
+	if (!FD_ISSET(this->PipeOutForward, writes))
+		return (20); //repeat write
 	wrRes = write(this->PipeOutForward, it->second->getReq_struct()->body.c_str(), it->second->getReq_struct()->body.length());
 	switch (wrRes)
 	{
@@ -168,8 +189,8 @@ int CGI::sendToPipe(std::map<int, Server *>::iterator &it, fd_set *writes, bool 
 
 int CGI::readFromPipe(std::map<int, Server *>::iterator &it, fd_set *reads)
 {
-    if (!FD_ISSET(this->PipeInBack, reads))
-        return (it->second->CGIStage);
+	if (!FD_ISSET(this->PipeInBack, reads))
+		return (it->second->CGIStage);
 	ssize_t		rdRes;
 	char		buf[BUF_SIZE_PIPE];
 
@@ -191,6 +212,7 @@ int CGI::readFromPipe(std::map<int, Server *>::iterator &it, fd_set *reads)
             it->second->updateLastActionTime();
 			this->cntTryingReading = 0;
 			it->second->setResponse(std::string(buf, rdRes));
+//			std::cout << it->first << ": response iz pipe = |" << it->second->getResponse() << "|\n";
             it->second->Stage = 5;
             if (rdRes == BUF_SIZE_PIPE)
 			    return (50);
@@ -205,10 +227,10 @@ int CGI::checkCntTrying(char c, int stage)
 {
 	char *checks;
 
-    if (c == 'r')
-        checks = &this->cntTryingReading;
-    else
-        checks = &this->cntTryingWriting;
+	if (c == 'r')
+		checks = &this->cntTryingReading;
+	else
+		checks = &this->cntTryingWriting;
 	++(*checks);
 	if (*checks < CNT_TRYING)
 		return (stage);

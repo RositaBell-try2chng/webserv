@@ -302,9 +302,9 @@ bool ConfParser::getLocations(std::string &src, std::map<std::string, std::strin
 		throw badConfig();
     }
 	if (part1[0] != '/')
-        part1.insert(part1.begin(), '/');
-    if (part1.length() > 1 && part1[part1.length() - 1] == '/')
-        part1.erase(part1.length() - 1, 1);
+		part1.insert(part1.begin(), '/');
+	if (part1.length() > 1 && part1[part1.length() - 1] == '/')
+		part1.erase(part1.length() - 1, 1);
 	from = i + 1;
 	i = ConfParser::findCloseBracket(src, i, 1);
 	part2 = src.substr(from, i - from);

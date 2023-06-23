@@ -6,13 +6,10 @@
 Server::Server() {};
 Server::~Server()
 {
-	if (this->ptrCGI)
-		delete this->ptrCGI;
+	delete this->ptrCGI;
 	delete this->req_struct;
-	delete this->answ_struct;
-	if (!this->serv)
-		return;
-	this->clearServ();
+	if (this->serv)
+		this->clearServ();
 };
 
 Server::Server(const std::string& _host, const std::string& _port)
@@ -34,7 +31,7 @@ Server::Server(const std::string& _host, const std::string& _port)
 	this->isChunkedRequest = false;
 	this->isChunkedResponse = false;
 	this->req_struct = new HTTP_Request();
-	this->answ_struct = new HTTP_Answer();
+	this->ptrCGI = new CGI();
 }
 
 void Server::addToReq(std::string src) { this->request += src; }
@@ -85,10 +82,19 @@ t_loc *Server::findLocation(std::string &str, t_serv *src)
 }
 
 //finders
-bool	Server::findFile(std::string &str, t_serv *servNode, t_loc *loc)
+bool	Server::findFile(std::string &str, t_serv *servNode, t_loc *loc, bool &CGIflg)
 {
 	std::string	fullPath;
+	std::string extension;
+	size_t		i = str.rfind('.');
 
+	//check if file CGI Script
+	if (i != std::string::npos)
+	{
+		extension = str.substr(i);
+		if (loc->CGIs.find(extension) != loc->CGIs.end())
+			CGIflg = true;
+	}
 	if (!servNode->root.empty() && servNode->root != "/")
 		fullPath = servNode->root;
 	else
@@ -98,7 +104,6 @@ bool	Server::findFile(std::string &str, t_serv *servNode, t_loc *loc)
 	if (!loc->root.empty() && loc->root != "/")
 		fullPath += loc->root;
 	fullPath += std::string("/") + str;
-	std::cout << "ful path in findFile is " << fullPath << std::endl;
 	if (access(fullPath.c_str(), F_OK) != 0)
 		return (false);
 	str = fullPath;
@@ -449,16 +454,6 @@ t_loc* Server::cloneLocList(t_loc const *src)
 }
 
 //clears
-void Server::clearAnsw_struct()
-{
-	this->answ_struct->body.clear();
-	this->answ_struct->headers.clear();
-	this->answ_struct->reason_phrase.clear();
-	this->answ_struct->status_code.clear();
-	this->answ_struct->version.clear();
-}
-
-//clears
 void Server::clearReq_struct()
 {
 	this->req_struct->base.start_string.version.clear();
@@ -484,11 +479,7 @@ void Server::reqClear()
 	this->isChunkedResponse = false;
 	this->response.clear();
 	this->CntTryingSendZero();
-	if (!this->ptrCGI)
-	{
-		delete this->ptrCGI;
-		this->ptrCGI = NULL;
-	}
+	this->ptrCGI->clearCGI();
 }
 
 //clears
@@ -540,7 +531,6 @@ const std::string & Server::getPort() { return (this->port); }
 std::string & Server::getRequest() { return (this->request); }
 const std::string & Server::getResponse() { return (this->response); }
 ssize_t				Server::getMaxBodySize() { return (this->maxLimitBodiSize); }
-HTTP_Answer		*Server::getAnsw_struct() { return (this->answ_struct); }
 HTTP_Request	*Server::getReq_struct() { return (this->req_struct); }
 CGI				*Server::getCGIptr() { return (this->ptrCGI); }
 
@@ -566,17 +556,6 @@ void	Server::addChunkedSizeToResponse()
 	this->response = chunkSize + std::string("\r\n") + this->response + std::string("\r\n");
 }
 
-//copy structs Answ/Req
-void Server::setAnsw_struct(HTTP_Answer const &src)
-{
-	this->answ_struct->body = src.body;
-	this->answ_struct->headers = std::map<std::string, std::string>(src.headers);
-	this->answ_struct->reason_phrase = src.reason_phrase;
-	this->answ_struct->status_code = src.status_code;
-	this->answ_struct->version = src.status_code;
-}
-
-//copy structs Answ/Req
 void Server::setReq_struct(HTTP_Request const &src)
 {
 	this->req_struct->base.start_string.version = src.base.start_string.version;

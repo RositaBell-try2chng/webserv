@@ -17,7 +17,7 @@ private:
 	static void	parserRequest(Server &srv);
 	static void	handleRequest(Server &srv);
 	static void	prepareToSendError(Server &srv);
-	static void	GET(Server &srv, std::string &fileName);
+	static void	GET(Server &srv, std::string &fileName, bool CGIflg);
 	static void	POST(Server &srv, t_loc *locNode, std::string &fileName);
 	static void	DELETE(Server &srv, t_loc *locNode, std::string &fileName);
 	static void	CGIerrorManager(Server &srv);

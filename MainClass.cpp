@@ -52,6 +52,7 @@ void MainClass::mainLoop()
 
 	while (true)
 	{
+		std::cout << "main loop start\n";
 		//2.0 clean sets
 		FD_ZERO(&readFds);
 		FD_ZERO(&writeFds);
@@ -76,9 +77,11 @@ void MainClass::mainLoop()
 			else if (it->second->Stage == 4 && (it->second->CGIStage == 5 || it->second->CGIStage == 50))
 				MainClass::addToSet(it->second->getCGIptr()->getPipeInBack(), &readFds);
 		}
+		std::cout << "handle end\n";
 		//2.1.2 add listen fds
 		for (it = allServers->getConnections(true).begin(); it != allServers->getConnections(true).end(); it++)
 			MainClass::addToSet(it->first, &readFds);
+		std::cout << "listen added\n";
 		//select
 		switch (select(MainClass::maxFd + 1, &readFds, &writeFds, NULL, &timeout))
 		{
@@ -90,6 +93,7 @@ void MainClass::mainLoop()
 			case 0: {continue;} //timeout. try another select
 			default: {break;} //have something to do
 		}
+		std::cout << "select done added\n";
 		// doing write/read depend on stage for all servers
 		it = allServers->getConnections().begin();
 		// std::cout << "while read/write in main LOOP\n";
@@ -105,11 +109,13 @@ void MainClass::mainLoop()
 				//write to socket
 				case 5: { MainClass::sendResponse(it, &writeFds); break; }
 				default://all servers should be in write/read stage or CGI, if not then ERROR
-				{ ++it; std::cout << "bad stage for server: " << it->first << " stage is: " << it->second->Stage << std::endl;}
+				{ ++it; std::cout << "bad stage for server: " << it->first << " stage is: " << it->second->Stage << std::endl; }
 			}
 		}
+		std::cout << "read/write done\n";
 		// std::cout << "accept in main LOOP\n";
 		acceptConnections(&readFds);
+		std::cout << "accept done\n";
 	}
 }
 
@@ -137,6 +143,7 @@ bool MainClass::acceptConnections(fd_set *readFds)
 
 void MainClass::readRequest(std::map<int, Server *>::iterator &it, fd_set *reads)
 {
+	std::cout << "readRequest\n";
 	if (!FD_ISSET(it->first, reads))
 	{
 		++it;
@@ -171,6 +178,7 @@ void MainClass::readRequest(std::map<int, Server *>::iterator &it, fd_set *reads
 
 void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *writes)
 {
+	std::cout << "sendResponse\n";
 	if (!FD_ISSET(it->first, writes))
 	{
 		++it;
@@ -178,12 +186,11 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *writ
 	}
 	ssize_t sendRes;
 	std::string toSend(it->second->getResponse());
-	// std::cout << "toSend = |" << toSend << "|\n";
 
 	if (toSend.empty()) // nothing to send = ERROR //should not to happen //fix me: test this
 	{
 		//Logger::putMsg(std::string("NOTHING TO SEND"), it->first, FILE_ERR, ERR);
-		std::cout << it->first << ": ERROR, NOTHING TO SEND\n";
+		std::cout << it->first << ": ERROR, NOTHING TO SEND\n"; //fix me: send error
 		MainClass::closeConnection(it);
 		return;
 	}
@@ -224,7 +231,8 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *writ
 				else if (it->second->writeStage == 1 || (it->second->writeStage == 0 && it->second->isChunkedResponse))
 					it->second->Stage = 4;
 				else
-					std::cout << it->first << ": bad stages in send:\nStage is: " << it->second->Stage << ". CGIStage is: " << it->second->CGIStage << std::endl;
+					std::cout << it->first << ": bad stages in send:\nStage is: " << it->second->Stage << ". CGIStage is: " << it->second->CGIStage << std::endl; //fix me: send
+					// error
 			}
 			toSend.erase(0, sendRes);
 			it->second->setResponse(toSend, true);
@@ -236,6 +244,7 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *writ
 
 void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_set *reads, fd_set *writes)
 {
+	std::cout << "CGIHandlerReadWrite start\n";
 	switch (it->second->CGIStage)
 	{
 		case 1: //1 - send to pipe
@@ -244,6 +253,7 @@ void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_se
 			it->second->getCGIptr()->prevStage = 1;
 			if (it->second->CGIStage != 20)
 				it->second->Stage = 1;
+
 			break;
 		}
 		case 2: //2 - last send to pipe
@@ -255,6 +265,7 @@ void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_se
 		case 20: //repeat write
 		{
 			it->second->CGIStage = it->second->getCGIptr()->sendToPipe(it, writes, it->second->getCGIptr()->prevStage == 2);
+
 			break;
 		} 
 		case 5: //read from pipe first
@@ -265,6 +276,7 @@ void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_se
 				it->second->Stage = MainClass::setChunkedResponse(*it->second);
 			else if (it->second->CGIStage == 6)
 				it->second->Stage = MainClass::setContentLengthResponse(*it->second);
+//			std::cout << it->first << ": response after add header content = |" << it->second->getResponse() << "|\n";
 			break;
 		}
 		case 50: // read from pipe next chunk
@@ -273,6 +285,7 @@ void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_se
 			it->second->addChunkedSizeToResponse();
 			if (it->second->CGIStage == 6)
 				it->second->setResponse(std::string("0\r\n\r\n"));
+//			std::cout << it->first << ": response after add header content = |" << it->second->getResponse() << "|\n";
 			break;
 		}
 		case 4: {break;} //waiting for child
@@ -283,7 +296,7 @@ void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_se
 			it->second->Stage = 9;
 			break;
 		}
-		default: { std:: cout << "BAD Stage CGI: " << it->second->Stage << " - " << it->second->CGIStage << std::endl;}
+		default: { std:: cout << "BAD Stage CGI: " << it->second->Stage << " - " << it->second->CGIStage << std::endl;} //fix me: send error
 	}
 }
 
@@ -291,9 +304,15 @@ int	MainClass::setContentLengthResponse(Server &srv)
 {
 	std::string	resp(srv.getResponse());
 	size_t		i = resp.find("\r\n\r\n");
+	if (i == std::string::npos)
+	{
+		srv.getReq_struct()->answ_code[0] = 5;
+		srv.getReq_struct()->answ_code[1] = 0;
+		return (9);
+	}
 	size_t		bodyLen = resp.length() - (i + 4);
 	std::string	bodyLenStr = Size_tToString(bodyLen, DEC_BASE);
-	
+
 	resp.insert(i, std::string("\r\nContent-Length: ") + bodyLenStr);
 	srv.setResponse(resp, true);
 	return (5);
@@ -301,6 +320,7 @@ int	MainClass::setContentLengthResponse(Server &srv)
 
 int	MainClass::setChunkedResponse(Server &srv)
 {
+	std::cout << "setCunkedResponse\n";
 	std::string	StartStringHeaders;
 	std::string	Body(srv.getResponse());
 	std::string BodySize;
@@ -315,17 +335,14 @@ int	MainClass::setChunkedResponse(Server &srv)
 	StartStringHeaders = Body.substr(0, i + 4);
 	Body.erase(0, i + 4);
 	//erase Content-Length because chunked response + add chunked Header
-	std::cout << "ststrHead1 = |" << StartStringHeaders << "|\n";
 	i = StartStringHeaders.find("Content-Length");
 	if (i != std::string::npos)
 	{
 		size_t j = StartStringHeaders.find("\r\n", i + 13);
 		StartStringHeaders.erase(i, j + 2 - i);
 	}
-	std::cout << "ststrHead2 = |" << StartStringHeaders << "|\n";
 	i = StartStringHeaders.find("\r\n");
 	StartStringHeaders.insert(i + 2, std::string("Transfer-Encoding: chunked\r\n"));
-	std::cout << "ststrHead2 = |" << StartStringHeaders << "|\n";
 	if (!Body.empty())
 	{
 		BodySize = Size_tToString(Body.length(), HEX_BASE) + std::string("\r\n");
@@ -364,6 +381,8 @@ bool MainClass::isCorrectRedirection(std::map<int, Server *>::iterator it)
 
 	for (chNodeServ = it->second->serv; chNodeServ != NULL; chNodeServ = chNodeServ->next)
 	{
+		if (chNodeServ->limitCLientBodySize == -1)
+			chNodeServ->limitCLientBodySize = 10000000;
 		for (chNodeLoc = chNodeServ->locList; chNodeLoc != NULL; chNodeLoc = chNodeLoc->next)
 		{
 			if (chNodeLoc->redirect.empty())
@@ -384,10 +403,7 @@ bool MainClass::isCorrectRedirection(std::map<int, Server *>::iterator it)
 					t_serv	*curServ = itA->second->findServer(name);
 					t_loc	*curLoc = Server::findLocation(location, curServ);
 					if (!curLoc->redirect.empty())
-					{
-						//Logger::putMsg("Two or more redirection in a raw: " + ip + ":" + port, FILE_ERR, ERR);
 						return (false);
-					}
 				}
 			}
 		}
@@ -469,7 +485,7 @@ void MainClass::exitHandler(int sig)
 	if (sig == SIGTERM)
 		std::cout << "ExitHandler: SIGTERM received\n";
 	else
-		std::cout << "EXCEPTION exit. check LOGS\n";
+		std::cout << "EXCEPTION exit.\n";
 	//system("leaks webserv");
 	exit(0);
 }

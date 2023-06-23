@@ -52,9 +52,6 @@ private:
 	HTTP_Request	*req_struct;
 
 	std::string		response;
-	HTTP_Answer		*answ_struct;
-
-	int				prevStage;
 
 	char			cntTryingSend;
 
@@ -91,7 +88,6 @@ public:
 	HTTP_Request	*		getReq_struct();
 
 	std::string		const&	getResponse();
-	HTTP_Answer		*		getAnsw_struct();
 
 	bool				checkTimeOut();
 	void				updateLastActionTime();
@@ -101,17 +97,15 @@ public:
 
 	static t_loc*		findLocation(std::string &str, t_serv *src);
 	t_serv*				findServer(std::string const &str);
-	static bool			findFile(std::string &str, t_serv *servNode, t_loc *loc);
+	static bool			findFile(std::string &str, t_serv *servNode, t_loc *loc, bool &CGIflg);
 
 	void				setCGIptr(CGI *src);
-	void				setAnsw_struct(HTTP_Answer const &src);
 	void				setReq_struct(HTTP_Request const &src);
 	void				setMaxBodySize(ssize_t n);
 
 //clears
 	void				resClear();
 	void				reqClear();
-	void				clearAnsw_struct();
 	void				clearReq_struct();
 
 	void				addToReq(std::string src);
