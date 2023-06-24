@@ -48,7 +48,7 @@ int CGI::startCGI()
 {
     int         fdsForward[2];
     int         fdsBack[2];
-    
+
     if (pipe(fdsForward) == -1)
         return (this->CGIsFailed());
     this->PipeInForward = fdsForward[0];
@@ -111,7 +111,7 @@ void	CGI::ChildCGI(Server &src)
     char **argv = NULL;
 
     //change STDIN and STDOUT
-    if (dup2(this->PipeInForward, 0) == -1 || dup2(this->PipeOutBack, 1) == -1)
+	if (dup2(this->PipeInForward, STDIN_FILENO) == -1 || dup2(this->PipeOutBack, STDOUT_FILENO) == -1)
     {
         std::cout << "bad dup2\n";
         exit(1);
@@ -169,12 +169,13 @@ int CGI::sendToPipe(std::map<int, Server *>::iterator &it, fd_set *writes, bool 
 		}
 		default:
 		{
+			std::cout << "send to this->PipeOutForward " << wrRes << std::endl;
             it->second->updateLastActionTime();
 			this->cntTryingWriting = 0;
             if (static_cast<size_t>(wrRes) == it->second->getReq_struct()->body.length())
             {
                 if (flgLast)
-                    return (4);
+                    return (3);
                 else
                 {
                     it->second->Stage = 1;
@@ -336,7 +337,8 @@ int     CGI::getPipeOutBack() { return this->PipeOutBack; }
 
 int CGI::checkTimeout()
 {
-    if (time(NULL) - this->timeCGIStarted.tv_sec > TIMEOUT)
+	std::cout << "check timeout\n";
+    if (time(NULL) - this->timeCGIStarted.tv_sec > 12)
         return (9);
     return (4);
 }

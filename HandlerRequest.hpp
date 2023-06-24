@@ -18,11 +18,13 @@ private:
 	static void	handleRequest(Server &srv);
 	static void	prepareToSendError(Server &srv);
 	static void	GET(Server &srv, std::string &fileName, bool CGIflg);
-	static void	POST(Server &srv, t_loc *locNode, std::string &fileName);
+	static void	POST(Server &srv, t_serv *servNode, t_loc *locNode, std::string &fileName);
 	static void	DELETE(Server &srv, t_loc *locNode, std::string &fileName);
 	static void	CGIerrorManager(Server &srv);
 	static bool	isBodyNeed(Server &srv);
 	static void	handleDirectoryResponse(Server &srv, t_loc *locNode);
+	static void changeBodyIfBoundryIsSet(Server &srv, HTTP_Request *req);
+	static void addFileNameEnv(HTTP_Request *req);
 	//CGIs
 	static void	checkReadyToHandle(Server &srv);
 	static void	prepareToSendCGI(Server &srv);

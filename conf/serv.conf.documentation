@@ -1,0 +1,20 @@
+#The first server for a host:port will be the default for this host:port
+# - comment string
+server {
+    host        //opt - default 127.0.0.1
+    listen        //need
+    server_name //opt - default NONE
+    error_pages X file // X - код ошибки, file - файл страницы ошибки
+    limitBodySize //opt - default NONE
+    root    //opt - default ./www/
+
+    location / {
+        acceptedMethods //opt - default GET POST DELETE
+        HTTP_redirection //opt - default NONE
+        root    //opt - default main root
+        dirListOn //opt - default off
+        defFileIfdir // opt - default ??? error page is Dir check nginx
+        CGIs // opt - default NONE
+        upload_path //opt - default NULL. if not - cannot upload;
+    }
+}

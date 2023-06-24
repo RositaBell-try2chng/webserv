@@ -45,14 +45,13 @@ void MainClass::doIt(int args, char **argv)
 
 void MainClass::mainLoop()
 {
-	timeval								timeout = {1, 0};
+	timeval								timeout = {1, 50};
 	fd_set								readFds;
 	fd_set								writeFds;
 	std::map<int, Server*>::iterator	it;
 
 	while (true)
 	{
-		std::cout << "main loop start\n";
 		//2.0 clean sets
 		FD_ZERO(&readFds);
 		FD_ZERO(&writeFds);
@@ -68,20 +67,15 @@ void MainClass::mainLoop()
 			else if (it->second->Stage == 5)
 				MainClass::addToSet(it->first, &writeFds);
 			else if (it->second->Stage == 4 && it->second->CGIStage == 4)
-			{
-				timeout.tv_sec = 0;
-				timeout.tv_usec = 15;
-			}
+				timeout.tv_sec = 1;
 			else if (it->second->Stage == 4 && (it->second->CGIStage == 1 || it->second->CGIStage == 2 || it->second->CGIStage == 20))
 				MainClass::addToSet(it->second->getCGIptr()->getPipeOutForward(), &writeFds);
 			else if (it->second->Stage == 4 && (it->second->CGIStage == 5 || it->second->CGIStage == 50))
 				MainClass::addToSet(it->second->getCGIptr()->getPipeInBack(), &readFds);
 		}
-		std::cout << "handle end\n";
 		//2.1.2 add listen fds
 		for (it = allServers->getConnections(true).begin(); it != allServers->getConnections(true).end(); it++)
 			MainClass::addToSet(it->first, &readFds);
-		std::cout << "listen added\n";
 		//select
 		switch (select(MainClass::maxFd + 1, &readFds, &writeFds, NULL, &timeout))
 		{
@@ -93,7 +87,6 @@ void MainClass::mainLoop()
 			case 0: {continue;} //timeout. try another select
 			default: {break;} //have something to do
 		}
-		std::cout << "select done added\n";
 		// doing write/read depend on stage for all servers
 		it = allServers->getConnections().begin();
 		// std::cout << "while read/write in main LOOP\n";
@@ -112,10 +105,8 @@ void MainClass::mainLoop()
 				{ ++it; std::cout << "bad stage for server: " << it->first << " stage is: " << it->second->Stage << std::endl; }
 			}
 		}
-		std::cout << "read/write done\n";
 		// std::cout << "accept in main LOOP\n";
 		acceptConnections(&readFds);
-		std::cout << "accept done\n";
 	}
 }
 
@@ -143,7 +134,6 @@ bool MainClass::acceptConnections(fd_set *readFds)
 
 void MainClass::readRequest(std::map<int, Server *>::iterator &it, fd_set *reads)
 {
-	std::cout << "readRequest\n";
 	if (!FD_ISSET(it->first, reads))
 	{
 		++it;
@@ -178,7 +168,6 @@ void MainClass::readRequest(std::map<int, Server *>::iterator &it, fd_set *reads
 
 void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *writes)
 {
-	std::cout << "sendResponse\n";
 	if (!FD_ISSET(it->first, writes))
 	{
 		++it;
@@ -244,7 +233,6 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *writ
 
 void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_set *reads, fd_set *writes)
 {
-	std::cout << "CGIHandlerReadWrite start\n";
 	switch (it->second->CGIStage)
 	{
 		case 1: //1 - send to pipe
@@ -288,7 +276,7 @@ void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_se
 //			std::cout << it->first << ": response after add header content = |" << it->second->getResponse() << "|\n";
 			break;
 		}
-		case 4: {break;} //waiting for child
+		case 4: { break; } //waiting for child
 		case 9:
 		{
 			std::cout << "ERROR CGI\n";

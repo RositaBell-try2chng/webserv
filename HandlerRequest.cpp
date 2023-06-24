@@ -37,7 +37,7 @@ void HandlerRequest::start(Server &srv)
 
 void HandlerRequest::parserRequest(Server &srv)
 {
-	Logger::putMsg(srv.getRequest(), FILE_REQ, REQ);
+//	Logger::putMsg(srv.getRequest(), FILE_REQ, REQ);
 	HTTP_Request::ft_strtoreq(*(srv.getReq_struct()), srv.getRequest());
 	switch (srv.getReq_struct()->stage)
 	{
@@ -73,6 +73,7 @@ bool HandlerRequest::isBodyNeed(Server &srv)
 
 void HandlerRequest::handleRequest(Server &srv)
 {
+	Logger::putMsg(srv.getReq_struct()->body, FILE_REQ, REQ);
 	//find serv
 	t_serv		*servNode = srv.findServer(srv.getReq_struct()->host);
 	//check too large body
@@ -129,7 +130,7 @@ void HandlerRequest::handleRequest(Server &srv)
 	if (method == "GET")
 		HandlerRequest::GET(srv, fileName, CGIflg);
 	else if (method == "POST")
-		HandlerRequest::POST(srv, locNode, fileName);
+		HandlerRequest::POST(srv, servNode, locNode, fileName);
 	else
 		HandlerRequest::DELETE(srv, locNode, fileName);
 }
@@ -183,8 +184,9 @@ void HandlerRequest::GET(Server &srv, std::string &fileName, bool CGIflg)
 	HandlerRequest::CGIHandler(srv);
 }
 
-void HandlerRequest::POST(Server &srv, t_loc *locNode, std::string &fileName)
+void HandlerRequest::POST(Server &srv, t_serv *servNode, t_loc *locNode, std::string &fileName)
 {
+	std::cout << "start POST\n";
 	//check access to upload
 	if (locNode->uploadPath.empty())
 	{
@@ -194,6 +196,14 @@ void HandlerRequest::POST(Server &srv, t_loc *locNode, std::string &fileName)
 		HandlerRequest::prepareToSendError(srv);
 		return;
 	}
+	//set upload path
+	std::string uplPath;
+	if (servNode->root != "/")
+		uplPath = servNode->root;
+	else
+		uplPath = std::string(".");
+	uplPath += locNode->uploadPath + std::string("/");
+	srv.getReq_struct()->base.headers.insert(std::pair<std::string, std::string>("UPLOAD_PATH", uplPath));
 	//check extension
 	std::string	tmp = fileName;
 	size_t		j = tmp.rfind('.');
@@ -202,6 +212,10 @@ void HandlerRequest::POST(Server &srv, t_loc *locNode, std::string &fileName)
 		tmp.erase(0, j);
 		if (locNode->CGIs.find(tmp) != locNode->CGIs.end())
 		{
+			std::cout << "ext founded\n";
+			HandlerRequest::changeBodyIfBoundryIsSet(srv, srv.getReq_struct());
+			HandlerRequest::addFileNameEnv(srv.getReq_struct());
+			srv.getCGIptr()->PATH_TRANSLATED = fileName;
 			srv.Stage = 4;
 			srv.CGIStage = 0;
 			HandlerRequest::CGIHandler(srv);
@@ -213,6 +227,110 @@ void HandlerRequest::POST(Server &srv, t_loc *locNode, std::string &fileName)
 	srv.getReq_struct()->answ_code[0] = 1;
 	srv.Stage = 9;
 	HandlerRequest::prepareToSendError(srv);
+}
+
+void HandlerRequest::addFileNameEnv(HTTP_Request *req)
+{
+	std::cout << "addFileNameEnv\n";
+	size_t i;
+	size_t j;
+	std::map<std::string, std::string>::iterator it;
+	//set filename
+	if (req->base.headers.find("FILENAME") == req->base.headers.end())
+	{
+		it = req->base.headers.find("Content-Disposition");
+		if (it == req->base.headers.end())
+			req->base.headers.insert(std::pair<std::string, std::string>("FILENAME", "default"));
+		else
+		{
+			i = it->second.find("name=\"") + 6;
+			j = it->second.find("\"", i);
+			if (i == std::string::npos || j == std::string::npos || j <= i)
+				req->base.headers.insert(std::pair<std::string, std::string>("FILENAME", "default"));
+			else
+			{
+				std::string fileName = it->second.substr(i, j - i);
+				i = it->second.find(fileName) + fileName.length() + 2;
+				j = it->second.find("\"", i);
+				if (i == std::string::npos || j == std::string::npos || j <= i)
+					req->base.headers.insert(std::pair<std::string, std::string>("FILENAME", "default"));
+				fileName = it->second.substr(i, j - i);
+				req->base.headers.insert(std::pair<std::string, std::string>("FILENAME", fileName));
+			}
+		}
+	}
+	//set ext
+	if (req->base.headers.find("EXTENSION") == req->base.headers.end())
+	{
+		it = req->base.headers.find("Content-Type");
+		if (it == req->base.headers.end())
+		{
+			req->base.headers.insert(std::pair<std::string, std::string>("EXTENSION", "unknown"));
+			return;
+		}
+		i = it->second.find("/");
+		if (i == std::string::npos)
+		{
+			req->base.headers.insert(std::pair<std::string, std::string>("EXTENSION", "unknown"));
+			return;
+		}
+		std::string ext = it->second.substr(i + 1);
+		if (ext.empty())
+			req->base.headers.insert(std::pair<std::string, std::string>("EXTENSION", "unknown"));
+		else
+			req->base.headers.insert(std::pair<std::string, std::string>("EXTENSION", std::string(".") + ext));
+	}
+}
+
+void HandlerRequest::changeBodyIfBoundryIsSet(Server &srv, HTTP_Request *req)
+{
+	std::map<std::string, std::string>::iterator it = req->base.headers.find("Content-Type");
+	if (it == req->base.headers.end())
+		return;
+	(void) srv;//fix me: add error handler
+	size_t i = it->second.find("multipart/form-data;");
+	if (i == std::string::npos)
+		return;
+	i = it->second.find("boundary=", i + 19);
+	if (i == std::string::npos)
+		return;
+	std::string boundary = it->second.substr(i + 9);
+	for (i = 0; i < boundary.length() && boundary[i] == '-'; i++)
+		;
+	boundary.erase(0, i);
+	i = req->body.find(boundary);
+	size_t j = req->body.rfind(boundary);
+	if (i == std::string::npos || j == i)
+		return;
+	i += boundary.length() + 2; // +\r\n
+	for (--j; j > i && req->body[j] == '-'; j--);
+	if (req->body[j] == '\n')
+		j--;
+	if (req->body[j] == '\r')
+		j--;
+	std::string newBody = req->body.substr(i, j - i);
+	i = newBody.find("\r\n\r\n");
+	if (i == std::string::npos)
+		return;
+	std::string subHeads = newBody.substr(0, i);
+	newBody.erase(0, i + 2);
+	i = subHeads.find("name=\"");
+	j = subHeads.find("\"", i + 6);
+	if (i == std::string::npos || j == std::string::npos)
+		return;
+	std::string filename = subHeads.substr(i + 6, j - (i + 6));
+	i = subHeads.find(filename, j);
+	i = subHeads.find("\"", i + 1);
+	j = subHeads.find("\"", i + 1);
+	if (i == std::string::npos || j == std::string::npos)
+		return;
+	filename = subHeads.substr(i + 1, j - (i + 1));
+	i = filename.rfind(".");
+	std::string ext = filename.substr(i);
+	filename.erase(i);
+	req->base.headers.insert(std::pair<std::string, std::string>(std::string("FILENAME"), filename));
+	req->base.headers.insert(std::pair<std::string, std::string>(std::string("EXTENSION"), ext));
+	req->body = newBody;
 }
 
 void HandlerRequest::DELETE(Server &srv, t_loc *locNode, std::string &fileName)
