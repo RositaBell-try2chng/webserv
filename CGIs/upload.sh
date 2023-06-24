@@ -8,7 +8,7 @@ echo "file name = " $FILENAME >> /home/bars/webserv/logs.txt
 echo "ext = " $EXTENSION >> /home/bars/webserv/logs.txt
 
 
-cat > $UPLOAD_PATH$FILENAME$SECs$EXTENSION
+#cat > $UPLOAD_PATH$FILENAME$SECs$EXTENSION
 
 echo -ne "HTTP/1.1 200 OK\r\n"
 echo -ne "Content-Type: text/html;charset=utf-8\r\n"

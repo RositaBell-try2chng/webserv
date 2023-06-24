@@ -6,8 +6,8 @@ Servers*	MainClass::allServers = NULL;
 
 void MainClass::doIt(int args, char **argv)
 {
-	bool		flg;
-	char*	   arg;
+	bool	flg;
+	char*	arg;
 
 	arg = NULL;
 	flg = ConfParser::checkArgs(args, argv);
@@ -241,13 +241,14 @@ void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_se
 			it->second->getCGIptr()->prevStage = 1;
 			if (it->second->CGIStage != 20)
 				it->second->Stage = 1;
-
 			break;
 		}
 		case 2: //2 - last send to pipe
 		{
+			std::cout << "HERE 1\n";
 			it->second->CGIStage = it->second->getCGIptr()->sendToPipe(it, writes, true);
 			it->second->getCGIptr()->prevStage = 2;
+			std::cout << "HERE 2\n";
 			break;
 		}
 		case 20: //repeat write

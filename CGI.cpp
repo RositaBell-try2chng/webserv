@@ -49,11 +49,11 @@ int CGI::startCGI()
     int         fdsForward[2];
     int         fdsBack[2];
 
-    if (pipe(fdsForward) == -1)
+    if (pipe(fdsForward) == -1 || fcntl(fdsForward[1], F_SETFL, O_NONBLOCK) == -1)
         return (this->CGIsFailed());
     this->PipeInForward = fdsForward[0];
     this->PipeOutForward = fdsForward[1];
-    if (pipe(fdsBack) == -1)
+    if (pipe(fdsBack) == -1 || fcntl(fdsBack[0], F_SETFL, O_NONBLOCK) == -1)
         return (this->CGIsFailed());
     this->PipeInBack = fdsBack[0];
     this->PipeOutBack = fdsBack[1];
@@ -154,7 +154,10 @@ int CGI::sendToPipe(std::map<int, Server *>::iterator &it, fd_set *writes, bool 
 
 	if (!FD_ISSET(this->PipeOutForward, writes))
 		return (20); //repeat write
+	it->second->getReq_struct()->body.push_back(EOF);
+	std::cout << "send to " << this->PipeOutForward << " " << it->second->getReq_struct()->body.length() << "bytes\n";
 	wrRes = write(this->PipeOutForward, it->second->getReq_struct()->body.c_str(), it->second->getReq_struct()->body.length());
+	std::cout << "res = " << wrRes << std::endl;
 	switch (wrRes)
 	{
 		case -1: //error

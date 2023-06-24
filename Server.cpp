@@ -269,7 +269,10 @@ t_loc* Server::setLocList(std::map <std::string, std::map<std::string, std::stri
 			else if (it2->first == "CGIs")
 				Server::setCGIs(cur->CGIs, it2->second);
 			else if (it2->first == "upload_path")
+			{
+
 				cur->uploadPath = std::string(it2->second);
+			}
 			else if (it2->first == "return")
 				Server::setRedirect(cur, it2->second);
 			else if (it2->first == "index")
