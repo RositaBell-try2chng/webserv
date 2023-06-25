@@ -67,7 +67,7 @@ void MainClass::mainLoop()
 			else if (it->second->Stage == 5)
 				MainClass::addToSet(it->first, &writeFds);
 			else if (it->second->Stage == 4 && it->second->CGIStage == 4)
-				timeout.tv_sec = 1;
+				timeout.tv_sec = 0;
 			else if (it->second->Stage == 4 && (it->second->CGIStage == 1 || it->second->CGIStage == 2 || it->second->CGIStage == 20))
 				MainClass::addToSet(it->second->getCGIptr()->getPipeOutForward(), &writeFds);
 			else if (it->second->Stage == 4 && (it->second->CGIStage == 5 || it->second->CGIStage == 50))
@@ -89,7 +89,6 @@ void MainClass::mainLoop()
 		}
 		// doing write/read depend on stage for all servers
 		it = allServers->getConnections().begin();
-		// std::cout << "while read/write in main LOOP\n";
 		while (it != allServers->getConnections().end())
 		{
 			switch (it->second->Stage)
@@ -105,7 +104,6 @@ void MainClass::mainLoop()
 				{ ++it; std::cout << "bad stage for server: " << it->first << " stage is: " << it->second->Stage << std::endl; }
 			}
 		}
-		// std::cout << "accept in main LOOP\n";
 		acceptConnections(&readFds);
 	}
 }
@@ -239,33 +237,38 @@ void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_se
 		{
 			it->second->CGIStage = it->second->getCGIptr()->sendToPipe(it, writes, false);
 			it->second->getCGIptr()->prevStage = 1;
-			if (it->second->CGIStage != 20)
+			if (it->second->CGIStage == 9)
+				it->second->Stage = 9;
+			else if (it->second->CGIStage != 20) //fix me: need??
 				it->second->Stage = 1;
 			break;
 		}
 		case 2: //2 - last send to pipe
 		{
-			std::cout << "HERE 1\n";
 			it->second->CGIStage = it->second->getCGIptr()->sendToPipe(it, writes, true);
 			it->second->getCGIptr()->prevStage = 2;
-			std::cout << "HERE 2\n";
+			if (it->second->CGIStage == 9)
+				it->second->Stage = 9;
 			break;
 		}
 		case 20: //repeat write
 		{
 			it->second->CGIStage = it->second->getCGIptr()->sendToPipe(it, writes, it->second->getCGIptr()->prevStage == 2);
-
+			if (it->second->CGIStage == 9)
+				it->second->Stage = 9;
 			break;
 		} 
 		case 5: //read from pipe first
 		{
 			it->second->CGIStage = it->second->getCGIptr()->readFromPipe(it, reads);
-			Logger::putMsg(it->second->getResponse(), FILE_REQ, REQ);
+			std::cout << "Response after read PIPE:\n|" << it->second->getResponse() << "|\n";
+			std::cout << "Stages after readFromPipe: " << it->second->Stage << " - " << it->second->CGIStage << "\n";
 			if (it->second->CGIStage == 50) //find body and add chunk size
 				it->second->Stage = MainClass::setChunkedResponse(*it->second);
 			else if (it->second->CGIStage == 6)
 				it->second->Stage = MainClass::setContentLengthResponse(*it->second);
-//			std::cout << it->first << ": response after add header content = |" << it->second->getResponse() << "|\n";
+			std::cout << "Response after read PIPE:\n|" << it->second->getResponse() << "|\n";
+			std::cout << "Stages after set HEADERS LENGTH: " << it->second->Stage << " - " << it->second->CGIStage << "\n";
 			break;
 		}
 		case 50: // read from pipe next chunk
@@ -274,7 +277,6 @@ void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_se
 			it->second->addChunkedSizeToResponse();
 			if (it->second->CGIStage == 6)
 				it->second->setResponse(std::string("0\r\n\r\n"));
-//			std::cout << it->first << ": response after add header content = |" << it->second->getResponse() << "|\n";
 			break;
 		}
 		case 4: { break; } //waiting for child

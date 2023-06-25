@@ -1,22 +1,45 @@
-#!/usr/bin/python3
+#!/usr/local/bin/python3.9
 
-import cgi, os
+import os
+import sys
 from datetime import datetime
 
-curTS = datetime.now().strftime("%d-%m-%Y:%H:%M:%S:%MS")
+def printError(str):
+	print("HTTP/1.1 500 Internal Server Error\r\nContent-Type: text/html;charset=utf-8\r\n\r\n", end = '')
+	print("<H1>", str, "doesn't set", "</H1>", end = '')
 
-form = cgi.FieldStorage()
+curTS = datetime.now().strftime("_%d-%m-%Y:%H:%M:%S:%f")
 
-# get file
-fileitem = form['filename']
+fileName = os.environ.get('FILENAME')
+ext = os.environ.get('EXTENSION')
+uploadPath = os.environ.get('UPLOAD_PATH')
 
-# is file in the form?
-if fileitem.filename:
-    open(os.getcwd() + '/cgi-bin/' + os.path.basename(fileitem.filename) + " " + curTS, 'wb').write(fileitem.file.read())
-    msg = 'The file "' + os.path.basename(fileitem.filename) + '" has been uploaded.'
+if (fileName == None):
+	printError('FILENAME')
+elif (ext == None):
+	printError('EXTENSION')
+elif (uploadPath == None):
+	printError('UPLOAD_PATH')
 else:
-    msg = 'Have no file in form'
+    try:
+	    os.mkdir(uploadPath)
+    except:
+        None
+    finally:
+        dstFileName = uploadPath + fileName + curTS + ext
 
-print("Content-Type: text/html;charset=utf-8")
-print("Content-type:text/html\r\n")
-print("<H1> " + msg + " </H1>")
+        dst = open(dstFileName, 'wb')
+        src = open(0, 'rb')
+
+        allContent = src.read(10000)
+        while len(allContent) == 10000:
+            dst.write(allContent)
+            allContent = src.read(10000)
+        dst.write(allContent)
+
+        dst.close()
+        src.close()
+        print("HTTP/1.1 200 OK\r\nContent-Type: text/html;charset=utf-8", end = '')
+        print("Content-type:text/html\r\n\r\n", end = '')
+        print("<H1>", fileName + curTS + ext, "has been uploaded </H1>", end = '')
+        exit(0)

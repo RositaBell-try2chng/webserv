@@ -21,7 +21,7 @@ private:
     char cntTryingWriting;
 
     pid_t   pid;
-
+    std::string toSend;
 public:
     CGI();
     ~CGI();

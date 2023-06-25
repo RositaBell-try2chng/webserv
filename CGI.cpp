@@ -57,7 +57,7 @@ int CGI::startCGI()
         return (this->CGIsFailed());
     this->PipeInBack = fdsBack[0];
     this->PipeOutBack = fdsBack[1];
-    return (1);
+    return (3);
 }
 
 int CGI::ForkCGI(Server &src)
@@ -78,28 +78,27 @@ int	CGI::ParentCGI()
 	this->timeCGIStarted.tv_usec = 0;
 	if (fcntl(this->PipeOutForward, F_SETFL, O_NONBLOCK) == -1 || fcntl(this->PipeInBack, F_SETFL, O_NONBLOCK) == -1)
 		return(this->CGIsFailed());
-	return (4);
+	return (1);
 }
 
 int CGI::waitingCGI()
 {
     int		stts;
-	pid_t	resPid;
+	pid_t	resPid = 5;
 
+    // std::cout << "waiting pid " << this->pid << std::endl;
 	resPid = waitpid(this->pid, &stts, WNOHANG);
+    // std::cout << "resPid = " << resPid << " stts = " << stts << std::endl;
     switch (resPid)
     {
         case -1: { return(this->CGIsFailed()); } //error
         case 0: { return (this->checkTimeout()); } //child not ready
         default:
 		{
-            if (resPid == this->pid)
-            {
-                this->pid = -1;
-                if (stts == 0) //child finished ok
-				    return (5);
-			    return (9);//child finished bad
-            }
+            this->pid = -1;
+            if (stts == 0) //child finished ok
+			    return (5);
+			return (9);//child finished bad
 		}
     }
     return (this->checkTimeout()); //wrong pid returned, need to wait correct pid
@@ -151,13 +150,21 @@ int    CGI::CGIsFailed()
 int CGI::sendToPipe(std::map<int, Server *>::iterator &it, fd_set *writes, bool flgLast)
 {
 	ssize_t		wrRes;
+    int         prev = it->second->CGIStage;
 
 	if (!FD_ISSET(this->PipeOutForward, writes))
 		return (20); //repeat write
-	it->second->getReq_struct()->body.push_back(EOF);
-	std::cout << "send to " << this->PipeOutForward << " " << it->second->getReq_struct()->body.length() << "bytes\n";
-	wrRes = write(this->PipeOutForward, it->second->getReq_struct()->body.c_str(), it->second->getReq_struct()->body.length());
-	std::cout << "res = " << wrRes << std::endl;
+    //check if child still working
+    if (this->pid > 0)
+    {
+        it->second->CGIStage = this->waitingCGI();
+        if (it->second->CGIStage == 9)
+            return (9);
+        if (it->second->CGIStage == 5)
+            return (5);
+    }
+    it->second->CGIStage = prev;
+    wrRes = write(this->PipeOutForward, it->second->getReq_struct()->body.c_str(), it->second->getReq_struct()->body.length());
 	switch (wrRes)
 	{
 		case -1: //error
@@ -172,18 +179,18 @@ int CGI::sendToPipe(std::map<int, Server *>::iterator &it, fd_set *writes, bool 
 		}
 		default:
 		{
-			std::cout << "send to this->PipeOutForward " << wrRes << std::endl;
             it->second->updateLastActionTime();
 			this->cntTryingWriting = 0;
             if (static_cast<size_t>(wrRes) == it->second->getReq_struct()->body.length())
             {
                 if (flgLast)
-                    return (3);
-                else
                 {
-                    it->second->Stage = 1;
-                    return (2);
+                    close(this->PipeOutForward);
+                    this->PipeOutForward = 0;
+                    return (4);
                 }
+                it->second->Stage = 1;
+                return (1);
             }
 			it->second->getReq_struct()->body.erase(0, wrRes);
 			return (20); //repeat write
@@ -216,7 +223,6 @@ int CGI::readFromPipe(std::map<int, Server *>::iterator &it, fd_set *reads)
             it->second->updateLastActionTime();
 			this->cntTryingReading = 0;
 			it->second->setResponse(std::string(buf, rdRes));
-//			std::cout << it->first << ": response iz pipe = |" << it->second->getResponse() << "|\n";
             it->second->Stage = 5;
             if (rdRes == BUF_SIZE_PIPE)
 			    return (50);
@@ -340,8 +346,10 @@ int     CGI::getPipeOutBack() { return this->PipeOutBack; }
 
 int CGI::checkTimeout()
 {
-	std::cout << "check timeout\n";
-    if (time(NULL) - this->timeCGIStarted.tv_sec > 12)
+    if (time(NULL) - this->timeCGIStarted.tv_sec > 5)
+    {
+        std::cout << "TIMEOUT FAILED!!\n";
         return (9);
+    }
     return (4);
 }

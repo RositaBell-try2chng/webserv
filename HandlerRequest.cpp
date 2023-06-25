@@ -37,7 +37,6 @@ void HandlerRequest::start(Server &srv)
 
 void HandlerRequest::parserRequest(Server &srv)
 {
-//	Logger::putMsg(srv.getRequest(), FILE_REQ, REQ);
 	HTTP_Request::ft_strtoreq(*(srv.getReq_struct()), srv.getRequest());
 	switch (srv.getReq_struct()->stage)
 	{
@@ -73,7 +72,6 @@ bool HandlerRequest::isBodyNeed(Server &srv)
 
 void HandlerRequest::handleRequest(Server &srv)
 {
-	Logger::putMsg(srv.getReq_struct()->body, FILE_REQ, REQ);
 	//find serv
 	t_serv		*servNode = srv.findServer(srv.getReq_struct()->host);
 	//check too large body
@@ -314,7 +312,7 @@ void HandlerRequest::changeBodyIfBoundryIsSet(Server &srv, HTTP_Request *req)
 	if (i == std::string::npos)
 		return;
 	std::string subHeads = newBody.substr(0, i);
-	newBody.erase(0, i + 2);
+	newBody.erase(0, i + 4);
 	i = subHeads.find("name=\"");
 	j = subHeads.find("\"", i + 6);
 	if (i == std::string::npos || j == std::string::npos)
@@ -411,7 +409,6 @@ void HandlerRequest::redirectResponse(Server &srv, t_loc *locNode)
 
 void HandlerRequest::CGIHandler(Server &srv)
 {
-	std::cout << "CGIHandler " << srv.CGIStage << std::endl;
 	switch (srv.CGIStage)
 	{
 		case 0: { HandlerRequest::startCGI(srv); break; }
@@ -447,7 +444,6 @@ void HandlerRequest::CGIHandler(Server &srv)
 
 void HandlerRequest::startCGI(Server &srv)
 {
-	std::cout << "start CGI1\n";
 	if (access(srv.getCGIptr()->PATH_TRANSLATED.c_str(), F_OK) == -1)
 	{
 		std::cout << "BAD startCGI. PATHTRANS = " << srv.getCGIptr()->PATH_TRANSLATED << std::endl;
@@ -457,7 +453,7 @@ void HandlerRequest::startCGI(Server &srv)
 		HandlerRequest::prepareToSendError(srv);
 		return;
 	}
-	std::cout << "start CGI 2\n";
+	// std::cout << "start CGI 2\n";
 	if (access(srv.getCGIptr()->PATH_TRANSLATED.c_str(), X_OK) == -1)
 	{
 		srv.Stage = 9;
@@ -466,13 +462,16 @@ void HandlerRequest::startCGI(Server &srv)
 		HandlerRequest::prepareToSendError(srv);
 		return;
 	}
-	std::cout << "start CGI 3\n";
+	// std::cout << "start CGI 3\n";
 	srv.CGIStage = srv.getCGIptr()->startCGI();
-	std::cout << "start CGI 4\n";
+	// std::cout << "start CGI 4\n";
+	srv.CGIStage = srv.getCGIptr()->ForkCGI(srv);
 	if (srv.CGIStage == 9)
 		HandlerRequest::CGIerrorManager(srv);
-	else
+	else if (HandlerRequest::isBodyNeed(srv))
 		HandlerRequest::prepareToSendCGI(srv);
+	else
+		srv.CGIStage = 4;
 }
 
 void	HandlerRequest::CGIerrorManager(Server &srv)
@@ -486,29 +485,18 @@ void	HandlerRequest::CGIerrorManager(Server &srv)
 
 void HandlerRequest::prepareToSendCGI(Server &srv)
 {
-	std::cout << "prepareToSendCGI\n";
 	if (srv.CGIStage == 20)
 		return;
-	if (!HandlerRequest::isBodyNeed(srv))
-	{
-		srv.CGIStage = srv.getCGIptr()->ForkCGI(srv);
-		if (srv.CGIStage == 9)
-			HandlerRequest::CGIerrorManager(srv);
-		return;
-	}
-	std::cout << "prepareToSendCGI 2\n";
 	if (srv.getReq_struct()->body.empty())
 	{
 		srv.Stage = 1;
 		return;
 	}
-	std::cout << "prepareToSendCGI 3\n";
 	srv.Stage = 4;
 	if (srv.parseStage == 3)
 		srv.CGIStage = 2;
 	else
 		srv.CGIStage = 1;
-	std::cout << "end prepare: " << srv.Stage << " - " << srv.CGIStage << std::endl;
 }
 
 void HandlerRequest::checkReadyToHandle(Server &srv)
