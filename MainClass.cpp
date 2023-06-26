@@ -61,13 +61,17 @@ void MainClass::mainLoop()
 		//handle all request until read/write or waiting child
 		for (it = allServers->getConnections().begin(); it != allServers->getConnections().end(); it++)
 		{
+			// std::cout << "handle: " << it->first << std::endl;
 			HandlerRequest::mainHandler(*it->second);
 			if (it->second->Stage == 1)
 				MainClass::addToSet(it->first, &readFds);
 			else if (it->second->Stage == 5)
 				MainClass::addToSet(it->first, &writeFds);
 			else if (it->second->Stage == 4 && it->second->CGIStage == 4)
+			{
 				timeout.tv_sec = 0;
+				MainClass::addToSet(it->second->getCGIptr()->getPipeInBack(), &readFds);
+			}
 			else if (it->second->Stage == 4 && (it->second->CGIStage == 1 || it->second->CGIStage == 2 || it->second->CGIStage == 20))
 				MainClass::addToSet(it->second->getCGIptr()->getPipeOutForward(), &writeFds);
 			else if (it->second->Stage == 4 && (it->second->CGIStage == 5 || it->second->CGIStage == 50))
@@ -87,10 +91,17 @@ void MainClass::mainLoop()
 			case 0: {continue;} //timeout. try another select
 			default: {break;} //have something to do
 		}
+		acceptConnections(&readFds);
 		// doing write/read depend on stage for all servers
 		it = allServers->getConnections().begin();
 		while (it != allServers->getConnections().end())
 		{
+			if (it->second->checkTimeOut())
+			{
+				std::cout << it->first << " closed by TIMOUT\n";
+				MainClass::closeConnection(it);
+				continue;
+			}
 			switch (it->second->Stage)
 			{
 				//read from socket
@@ -101,10 +112,9 @@ void MainClass::mainLoop()
 				//write to socket
 				case 5: { MainClass::sendResponse(it, &writeFds); break; }
 				default://all servers should be in write/read stage or CGI, if not then ERROR
-				{ ++it; std::cout << "bad stage for server: " << it->first << " stage is: " << it->second->Stage << std::endl; }
+				{ MainClass::setBadStageError(*(it->second)); ++it; }
 			}
 		}
-		acceptConnections(&readFds);
 	}
 }
 
@@ -172,17 +182,13 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *writ
 		return;
 	}
 	ssize_t sendRes;
-	std::string toSend(it->second->getResponse());
-
-	if (toSend.empty()) // nothing to send = ERROR //should not to happen //fix me: test this
+	if (it->second->getResponse().empty()) // nothing to send = ERROR //should not to happen //fix me: test this
 	{
-		//Logger::putMsg(std::string("NOTHING TO SEND"), it->first, FILE_ERR, ERR);
 		std::cout << it->first << ": ERROR, NOTHING TO SEND\n"; //fix me: send error
 		MainClass::closeConnection(it);
 		return;
 	}
-	Logger::putMsg(toSend, FILE_REQ, REQ);
-	sendRes = send(it->first, toSend.c_str(), toSend.length(), 0);
+	sendRes = send(it->first, it->second->getResponse().c_str(), it->second->getResponse().length(), 0);
 	switch (sendRes)
 	{
 		case -1: //error
@@ -205,24 +211,16 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *writ
 		{
 			it->second->updateLastActionTime();
 			it->second->CntTryingSendZero();
-			if (static_cast<size_t>(sendRes) == toSend.length())
+			if (static_cast<size_t>(sendRes) == it->second->getResponse().length())
 			{
-				if (it->second->writeStage == 3)
-				{
-					std::cerr << it->first << " has been closed because FATAL ERROR\n";
-					MainClass::closeConnection(it);
-					return;
-				}
 				if (!it->second->isChunkedResponse || it->second->writeStage == 2)
 					it->second->reqClear();
 				else if (it->second->writeStage == 1 || (it->second->writeStage == 0 && it->second->isChunkedResponse))
 					it->second->Stage = 4;
 				else
-					std::cout << it->first << ": bad stages in send:\nStage is: " << it->second->Stage << ". CGIStage is: " << it->second->CGIStage << std::endl; //fix me: send
-					// error
+					MainClass::setBadStageError(*(it->second));// error
 			}
-			toSend.erase(0, sendRes);
-			it->second->setResponse(toSend, true);
+			it->second->getResponse().erase(0, sendRes);
 			break;
 		}
 	}
@@ -257,18 +255,29 @@ void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_se
 			if (it->second->CGIStage == 9)
 				it->second->Stage = 9;
 			break;
-		} 
+		}
+		case 4: //pipe is not finished
+		{
+			if (time(NULL) - it->second->getCGIptr()->timeCGIStarted.tv_sec > 2)
+			{
+				int res = it->second->getCGIptr()->readFromPipe(it, reads, true);
+				if (res != 6)
+					break;
+				it->second->CGIStage = 6;
+				it->second->Stage = MainClass::setContentLengthResponse(*it->second);
+			}
+			break;
+		}
 		case 5: //read from pipe first
 		{
 			it->second->CGIStage = it->second->getCGIptr()->readFromPipe(it, reads);
-			std::cout << "Response after read PIPE:\n|" << it->second->getResponse() << "|\n";
-			std::cout << "Stages after readFromPipe: " << it->second->Stage << " - " << it->second->CGIStage << "\n";
 			if (it->second->CGIStage == 50) //find body and add chunk size
 				it->second->Stage = MainClass::setChunkedResponse(*it->second);
 			else if (it->second->CGIStage == 6)
+			{
+				it->second->getCGIptr()->pid = -1;
 				it->second->Stage = MainClass::setContentLengthResponse(*it->second);
-			std::cout << "Response after read PIPE:\n|" << it->second->getResponse() << "|\n";
-			std::cout << "Stages after set HEADERS LENGTH: " << it->second->Stage << " - " << it->second->CGIStage << "\n";
+			}
 			break;
 		}
 		case 50: // read from pipe next chunk
@@ -276,10 +285,13 @@ void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_se
 			it->second->CGIStage = it->second->getCGIptr()->readFromPipe(it, reads);
 			it->second->addChunkedSizeToResponse();
 			if (it->second->CGIStage == 6)
+			{
+				it->second->getCGIptr()->pid = -1;
 				it->second->setResponse(std::string("0\r\n\r\n"));
+				it->second->writeStage = 2;
+			}
 			break;
 		}
-		case 4: { break; } //waiting for child
 		case 9:
 		{
 			std::cout << "ERROR CGI\n";
@@ -287,8 +299,17 @@ void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_se
 			it->second->Stage = 9;
 			break;
 		}
-		default: { std:: cout << "BAD Stage CGI: " << it->second->Stage << " - " << it->second->CGIStage << std::endl;} //fix me: send error
+		default: { MainClass::setBadStageError(*(it->second)); }
 	}
+}
+
+void MainClass::setBadStageError(Server &srv)
+{
+	std::cout << "BAD STAGES!\n" << "Stage is: " << srv.Stage << "\nParseStage is: " << srv.parseStage << "\nreadStage is: " << srv.readStage;
+	std::cout << "\nCGIStage is: " << srv.CGIStage << "\nwriteStage is: " << srv.writeStage << std::endl;
+	srv.Stage = 9;
+	srv.getReq_struct()->answ_code[0] = 5;
+	srv.getReq_struct()->answ_code[1] = 0;
 }
 
 int	MainClass::setContentLengthResponse(Server &srv)
@@ -311,7 +332,6 @@ int	MainClass::setContentLengthResponse(Server &srv)
 
 int	MainClass::setChunkedResponse(Server &srv)
 {
-	std::cout << "setCunkedResponse\n";
 	std::string	StartStringHeaders;
 	std::string	Body(srv.getResponse());
 	std::string BodySize;

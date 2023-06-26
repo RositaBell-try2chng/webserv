@@ -86,16 +86,13 @@ int CGI::waitingCGI()
     int		stts;
 	pid_t	resPid = 5;
 
-    // std::cout << "waiting pid " << this->pid << std::endl;
 	resPid = waitpid(this->pid, &stts, WNOHANG);
-    // std::cout << "resPid = " << resPid << " stts = " << stts << std::endl;
     switch (resPid)
     {
         case -1: { return(this->CGIsFailed()); } //error
         case 0: { return (this->checkTimeout()); } //child not ready
         default:
 		{
-            this->pid = -1;
             if (stts == 0) //child finished ok
 			    return (5);
 			return (9);//child finished bad
@@ -198,13 +195,22 @@ int CGI::sendToPipe(std::map<int, Server *>::iterator &it, fd_set *writes, bool 
 	}
 }
 
-int CGI::readFromPipe(std::map<int, Server *>::iterator &it, fd_set *reads)
+int CGI::readFromPipe(std::map<int, Server *>::iterator &it, fd_set *reads, bool flgWait)
 {
 	if (!FD_ISSET(this->PipeInBack, reads))
 		return (it->second->CGIStage);
 	ssize_t		rdRes;
 	char		buf[BUF_SIZE_PIPE];
 
+    if (flgWait)
+    {
+        rdRes = read(this->PipeInBack, buf, BUF_SIZE_PIPE);
+        if (rdRes > 0)
+            it->second->setResponse(std::string(buf, rdRes));
+        if (rdRes < BUF_SIZE_PIPE)
+            return (6);
+        return (it->second->CGIStage);
+    }
 	rdRes = read(this->PipeInBack, buf, BUF_SIZE_PIPE);
 	switch (rdRes)
 	{
@@ -224,6 +230,7 @@ int CGI::readFromPipe(std::map<int, Server *>::iterator &it, fd_set *reads)
 			this->cntTryingReading = 0;
 			it->second->setResponse(std::string(buf, rdRes));
             it->second->Stage = 5;
+            Logger::putMsg(it->second->getResponse(), FILE_REQ, REQ);
             if (rdRes == BUF_SIZE_PIPE)
 			    return (50);
             else
@@ -235,7 +242,7 @@ int CGI::readFromPipe(std::map<int, Server *>::iterator &it, fd_set *reads)
 //checker counters
 int CGI::checkCntTrying(char c, int stage)
 {
-	char *checks;
+	char    *checks;
 
 	if (c == 'r')
 		checks = &this->cntTryingReading;
@@ -346,7 +353,7 @@ int     CGI::getPipeOutBack() { return this->PipeOutBack; }
 
 int CGI::checkTimeout()
 {
-    if (time(NULL) - this->timeCGIStarted.tv_sec > 5)
+    if (time(NULL) - this->timeCGIStarted.tv_sec > 145)
     {
         std::cout << "TIMEOUT FAILED!!\n";
         return (9);

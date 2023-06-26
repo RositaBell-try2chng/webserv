@@ -36,6 +36,7 @@ public:
     static void				addToSet(int fd, fd_set *dst);
 	static bool				isCorrectRedirection(std::map<int, Server *>::iterator it);
 	static bool				checkCorrectHostPortInRedirection(t_loc *locNode, std::string &host, std::string &port, std::string &ip, std::string &location);
+    static void             setBadStageError(Server &srv);
 };
 
 #endif

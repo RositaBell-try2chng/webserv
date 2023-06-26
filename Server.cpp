@@ -532,7 +532,7 @@ void    Server::clearServ()
 const std::string & Server::getHost() { return (this->host); }
 const std::string & Server::getPort() { return (this->port); }
 std::string & Server::getRequest() { return (this->request); }
-const std::string & Server::getResponse() { return (this->response); }
+std::string & Server::getResponse() { return (this->response); }
 ssize_t				Server::getMaxBodySize() { return (this->maxLimitBodiSize); }
 HTTP_Request	*Server::getReq_struct() { return (this->req_struct); }
 CGI				*Server::getCGIptr() { return (this->ptrCGI); }
@@ -554,8 +554,8 @@ void	Server::CntTryingSendZero() {this->cntTryingSend = 0;}
 
 void	Server::addChunkedSizeToResponse()
 {
+	std::cout << "addChunkedSizeToResponse\n";
 	std::string chunkSize = Size_tToString(this->response.length(), HEX_BASE);
-
 	this->response = chunkSize + std::string("\r\n") + this->response + std::string("\r\n");
 }
 

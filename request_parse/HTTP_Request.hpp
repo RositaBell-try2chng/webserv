@@ -8,7 +8,7 @@
 # include <cstring>
 # include <map>
 
-# define REQ_MAX_SIZE		100000
+# define REQ_MAX_SIZE		100000000
 # define HDR_MAX_LEN		4096
 # define HDRS_MAX_SUM_LEN	8192
 

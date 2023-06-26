@@ -25,7 +25,7 @@
 # define DEF_HOST "127.0.0.1"
 
 # define BUF_SIZE 25000
-# define BUF_SIZE_PIPE 1024
+# define BUF_SIZE_PIPE 16000
 
 # define DEF_RESPONSE "HTTP/1.1 200 OK\r\nContent-Length: 13\r\nConnection: close\r\n\r\nHello, world!"
 
@@ -39,7 +39,7 @@
 # define LAST_CHUNK std::string("0\r\n\r\n", 5);
 
 # define CNT_TRYING 3
-# define TIMEOUT 10 //in sec
+# define TIMEOUT 160 //in sec
 
 //Mesages
 #define TOO_MANY_ARGS			"Too many args\nUse only first argument\n"

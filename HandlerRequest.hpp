@@ -23,7 +23,7 @@ private:
 	static void	CGIerrorManager(Server &srv);
 	static bool	isBodyNeed(Server &srv);
 	static void	handleDirectoryResponse(Server &srv, t_loc *locNode);
-	static void changeBodyIfBoundryIsSet(Server &srv, HTTP_Request *req);
+	static void changeBodyIfBoundryIsSet(HTTP_Request *req);
 	static void addFileNameEnv(HTTP_Request *req);
 	//CGIs
 	static void	checkReadyToHandle(Server &srv);

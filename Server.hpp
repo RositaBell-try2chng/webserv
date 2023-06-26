@@ -87,7 +87,7 @@ public:
 	std::string		&		getRequest();
 	HTTP_Request	*		getReq_struct();
 
-	std::string		const&	getResponse();
+	std::string		&	getResponse();
 
 	bool				checkTimeOut();
 	void				updateLastActionTime();

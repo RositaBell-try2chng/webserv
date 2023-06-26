@@ -15,18 +15,22 @@ private:
     int PipeInBack;
     int PipeOutBack;
 
-	timeval	timeCGIStarted;
+
 
     char cntTryingReading;
     char cntTryingWriting;
 
-    pid_t   pid;
+    
     std::string toSend;
 public:
     CGI();
     ~CGI();
 
-	int		ForkCGI(Server &src);
+    timeval     timeCGIStarted;
+    std::string fromPipe;
+    pid_t   pid;
+	
+    int		ForkCGI(Server &src);
     int     ParentCGI();
     void    ChildCGI(Server &src);
 	int		waitingCGI();
@@ -37,7 +41,7 @@ public:
 
     //communicate
     int     sendToPipe(std::map<int, Server *>::iterator &it, fd_set *writes, bool flgLast);
-    int     readFromPipe(std::map<int, Server *>::iterator &it, fd_set *reads);
+    int     readFromPipe(std::map<int, Server *>::iterator &it, fd_set *reads, bool flgWait = false);
 
     char            **setEnv(Server &src);
     char            **setArgv(Server &src);

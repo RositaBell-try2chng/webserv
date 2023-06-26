@@ -2,8 +2,6 @@
 
 void HandlerRequest::mainHandler(Server &srv)
 {
-	if (srv.checkTimeOut())
-		srv.Stage = 99;
 	switch (srv.Stage)
 	{
 		case 0: { HandlerRequest::start(srv); break; } //start
@@ -15,7 +13,7 @@ void HandlerRequest::mainHandler(Server &srv)
 		case 1: //read/write to socket stage
 		case 5: {break;}
 		default:
-		{ std::cout << "bad stage in mainHandler\n"; } //fix me: send FATAL
+		{ MainClass::setBadStageError(srv); }
 	}
 }
 
@@ -31,13 +29,20 @@ void HandlerRequest::start(Server &srv)
 		case 2: { HandlerRequest::checkReadyToHandle(srv); break; }
 		case 3: { srv.Stage = 3;  HandlerRequest::handleRequest(srv); break; }
 		case 9: { srv.Stage = 9; HandlerRequest::prepareToSendError(srv); break; }
-		default: { std::cout << "BAD parse Stage: " << srv.parseStage << std::endl; break; } // fix me: send FATAL ERROR
+		default: { MainClass::setBadStageError(srv); break; }
 	}
 }
 
 void HandlerRequest::parserRequest(Server &srv)
 {
+	Logger::putMsg(srv.getRequest(), FILE_REQ, REQ);
 	HTTP_Request::ft_strtoreq(*(srv.getReq_struct()), srv.getRequest());
+	if (srv.getReq_struct()->answ_code[0] == 4 || srv.getReq_struct()->answ_code[0] == 5)
+	{
+		srv.Stage = 9;
+		HandlerRequest::prepareToSendError(srv);
+		return;
+	}
 	switch (srv.getReq_struct()->stage)
 	{
 		case 50: { srv.Stage = 1; srv.parseStage = 0; return; }
@@ -45,7 +50,7 @@ void HandlerRequest::parserRequest(Server &srv)
 		case 52: { srv.parseStage = 2; break; }
 		case 53: { srv.parseStage = 3; break; }
 		case 59: { HandlerRequest::prepareToSendError(srv); return; }
-		default: {std::cout << "BAD Stage parser: " << srv.getReq_struct()->stage; return;} //fix me: send error
+		default: { MainClass::setBadStageError(srv); return;}
 	}
 	//check body need/exists to handle
 	if (srv.parseStage == 2 && HandlerRequest::isBodyNeed(srv) && (srv.getReq_struct()->flg_te == 0 || srv.getReq_struct()->body.empty()))
@@ -129,8 +134,15 @@ void HandlerRequest::handleRequest(Server &srv)
 		HandlerRequest::GET(srv, fileName, CGIflg);
 	else if (method == "POST")
 		HandlerRequest::POST(srv, servNode, locNode, fileName);
-	else
+	else if (method == "DELETE")
 		HandlerRequest::DELETE(srv, locNode, fileName);
+	else
+	{
+		srv.Stage = 9;
+		srv.getReq_struct()->answ_code[0] = 5;
+		srv.getReq_struct()->answ_code[1] = 1;
+		HandlerRequest::prepareToSendError(srv);
+	}
 }
 
 void HandlerRequest::handleDirectoryResponse(Server &srv, t_loc *locNode)
@@ -160,10 +172,12 @@ void HandlerRequest::handleDirectoryResponse(Server &srv, t_loc *locNode)
 
 void HandlerRequest::GET(Server &srv, std::string &fileName, bool CGIflg)
 {
-	if ((!CGIflg && access(fileName.c_str(), R_OK) == -1) || (CGIflg && access(fileName.c_str(), X_OK) == -1))
+	if (fileName.find("favicon.ico") != std::string::npos)
+		CGIflg = false;
+	else if ((!CGIflg && access(fileName.c_str(), R_OK) == -1) || (CGIflg && access(fileName.c_str(), X_OK) == -1))
 	{
 		srv.getReq_struct()->answ_code[0] = 4;
-		srv.getReq_struct()->answ_code[0] = 3;
+		srv.getReq_struct()->answ_code[1] = 3;
 		srv.Stage = 9;
 		HandlerRequest::prepareToSendError(srv);
 		return;
@@ -184,12 +198,11 @@ void HandlerRequest::GET(Server &srv, std::string &fileName, bool CGIflg)
 
 void HandlerRequest::POST(Server &srv, t_serv *servNode, t_loc *locNode, std::string &fileName)
 {
-	std::cout << "start POST\n";
 	//check access to upload
 	if (locNode->uploadPath.empty())
 	{
 		srv.getReq_struct()->answ_code[0] = 4;
-		srv.getReq_struct()->answ_code[0] = 3;
+		srv.getReq_struct()->answ_code[1] = 3;
 		srv.Stage = 9;
 		HandlerRequest::prepareToSendError(srv);
 		return;
@@ -210,126 +223,20 @@ void HandlerRequest::POST(Server &srv, t_serv *servNode, t_loc *locNode, std::st
 		tmp.erase(0, j);
 		if (locNode->CGIs.find(tmp) != locNode->CGIs.end())
 		{
-			std::cout << "ext founded\n";
-			HandlerRequest::changeBodyIfBoundryIsSet(srv, srv.getReq_struct());
+			HandlerRequest::changeBodyIfBoundryIsSet(srv.getReq_struct());
 			HandlerRequest::addFileNameEnv(srv.getReq_struct());
 			srv.getCGIptr()->PATH_TRANSLATED = fileName;
 			srv.Stage = 4;
 			srv.CGIStage = 0;
-			std::cout << "to CGIHandler\n";
 			HandlerRequest::CGIHandler(srv);
 			return;
 		}
 	}
 	//can't POST without CGI
 	srv.getReq_struct()->answ_code[0] = 5;
-	srv.getReq_struct()->answ_code[0] = 1;
+	srv.getReq_struct()->answ_code[1] = 1;
 	srv.Stage = 9;
 	HandlerRequest::prepareToSendError(srv);
-}
-
-void HandlerRequest::addFileNameEnv(HTTP_Request *req)
-{
-	std::cout << "addFileNameEnv\n";
-	size_t i;
-	size_t j;
-	std::map<std::string, std::string>::iterator it;
-	//set filename
-	if (req->base.headers.find("FILENAME") == req->base.headers.end())
-	{
-		it = req->base.headers.find("Content-Disposition");
-		if (it == req->base.headers.end())
-			req->base.headers.insert(std::pair<std::string, std::string>("FILENAME", "default"));
-		else
-		{
-			i = it->second.find("name=\"") + 6;
-			j = it->second.find("\"", i);
-			if (i == std::string::npos || j == std::string::npos || j <= i)
-				req->base.headers.insert(std::pair<std::string, std::string>("FILENAME", "default"));
-			else
-			{
-				std::string fileName = it->second.substr(i, j - i);
-				i = it->second.find(fileName) + fileName.length() + 2;
-				j = it->second.find("\"", i);
-				if (i == std::string::npos || j == std::string::npos || j <= i)
-					req->base.headers.insert(std::pair<std::string, std::string>("FILENAME", "default"));
-				fileName = it->second.substr(i, j - i);
-				req->base.headers.insert(std::pair<std::string, std::string>("FILENAME", fileName));
-			}
-		}
-	}
-	//set ext
-	if (req->base.headers.find("EXTENSION") == req->base.headers.end())
-	{
-		it = req->base.headers.find("Content-Type");
-		if (it == req->base.headers.end())
-		{
-			req->base.headers.insert(std::pair<std::string, std::string>("EXTENSION", "unknown"));
-			return;
-		}
-		i = it->second.find("/");
-		if (i == std::string::npos)
-		{
-			req->base.headers.insert(std::pair<std::string, std::string>("EXTENSION", "unknown"));
-			return;
-		}
-		std::string ext = it->second.substr(i + 1);
-		if (ext.empty())
-			req->base.headers.insert(std::pair<std::string, std::string>("EXTENSION", "unknown"));
-		else
-			req->base.headers.insert(std::pair<std::string, std::string>("EXTENSION", std::string(".") + ext));
-	}
-}
-
-void HandlerRequest::changeBodyIfBoundryIsSet(Server &srv, HTTP_Request *req)
-{
-	std::map<std::string, std::string>::iterator it = req->base.headers.find("Content-Type");
-	if (it == req->base.headers.end())
-		return;
-	(void) srv;//fix me: add error handler
-	size_t i = it->second.find("multipart/form-data;");
-	if (i == std::string::npos)
-		return;
-	i = it->second.find("boundary=", i + 19);
-	if (i == std::string::npos)
-		return;
-	std::string boundary = it->second.substr(i + 9);
-	for (i = 0; i < boundary.length() && boundary[i] == '-'; i++)
-		;
-	boundary.erase(0, i);
-	i = req->body.find(boundary);
-	size_t j = req->body.rfind(boundary);
-	if (i == std::string::npos || j == i)
-		return;
-	i += boundary.length() + 2; // +\r\n
-	for (--j; j > i && req->body[j] == '-'; j--);
-	if (req->body[j] == '\n')
-		j--;
-	if (req->body[j] == '\r')
-		j--;
-	std::string newBody = req->body.substr(i, j - i);
-	i = newBody.find("\r\n\r\n");
-	if (i == std::string::npos)
-		return;
-	std::string subHeads = newBody.substr(0, i);
-	newBody.erase(0, i + 4);
-	i = subHeads.find("name=\"");
-	j = subHeads.find("\"", i + 6);
-	if (i == std::string::npos || j == std::string::npos)
-		return;
-	std::string filename = subHeads.substr(i + 6, j - (i + 6));
-	i = subHeads.find(filename, j);
-	i = subHeads.find("\"", i + 1);
-	j = subHeads.find("\"", i + 1);
-	if (i == std::string::npos || j == std::string::npos)
-		return;
-	filename = subHeads.substr(i + 1, j - (i + 1));
-	i = filename.rfind(".");
-	std::string ext = filename.substr(i);
-	filename.erase(i);
-	req->base.headers.insert(std::pair<std::string, std::string>(std::string("FILENAME"), filename));
-	req->base.headers.insert(std::pair<std::string, std::string>(std::string("EXTENSION"), ext));
-	req->body = newBody;
 }
 
 void HandlerRequest::DELETE(Server &srv, t_loc *locNode, std::string &fileName)
@@ -339,7 +246,7 @@ void HandlerRequest::DELETE(Server &srv, t_loc *locNode, std::string &fileName)
 	if (locNode->uploadPath.empty())
 	{
 		srv.getReq_struct()->answ_code[0] = 4;
-		srv.getReq_struct()->answ_code[0] = 3;
+		srv.getReq_struct()->answ_code[1] = 3;
 		srv.Stage = 9;
 		HandlerRequest::prepareToSendError(srv);
 		return;
@@ -347,7 +254,7 @@ void HandlerRequest::DELETE(Server &srv, t_loc *locNode, std::string &fileName)
 	if (access(fileName.c_str(), W_OK) != 0)
 	{
 		srv.getReq_struct()->answ_code[0] = 4;
-		srv.getReq_struct()->answ_code[0] = 3;
+		srv.getReq_struct()->answ_code[1] = 3;
 		srv.Stage = 9;
 		HandlerRequest::prepareToSendError(srv);
 		return;
@@ -382,7 +289,7 @@ bool HandlerRequest::haveErrorPage(Server &srv, t_serv *servNode, int code)
 	return (true);
 }
 
-void HandlerRequest::redirectResponse(Server &srv, t_loc *locNode)
+void HandlerRequest::redirectResponse(Server &srv, t_loc *locNode) //fix me: test this at all
 {
 	std::map<int, std::string>::iterator	it = locNode->redirect.begin();
 	int										code = it->first;
@@ -429,6 +336,8 @@ void HandlerRequest::CGIHandler(Server &srv)
 				HandlerRequest::CGIerrorManager(srv);
 			break;
 		}
+		case 5:
+		case 50: { break; } //read from PIPE
 		case 6: //end of pipe - clean all
 		{
 			delete srv.getCGIptr();
@@ -438,7 +347,7 @@ void HandlerRequest::CGIHandler(Server &srv)
 			break;
 		}
 		case 9: { HandlerRequest::CGIerrorManager(srv); break; }
-		default: { std::cout << "bad stage in cgi handler\n"; } //fix me: send 500 error
+		default: { MainClass::setBadStageError(srv); }
 	}
 }
 
@@ -446,14 +355,12 @@ void HandlerRequest::startCGI(Server &srv)
 {
 	if (access(srv.getCGIptr()->PATH_TRANSLATED.c_str(), F_OK) == -1)
 	{
-		std::cout << "BAD startCGI. PATHTRANS = " << srv.getCGIptr()->PATH_TRANSLATED << std::endl;
 		srv.Stage = 9;
 		srv.getReq_struct()->answ_code[0] = 4;
 		srv.getReq_struct()->answ_code[1] = 4;
 		HandlerRequest::prepareToSendError(srv);
 		return;
 	}
-	// std::cout << "start CGI 2\n";
 	if (access(srv.getCGIptr()->PATH_TRANSLATED.c_str(), X_OK) == -1)
 	{
 		srv.Stage = 9;
@@ -462,9 +369,7 @@ void HandlerRequest::startCGI(Server &srv)
 		HandlerRequest::prepareToSendError(srv);
 		return;
 	}
-	// std::cout << "start CGI 3\n";
 	srv.CGIStage = srv.getCGIptr()->startCGI();
-	// std::cout << "start CGI 4\n";
 	srv.CGIStage = srv.getCGIptr()->ForkCGI(srv);
 	if (srv.CGIStage == 9)
 		HandlerRequest::CGIerrorManager(srv);
@@ -476,7 +381,6 @@ void HandlerRequest::startCGI(Server &srv)
 
 void	HandlerRequest::CGIerrorManager(Server &srv)
 {
-	std::cout << "CGI ERRor MANAGER\n";
 	srv.getCGIptr()->clearCGI();
 	srv.Stage = 9;
 	srv.CGIStage = 9;
@@ -497,6 +401,110 @@ void HandlerRequest::prepareToSendCGI(Server &srv)
 		srv.CGIStage = 2;
 	else
 		srv.CGIStage = 1;
+}
+
+void HandlerRequest::addFileNameEnv(HTTP_Request *req)
+{
+	size_t i;
+	size_t j;
+	std::map<std::string, std::string>::iterator it;
+	//set filename
+	if (req->base.headers.find("FILENAME") == req->base.headers.end())
+	{
+		it = req->base.headers.find("Content-Disposition");
+		if (it == req->base.headers.end())
+		{
+			req->base.headers.insert(std::pair<std::string, std::string>("FILENAME", "default"));
+		}
+		else
+		{
+			i = it->second.find("name=\"") + 6;
+			j = it->second.find("\"", i);
+			if (i == std::string::npos || j == std::string::npos || j <= i)
+				req->base.headers.insert(std::pair<std::string, std::string>("FILENAME", "default"));
+			else
+			{
+				std::string fileName = it->second.substr(i, j - i);
+				i = it->second.find(fileName) + fileName.length() + 2;
+				j = it->second.find("\"", i);
+				if (i == std::string::npos || j == std::string::npos || j <= i)
+					req->base.headers.insert(std::pair<std::string, std::string>("FILENAME", "default"));
+				fileName = it->second.substr(i, j - i);
+				req->base.headers.insert(std::pair<std::string, std::string>("FILENAME", fileName));
+			}
+		}
+	}
+	//set ext
+	if (req->base.headers.find("EXTENSION") == req->base.headers.end())
+	{
+		it = req->base.headers.find("Content-Type");
+		if (it == req->base.headers.end())
+		{
+			req->base.headers.insert(std::pair<std::string, std::string>("EXTENSION", "unknown"));
+			return;
+		}
+		i = it->second.find("/");
+		if (i == std::string::npos)
+		{
+			req->base.headers.insert(std::pair<std::string, std::string>("EXTENSION", "unknown"));
+			return;
+		}
+		std::string ext = it->second.substr(i + 1);
+		if (ext.empty())
+			req->base.headers.insert(std::pair<std::string, std::string>("EXTENSION", "unknown"));
+		else
+			req->base.headers.insert(std::pair<std::string, std::string>("EXTENSION", std::string(".") + ext));
+	}
+}
+
+void HandlerRequest::changeBodyIfBoundryIsSet(HTTP_Request *req)
+{
+	std::map<std::string, std::string>::iterator it = req->base.headers.find("Content-Type");
+	if (it == req->base.headers.end())
+		return;
+	size_t i = it->second.find("multipart/form-data;");
+	if (i == std::string::npos)
+		return;
+	i = it->second.find("boundary=", i + 19);
+	if (i == std::string::npos)
+		return;
+	std::string boundary = it->second.substr(i + 9);
+	for (i = 0; i < boundary.length() && boundary[i] == '-'; i++)
+		;
+	boundary.erase(0, i);
+	i = req->body.find(boundary);
+	size_t j = req->body.rfind(boundary);
+	if (i == std::string::npos || j == i)
+		return;
+	i += boundary.length() + 2; // +\r\n
+	for (--j; j > i && req->body[j] == '-'; j--);
+	if (req->body[j] == '\n')
+		j--;
+	if (req->body[j] == '\r')
+		j--;
+	std::string newBody = req->body.substr(i, j - i);
+	i = newBody.find("\r\n\r\n");
+	if (i == std::string::npos)
+		return;
+	std::string subHeads = newBody.substr(0, i);
+	newBody.erase(0, i + 4);
+	i = subHeads.find("name=\"");
+	j = subHeads.find("\"", i + 6);
+	if (i == std::string::npos || j == std::string::npos)
+		return;
+	std::string filename = subHeads.substr(i + 6, j - (i + 6));
+	i = subHeads.find(filename, j);
+	i = subHeads.find("\"", i + 1);
+	j = subHeads.find("\"", i + 1);
+	if (i == std::string::npos || j == std::string::npos)
+		return;
+	filename = subHeads.substr(i + 1, j - (i + 1));
+	i = filename.rfind(".");
+	std::string ext = filename.substr(i);
+	filename.erase(i);
+	req->base.headers.insert(std::pair<std::string, std::string>(std::string("FILENAME"), filename));
+	req->base.headers.insert(std::pair<std::string, std::string>(std::string("EXTENSION"), ext));
+	req->body = newBody;
 }
 
 void HandlerRequest::checkReadyToHandle(Server &srv)
@@ -527,7 +535,6 @@ void HandlerRequest::prepareToSendError(Server &srv)
 	{
 		srv.getReq_struct()->answ_code[0] = 4;
 		srv.getReq_struct()->answ_code[1] = 8;
-		srv.writeStage = 3;
 	}
 	else if (srv.CGIStage == 9) //CGI error
 	{
@@ -541,6 +548,7 @@ void HandlerRequest::prepareToSendError(Server &srv)
 	tmp = HTTP_Answer::ft_reqtoansw(*(srv.getReq_struct()));
 	srv.setResponse(HTTP_Answer::ft_answtostr(tmp), true);
 	srv.Stage = 5;
+	srv.writeStage = 2;
 	srv.isChunkedResponse = false;
 }
 
