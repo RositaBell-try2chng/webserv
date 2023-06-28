@@ -23,12 +23,12 @@
  	return 0;
  }
 
-//int main(void)										// Directories listing Tests
-//{
-//	ft_dir_out(".");
-//
-//	return 0;
-//}0
+// int main(void)										// Directories listing Tests
+// {
+// 	ft_dir_out("./uploadDir");
+
+// 	return 0;
+// }
 
 // int main( void )									// Parser Tests
 // {
