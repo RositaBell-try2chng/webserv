@@ -353,7 +353,7 @@ int     CGI::getPipeOutBack() { return this->PipeOutBack; }
 
 int CGI::checkTimeout()
 {
-    if (time(NULL) - this->timeCGIStarted.tv_sec > 145)
+    if (time(NULL) - this->timeCGIStarted.tv_sec > 13)
     {
         std::cout << "TIMEOUT FAILED!!\n";
         return (9);

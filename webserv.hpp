@@ -39,7 +39,7 @@
 # define LAST_CHUNK std::string("0\r\n\r\n", 5);
 
 # define CNT_TRYING 3
-# define TIMEOUT 160 //in sec
+# define TIMEOUT 15 //in sec
 
 //Mesages
 #define TOO_MANY_ARGS			"Too many args\nUse only first argument\n"

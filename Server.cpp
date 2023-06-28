@@ -82,12 +82,14 @@ t_loc *Server::findLocation(std::string &str, t_serv *src)
 }
 
 //finders
-bool	Server::findFile(std::string &str, t_serv *servNode, t_loc *loc, bool &CGIflg)
+bool	Server::findFile(Server &srv, std::string &str, t_serv *servNode, t_loc *loc, bool &CGIflg)
 {
 	std::string	fullPath;
 	std::string extension;
 	size_t		i = str.rfind('.');
 
+	if (srv.getReq_struct()->base.start_string.method == "POST" && str != "upload.py")
+		return (true);
 	//check if file CGI Script
 	if (i != std::string::npos)
 	{
@@ -248,7 +250,7 @@ t_loc* Server::setLocList(std::map <std::string, std::map<std::string, std::stri
 		cur->uploadPath = std::string("");
 		cur->indexFile = std::string("");
 		cur->flgGet = true;
-		cur->flgDelete = true;
+		cur->flgDelete = false;
 		cur->flgPost = true;
 		for (it2 = it->second.begin(); it2 != it->second.end(); it2++)
 		{
@@ -554,7 +556,6 @@ void	Server::CntTryingSendZero() {this->cntTryingSend = 0;}
 
 void	Server::addChunkedSizeToResponse()
 {
-	std::cout << "addChunkedSizeToResponse\n";
 	std::string chunkSize = Size_tToString(this->response.length(), HEX_BASE);
 	this->response = chunkSize + std::string("\r\n") + this->response + std::string("\r\n");
 }

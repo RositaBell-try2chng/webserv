@@ -97,7 +97,7 @@ public:
 
 	static t_loc*		findLocation(std::string &str, t_serv *src);
 	t_serv*				findServer(std::string const &str);
-	static bool			findFile(std::string &str, t_serv *servNode, t_loc *loc, bool &CGIflg);
+	static bool			findFile(Server &srv, std::string &str, t_serv *servNode, t_loc *loc, bool &CGIflg);
 
 	void				setCGIptr(CGI *src);
 	void				setReq_struct(HTTP_Request const &src);
