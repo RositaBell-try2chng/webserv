@@ -549,10 +549,12 @@ void HandlerRequest::prepareToSendError(Server &srv)
 	if (HandlerRequest::haveErrorPage(srv, servNode, code))
 		return;
 	tmp = HTTP_Answer::ft_reqtoansw(*(srv.getReq_struct()));
+	std::cout << HTTP_Answer::ft_answtostr(tmp);
 	srv.setResponse(HTTP_Answer::ft_answtostr(tmp), true);
 	srv.Stage = 5;
 	srv.writeStage = 2;
 	srv.isChunkedResponse = false;
+	srv.getRequest().clear();
 }
 
 HandlerRequest::HandlerRequest() {}

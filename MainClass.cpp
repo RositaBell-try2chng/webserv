@@ -188,6 +188,7 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *writ
 		MainClass::closeConnection(it);
 		return;
 	}
+	Logger::putMsg(it->second->getResponse(), FILE_REQ, REQ);
 	sendRes = send(it->first, it->second->getResponse().c_str(), it->second->getResponse().length(), 0);
 	switch (sendRes)
 	{

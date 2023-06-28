@@ -39,8 +39,8 @@ re:			fclean all
 log_clean:
 			${RM} logs/errors.txt logs/info.txt logs/requests.txt logs/wrong_requests.txt
 
-test:	all
-			./${NAME} | cat -e
+tester:	all
+			./tester http://127.0.0.1:8080
 
 stop:
 			pkill webserv

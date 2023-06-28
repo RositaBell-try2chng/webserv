@@ -55,7 +55,7 @@ int ft_set_method(HTTP_Request &req, std::string url, int end) {
 		req.answ_code[0] = 5;
 		req.answ_code[1] = 1;
 
-		return 0;
+		//return 0;
 	}
 
 	// other checks if we need (use "method", return 0 if false)
@@ -74,7 +74,7 @@ int	ft_set_uri(HTTP_Request &req, std::string url, int end, int i) {
 		Logger::putMsg("Request hasn\'t URI", FILE_WREQ, WREQ);
 		req.answ_code[0] = 4;
 		req.answ_code[1] = 0;
-		return 0;
+		//return 0;
 	}
 
 	int	j = 0;
