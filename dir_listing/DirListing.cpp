@@ -24,9 +24,8 @@ std::string	ft_name_cell(const char *name, size_t type) {
 std::string ft_mtime(timespec mtime) {
 
 	char time[100];
-	mtime.tv_sec += 4 * 3600;
 
-	strftime(time, sizeof time, "%c", gmtime(&mtime.tv_sec));
+	strftime(time, sizeof time, "%c", localtime(&mtime.tv_sec));
 
 	return time;	
 }
