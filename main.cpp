@@ -12,24 +12,24 @@
 #include "./dir_listing/DirListing.hpp"
 
 
-//  int main(int argc, char **argv)					// MAIN main
-//  {
-//  	signal(SIGTERM, MainClass::exitHandler);
-//  	Logger::putMsg(DELIMITER_START);
-//  	MainClass::doIt(argc, argv);
-//  	Logger::putMsg(DELIMITER_END);
-//  	MainClass::exitHandler(0);
+ int main(int argc, char **argv)					// MAIN main
+ {
+ 	signal(SIGTERM, MainClass::exitHandler);
+ 	Logger::putMsg(DELIMITER_START);
+ 	MainClass::doIt(argc, argv);
+ 	Logger::putMsg(DELIMITER_END);
+ 	MainClass::exitHandler(0);
 
-//  	return 0;
-//  }
+ 	return 0;
+ }
 
-int main(void)										// Directories listing Tests
-{
-	std::string html = ft_dirlisting("logs/");
-	std::cout << html;
+// int main(void)										// Directories listing Tests
+// {
+// 	std::string html = ft_dirlisting("logs/");
+// 	std::cout << html;
 
-	return 0;
-}
+// 	return 0;
+// }
 
 // int main( void )									// Parser Tests
 // {
