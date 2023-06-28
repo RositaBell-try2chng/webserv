@@ -8,6 +8,7 @@
 # include <ctime>
 # include <cerrno>
 # include <cstring>
+# include <string>
 # include <csignal>
 # include <sys/types.h>
 # include <sys/wait.h>

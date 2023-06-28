@@ -1,70 +1,103 @@
-//	opendir()		https://www.opennet.ru/man.shtml?topic=opendir&russian=0&category=&submit=%F0%CF%CB%C1%DA%C1%D4%D8+man
-//	readdir()		https://www.opennet.ru/man.shtml?topic=readdir&category=3&russian=0
-//	closedir()		https://www.opennet.ru/man.shtml?topic=closedir&russian=0&category=&submit=%F0%CF%CB%C1%DA%C1%D4%D8+man
-//	struct dirent	https://www.opennet.ru/man.shtml?topic=dirent&russian=0&category=&submit=%F0%CF%CB%C1%DA%C1%D4%D8+man
-//	stat()			https://www.opennet.ru/man.shtml?topic=stat&category=2&russian=0
-
 #include "DirListing.hpp"
 
-int ft_dir_out(std::string dir_nm_str) {
+std::string	ft_name_cell(const char *name, size_t type) {
 
-	const char *dir_nm = dir_nm_str.c_str();
+	std::string cell;
 
-	if (access(dir_nm, F_OK)) {
-		Logger::putMsg("Dir \"" + dir_nm_str + "\" doesn't exist", FILE_ERR, ERR);
-		return 1;
+	cell = "<td>\n<a href=\"";
+
+	cell += name;
+	if (type == 4)
+		cell += "/";
+
+	cell += "\">";
+
+	cell += name;
+	if (type == 4)
+		cell += "/";
+
+	cell += "</a>\n</td>\n";
+
+	return cell;
+}
+
+std::string ft_mtime(timespec mtime) {
+
+	char time[100];
+
+	strftime(time, sizeof time, "%c", gmtime(&mtime.tv_sec));
+
+	return time;	
+}
+
+std::string ft_mtime_cell(std::string time) {
+
+	std::string cell;
+
+	cell = "<td>\n";
+	cell += time;
+	cell += "\n</td>\n";
+
+	return cell;
+}
+
+std::string ft_size_cell(long size, size_t type) {
+
+	std::string cell;
+
+	cell = "<td>\n";
+	if (type == 8)
+		cell += std::to_string(size);
+	cell += "\n</td>\n";
+
+	return cell;
+}
+
+std::string ft_dirlisting(std::string path_str) {
+
+	const char *path = path_str.c_str();
+
+	if (access(path, F_OK)) {
+		Logger::putMsg("Dir \"" + path_str + "\" doesn't exist", FILE_ERR, ERR);
+		return "1";
 	}
-	if (access(dir_nm, R_OK)) {
-		Logger::putMsg("Have no permissions to read dir \"" + dir_nm_str + "\"", FILE_ERR, ERR);
-		return 1;
+	if (access(path, R_OK)) {
+		Logger::putMsg("Have no permissions to read dir \"" + path_str + "\"", FILE_ERR, ERR);
+		return "1";
 	}
+
+	std::string page("<html>\n<head>\n<title> Index of " + path_str + "</title>\n</head>\n<body >\n<h1> Index of " + path_str + "</h1>\n<table style=\"width:80%; font-size: 15px\">\n<hr>\n<th style=\"text-align:left\"> File Name </th>\n<th style=\"text-align:left\"> Last Modification </th>\n<th style=\"text-align:left\"> File Size </th>\n" );
 
 	DIR			*dir;
 	dirent		*current;
 	struct stat	info;
+	size_t		type;
 	
-	dir = opendir(dir_nm);
+	dir = opendir(path);
 
 	for (current = readdir(dir); current; current = readdir(dir)) {
-		std::cout << current->d_ino << "	" << current->d_name << '\n' << std::endl;
 
-		if (stat(current->d_name, &info) == -1) {
+		page += "<tr>\n";
+
+		type = static_cast<size_t>(current->d_type);
+
+		page += ft_name_cell(current->d_name, type);
+
+		if (stat((path_str  + current->d_name).c_str(), &info) == -1) {
 			Logger::putMsg("Can't do \"stat()\"", FILE_ERR, ERR);
-			return 1;
+			page += "</tr>\n";
+			continue ;
 		}
-		else {
-			std::cout << "st_atimespec.tv_nsec:		" << info.st_atimespec.tv_nsec << std::endl;
-			std::cout << "st_atimespec.tv_sec:		" << info.st_atimespec.tv_sec << std::endl;
-			std::cout << "st_birthtimespec.tv_nsec:	" << info.st_birthtimespec.tv_nsec << std::endl;
-			std::cout << "st_birthtimespec.tv_sec:	" << info.st_birthtimespec.tv_sec << std::endl;
-			std::cout << "st_blksize:			" << info.st_blksize << std::endl;
-			std::cout << "st_blocks:			" << info.st_blocks << std::endl;
-			std::cout << "st_ctimespec.tv_nsec:		" << info.st_ctimespec.tv_nsec << std::endl;
-			std::cout << "st_ctimespec.tv_sec:		" << info.st_ctimespec.tv_sec << std::endl;
-			std::cout << "st_dev:				" << info.st_dev << std::endl;
-			std::cout << "st_flags:			" << info.st_flags << std::endl;
-			std::cout << "st_gen:				" << info.st_gen << std::endl;
-			std::cout << "st_gid:				" << info.st_gid << std::endl;
-			std::cout << "st_ino:				" << info.st_ino << std::endl;
-			std::cout << "st_lspare:			" << info.st_lspare << std::endl;
-			std::cout << "st_mode:			" << info.st_mode << std::endl;
-			std::cout << "st_mtimespec.tv_nsec:		" << info.st_mtimespec.tv_nsec << std::endl;
-			std::cout << "st_mtimespec.tv_sec:		" << info.st_mtimespec.tv_sec << std::endl;
-			std::cout << "st_nlink:			" << info.st_nlink << std::endl;
-			std::cout << "st_qspare:			" << info.st_qspare << std::endl;
-			std::cout << "st_rdev:			" << info.st_rdev << std::endl;
-			std::cout << "st_size:			" << info.st_size << std::endl;
-			std::cout << "st_uid:				" << info.st_uid << std::endl;
-		}
+		page +=	ft_mtime_cell(ft_mtime(info.st_mtimespec));
+		
+		page += ft_size_cell(info.st_size, type);
 
-		std::cout << "	Length of filename:	" << current->d_namlen << std::endl;
-		std::cout << "	Length of record:	" << current->d_reclen << std::endl;
-		std::cout << "	seekof:			" << current->d_seekoff << std::endl;
-		std::cout << "	Type of file:		" << static_cast<size_t>(current->d_type) << std::endl;
-		std::cout << "=======================================================" << std::endl;
+		page += "</tr>\n";
 	}
-	
+
 	closedir(dir);
 
-	return 0;
+	page += "</table>\n<hr>\n</body>\n</html>\n";
+
+	return page;
 }
