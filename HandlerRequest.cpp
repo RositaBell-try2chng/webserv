@@ -149,8 +149,9 @@ void HandlerRequest::handleDirectoryResponse(Server &srv, t_loc *locNode)
 {
 	if (locNode->dirListFlg)
 	{
-		;//do some from Egor's file
+		srv.resp.body = ft_dirlisting(locNode->location);//do some from Egor's file
 		std::cout << "DIR LISTING ON on: " << locNode->location << std::endl;
+		srv.setResponse("HTTP/1.1 200 OK\r\nContent-type: text/html\r\nContent-Length: " + Size_tToString(srv.resp.body.length(), DEC_BASE) + "\r\n\r\n" + srv.resp.body);
 		return;
 	}
 	if (!locNode->indexFile.empty())
