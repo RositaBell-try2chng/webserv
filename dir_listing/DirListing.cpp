@@ -48,6 +48,8 @@ std::string ft_size_cell(long size, size_t type) {
 	cell = "<td>\n";
 	if (type == 8)
 		cell += std::to_string(size);
+	else
+		cell += "-";
 	cell += "\n</td>\n";
 
 	return cell;
@@ -66,7 +68,7 @@ std::string ft_dirlisting(std::string path_str) {
 		return "1";
 	}
 
-	std::string page("<html>\n<head>\n<title> Index of " + path_str + "</title>\n</head>\n<body >\n<h1> Index of " + path_str + "</h1>\n<table style=\"width:80%; font-size: 15px\">\n<hr>\n<th style=\"text-align:left\"> File Name </th>\n<th style=\"text-align:left\"> Last Modification </th>\n<th style=\"text-align:left\"> File Size </th>\n" );
+	std::string page("<html>\n<head>\n<title> Index of /" + path_str + "</title>\n</head>\n<body >\n<h1> Index of /" + path_str + "</h1>\n<table style=\"width:80%; font-size: 15px\">\n<hr>\n<th style=\"text-align:left\"> File Name </th>\n<th style=\"text-align:left\"> Last Modification </th>\n<th style=\"text-align:left\"> File Size </th>\n" );
 
 	DIR			*dir;
 	dirent		*current;
@@ -74,6 +76,7 @@ std::string ft_dirlisting(std::string path_str) {
 	size_t		type;
 	
 	dir = opendir(path);
+	current = readdir(dir);
 
 	for (current = readdir(dir); current; current = readdir(dir)) {
 
