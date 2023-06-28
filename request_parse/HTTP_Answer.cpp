@@ -39,7 +39,7 @@ HTTP_Answer HTTP_Answer::ft_reqtoansw(HTTP_Request req) {
 //		// 	ft_post_answ(req, answ);
 //		// else if (!req.method.compare("DELETE"))
 //		// 	ft_delete_answ(req, answ);
-//		else if (!req.base.start_string.method.compare("PUT")) {
+//		else if (!req.base.start_string.method.compare("PUT") && !req.base.start_string.method.compare("HEAD")) {
 //			Logger::putMsg("Method: " + req.base.start_string.method + "\nIs Not Allowed" , FILE_WREQ, WREQ);
 //			req.answ_code[0] = 4;
 //			req.answ_code[1] = 5;

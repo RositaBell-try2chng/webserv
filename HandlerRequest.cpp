@@ -151,8 +151,11 @@ void HandlerRequest::handleDirectoryResponse(Server &srv, t_loc *locNode)
 {
 	if (locNode->dirListFlg)
 	{
-		;//do some from Egor's file
+		srv.resp.body = ft_dirlisting(locNode->location.substr(1) + "/");//do some from Egor's file
 		std::cout << "DIR LISTING ON on: " << locNode->location << std::endl;
+		srv.setResponse("HTTP/1.1 200 OK\r\nContent-type: text/html\r\nContent-Length: " + Size_tToString(srv.resp.body.length(), DEC_BASE) + "\r\n\r\n" + srv.resp.body);
+		srv.Stage = 5;
+		srv.writeStage = 2;
 		return;
 	}
 	if (!locNode->indexFile.empty())
@@ -608,10 +611,12 @@ void HandlerRequest::prepareToSendError(Server &srv)
 	if (HandlerRequest::haveErrorPage(srv, servNode, code))
 		return;
 	tmp = HTTP_Answer::ft_reqtoansw(*(srv.getReq_struct()));
+	std::cout << HTTP_Answer::ft_answtostr(tmp);
 	srv.setResponse(HTTP_Answer::ft_answtostr(tmp), true);
 	srv.Stage = 5;
 	srv.writeStage = 2;
 	srv.isChunkedResponse = false;
+	srv.getRequest().clear();
 }
 
 HandlerRequest::HandlerRequest() {}

@@ -80,6 +80,7 @@ public:
 	bool					isChunkedRequest;
 	bool					isChunkedResponse;
 	timeval					lastActionTime;
+	HTTP_Answer				resp;
 
 	std::string 	const&	getHost();
 	std::string 	const&	getPort();

@@ -22,12 +22,12 @@ int ft_set_method(HTTP_Request &req, std::string url, int end) {
 	std::string method = req.base.start_string.method;
 
 	// checking if method implemented
-	if (ft_if_method_implemented(method)) {
+	if (i < end && ft_if_method_implemented(method)) {
 		Logger::putMsg("Method is not implemented", FILE_WREQ, WREQ);
-		req.answ_code[0] = 5;
-		req.answ_code[1] = 1;
+		req.answ_code[0] = 4;
+		req.answ_code[1] = 5;
 
-		return 0;
+		//return 0;
 	}
 
 	// other checks if we need (use "method", return 0 if false)
@@ -120,6 +120,8 @@ void	ft_parse_start_string(HTTP_Request &req, std::string &raw, int &end) {
 			++req.stage;
 		req.left.clear();
 	}
+	else
+		req.left.push_back(raw[i]);
 	raw.erase(0, i + 2);
 	end = raw.size();
 }
