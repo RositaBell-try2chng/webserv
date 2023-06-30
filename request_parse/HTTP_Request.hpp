@@ -67,9 +67,10 @@ struct HTTP_Request {
 			StartString							start_string;
 
 			std::map<std::string, std::string>	headers;
+			bool								check;
 			int									hdrs_total_len;
 
-			Base() : hdrs_total_len(0){}
+			Base() : check(false), hdrs_total_len(0){}
 		};
 
 		std::string	left;	//	unparsed part of request

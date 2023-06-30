@@ -37,7 +37,7 @@ int ft_set_method(HTTP_Request &req, std::string url, int end) {
 
 int	ft_set_uri(HTTP_Request &req, std::string url, int end, int i) {
 	
-	for (++i; url[i] != ' ' && i != end; ++i)
+	for (++i; url[i] != ' ' && i < end; ++i)
 		req.base.start_string.uri.push_back(url[i]);
 	
 	end = req.base.start_string.uri.size();
@@ -63,7 +63,7 @@ int	ft_set_uri(HTTP_Request &req, std::string url, int end, int i) {
 
 int	ft_set_version(HTTP_Request &req, std::string url, int end, int i) {
 
-	for (++i; i != end; ++i)
+	for (++i; i < end; ++i)
 		req.base.start_string.version.push_back(url[i]);
 
 	if (req.base.start_string.version.size() == 0) {
@@ -155,8 +155,8 @@ void ft_set_hdr(HTTP_Request &req) {
 
 	if (!header.second.compare("")) {
 		Logger::putMsg("Header " + header.first + " Doesn't have a value", FILE_WREQ, WREQ);
-		req.answ_code[0] = 4;
-		req.answ_code[1] = 0;
+		//req.answ_code[0] = 4;
+		//req.answ_code[1] = 0;
 		return ;
 	}
 	if (req.base.headers.find(header.first) != req.base.headers.end()){
@@ -182,17 +182,16 @@ void	ft_parse_headers(HTTP_Request &req, std::string &raw, int &end) {
 	for (i = 0; i < end; ++i) {
 		for (letter = 1;
 				i + letter < end && !(raw[i + letter] == '\n' && raw[i + letter - 1] == '\r');
-				++letter) {	
-		}
+				++letter) {}
 		req.left += raw.substr(i, letter);
-		if (raw[i + letter] == '\n' && raw[i + letter - 1] == '\r') {
+		if (raw[i + letter] == '\n' && raw[i + letter - 1] == '\r' && !req.base.check) {
 			ft_set_hdr(req);
 			i += (letter - 1);
 		}
 		else
 			break ;
 		++i;
-		if (i + 2 < end && raw[i + 2] == '\n' && raw[i + 1] == '\r') {
+		if ((i + 2 < end && raw[i + 2] == '\n' && raw[i + 1] == '\r')) {
 			ft_headers_parse(req);
 			++req.stage;
 			i += 3;
