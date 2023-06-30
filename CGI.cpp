@@ -230,7 +230,6 @@ int CGI::readFromPipe(std::map<int, Server *>::iterator &it, fd_set *reads, bool
 			this->cntTryingReading = 0;
 			it->second->setResponse(std::string(buf, rdRes));
             it->second->Stage = 5;
-            Logger::putMsg(it->second->getResponse(), FILE_REQ, REQ);
             if (rdRes == BUF_SIZE_PIPE)
 			    return (50);
             else

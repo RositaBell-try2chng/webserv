@@ -61,7 +61,6 @@ void MainClass::mainLoop()
 		//handle all request until read/write or waiting child
 		for (it = allServers->getConnections().begin(); it != allServers->getConnections().end(); it++)
 		{
-			// std::cout << "handle: " << it->first << std::endl;
 			HandlerRequest::mainHandler(*it->second);
 			if (it->second->Stage == 1)
 				MainClass::addToSet(it->first, &readFds);
@@ -188,7 +187,7 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *writ
 		MainClass::closeConnection(it);
 		return;
 	}
-	Logger::putMsg(it->second->getResponse(), FILE_REQ, REQ);
+	Logger::putMsg(it->second->getResponse(), FILE_REQ, RES);
 	sendRes = send(it->first, it->second->getResponse().c_str(), it->second->getResponse().length(), 0);
 	switch (sendRes)
 	{
@@ -304,10 +303,15 @@ void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_se
 	}
 }
 
-void MainClass::setBadStageError(Server &srv)
+void printStages(Server &srv)
 {
 	std::cout << "BAD STAGES!\n" << "Stage is: " << srv.Stage << "\nParseStage is: " << srv.parseStage << "\nreadStage is: " << srv.readStage;
 	std::cout << "\nCGIStage is: " << srv.CGIStage << "\nwriteStage is: " << srv.writeStage << std::endl;
+}
+
+void MainClass::setBadStageError(Server &srv)
+{
+	printStages(srv);
 	srv.Stage = 9;
 	srv.getReq_struct()->answ_code[0] = 5;
 	srv.getReq_struct()->answ_code[1] = 0;

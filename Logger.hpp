@@ -13,6 +13,7 @@
 
 # define FILE_REQ	"requests.txt"
 # define REQ		"REQUEST"
+# define RES		"RESPONSE"
 
 # define FILE_WREQ	"wrong_requests.txt"
 # define WREQ		"WRONG_REQUEST"

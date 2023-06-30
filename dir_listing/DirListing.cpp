@@ -55,20 +55,27 @@ std::string ft_size_cell(long size, size_t type) {
 	return cell;
 }
 
-std::string ft_dirlisting(std::string path_str) {
+std::string ft_dirlisting(std::string path_str, Server &srv) {
 
-	const char *path = path_str.c_str();
+	const char	*path = path_str.c_str();
 
+	std::string	pathToPrint(srv.getReq_struct()->base.start_string.uri);
 	if (access(path, F_OK)) {
 		Logger::putMsg("Dir \"" + path_str + "\" doesn't exist", FILE_ERR, ERR);
+		srv.Stage = 9;
+		srv.getReq_struct()->answ_code[0] = 4;
+		srv.getReq_struct()->answ_code[1] = 4;
 		return "1";
 	}
 	if (access(path, R_OK)) {
 		Logger::putMsg("Have no permissions to read dir \"" + path_str + "\"", FILE_ERR, ERR);
+		srv.Stage = 9;
+		srv.getReq_struct()->answ_code[0] = 4;
+		srv.getReq_struct()->answ_code[1] = 3;
 		return "1";
 	}
 
-	std::string page("<html>\n<head>\n<title> Index of /" + path_str + "</title>\n</head>\n<body >\n<h1> Index of /" + path_str + "</h1>\n<table style=\"width:80%; font-size: 15px\">\n<hr>\n<th style=\"text-align:left\"> File Name </th>\n<th style=\"text-align:left\"> Last Modification </th>\n<th style=\"text-align:left\"> File Size </th>\n" );
+	std::string page("<html>\n<head>\n<title> Index of /" + pathToPrint + "</title>\n</head>\n<body >\n<h1> Index of " + pathToPrint + "</h1>\n<table style=\"width:80%; font-size: 15px\">\n<hr>\n<th style=\"text-align:left\"> File Name </th>\n<th style=\"text-align:left\"> Last Modification </th>\n<th style=\"text-align:left\"> File Size </th>\n" );
 
 	DIR			*dir;
 	dirent		*current;

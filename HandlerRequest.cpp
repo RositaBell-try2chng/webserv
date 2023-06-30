@@ -31,15 +31,22 @@ void HandlerRequest::start(Server &srv)
 		case 9: { srv.Stage = 9; HandlerRequest::prepareToSendError(srv); break; }
 		default: { MainClass::setBadStageError(srv); break; }
 	}
+
 }
 
 void HandlerRequest::parserRequest(Server &srv)
 {
 	Logger::putMsg(srv.getRequest(), FILE_REQ, REQ);
 	HTTP_Request::ft_strtoreq(*(srv.getReq_struct()), srv.getRequest());
-	if (srv.getReq_struct()->answ_code[0] == 4 || srv.getReq_struct()->answ_code[0] == 5)
+	if (/*srv.getReq_struct()->answ_code[0] == 4 || srv.getReq_struct()->answ_code[0] == 5 || */srv.getReq_struct()->stage == 59)
 	{
 		srv.Stage = 9;
+		HandlerRequest::prepareToSendError(srv);
+		return;
+	}
+	else if (srv.getReq_struct()->stage == 54)
+	{
+		srv.Stage = 99;
 		HandlerRequest::prepareToSendError(srv);
 		return;
 	}
@@ -81,7 +88,7 @@ void HandlerRequest::handleRequest(Server &srv)
 	t_serv		*servNode = srv.findServer(srv.getReq_struct()->host);
 	//check too large body
 	if ((srv.getReq_struct()->flg_te == 0 && srv.getReq_struct()->content_lngth > servNode->limitCLientBodySize) || \
-		(srv.getReq_struct()->flg_te == 1 && srv.getReq_struct()->chunk_size > servNode->limitCLientBodySize))//fix me: check if need to skip some from fd
+		(srv.getReq_struct()->flg_te == 1 && srv.getReq_struct()->chunk_size > servNode->limitCLientBodySize))
 	{
 		srv.Stage = 9;
 		srv.getReq_struct()->answ_code[0] = 4;
@@ -90,15 +97,46 @@ void HandlerRequest::handleRequest(Server &srv)
 		return;
 	}
 	//split locName && fileName + find location
-	size_t		i = srv.getReq_struct()->base.start_string.uri.rfind('/');
-	std::string	locName = srv.getReq_struct()->base.start_string.uri.substr(0, i);
-	std::string	fileName = srv.getReq_struct()->base.start_string.uri;
-	fileName.erase(0, i + 1);
+	t_loc		*locNode = servNode->locList;
+	size_t		i = srv.getReq_struct()->base.start_string.uri.length();
+	std::string	locName;
+	std::string	fileName;
+	std::string realPath(servNode->root);
+	while (i != std::string::npos && i != 0)
+	{
+		locName = srv.getReq_struct()->base.start_string.uri.substr(0, i);
+		locNode = srv.findLocation(locName, servNode);
+		if (locNode != servNode->locList)
+			break;
+		i = srv.getReq_struct()->base.start_string.uri.rfind('/', i - 1);
+	}
+
+	if (!locNode->root.empty() && locNode->root != "/")
+		realPath += locNode->root;
+	else if (locNode->location != "/")
+		realPath += locNode->location;
+	fileName = srv.getReq_struct()->base.start_string.uri.substr(i);
 	srv.getCGIptr()->PATH_INFO = srv.getReq_struct()->base.start_string.uri;
 	srv.getCGIptr()->SCRIPT_NAME = fileName;
-	t_loc		*locNode = srv.findLocation(locName, servNode);
-	//check if method allowed
 	std::string method = srv.getReq_struct()->base.start_string.method;
+	//check exists methods not ALLOWED
+	if (method == "CONNECT" || method == "HEAD" || method == "OPTIONS" || method == "PATCH" || method == "PUT" || method == "TRACE")
+	{
+		srv.Stage = 9;
+		srv.getReq_struct()->answ_code[0] = 4;
+		srv.getReq_struct()->answ_code[1] = 5;
+		HandlerRequest::prepareToSendError(srv);
+		return;
+	}
+	else if (method != "GET" && method != "POST" && method != "DELETE")
+	{
+		srv.Stage = 9;
+		srv.getReq_struct()->answ_code[0] = 5;
+		srv.getReq_struct()->answ_code[1] = 1;
+		HandlerRequest::prepareToSendError(srv);
+		return;
+	}
+	//check if method allowed
 	if ((method == "GET" && !locNode->flgGet) || (method == "POST" && !locNode->flgPost) || (method == "DELETE" && !locNode->flgDelete))
 	{
 		srv.Stage = 9;
@@ -108,17 +146,18 @@ void HandlerRequest::handleRequest(Server &srv)
 		return;
 	}
 	//check directory request
-	if (i >= srv.getReq_struct()->base.start_string.uri.length() - 1)
+	DIR *dirPTR = opendir((realPath + fileName).c_str());
+	if (dirPTR != NULL)
 	{
-		HandlerRequest::handleDirectoryResponse(srv, locNode);
+		closedir(dirPTR);
+		HandlerRequest::handleDirectoryResponse(srv, realPath + fileName, locNode);
 		return;
 	}
 	//try to find file
 	bool	CGIflg = false;
-	if (!Server::findFile(srv, fileName, servNode, locNode, CGIflg))
+	realPath += fileName;
+	if (!Server::findFile(srv, realPath, servNode, locNode, CGIflg))
 	{
-		if (method == "POST")
-			std::cout << "HTTP/1.1 403 Forbidden\r\nContent-Length: 13\r\nConnection: close\r\n\r\nHello, world!";
 		//check redirect
 		if (!locNode->redirect.empty())
 			HandlerRequest::redirectResponse(srv, locNode);
@@ -133,26 +172,30 @@ void HandlerRequest::handleRequest(Server &srv)
 	}
 	//start handle methods
 	if (method == "GET")
-		HandlerRequest::GET(srv, fileName, CGIflg);
+		HandlerRequest::GET(srv, servNode, realPath, CGIflg);
 	else if (method == "POST")
-		HandlerRequest::POST(srv, servNode, locNode, fileName);
+		HandlerRequest::POST(srv, servNode, locNode, realPath);
 	else if (method == "DELETE")
-		HandlerRequest::DELETE(srv, locNode, fileName);
+		HandlerRequest::DELETE(srv, locNode, realPath);
 	else
 	{
 		srv.Stage = 9;
-		srv.getReq_struct()->answ_code[0] = 5;
-		srv.getReq_struct()->answ_code[1] = 1;
+		srv.getReq_struct()->answ_code[0] = 4;
+		srv.getReq_struct()->answ_code[1] = 5;
 		HandlerRequest::prepareToSendError(srv);
 	}
 }
 
-void HandlerRequest::handleDirectoryResponse(Server &srv, t_loc *locNode)
+void HandlerRequest::handleDirectoryResponse(Server &srv, std::string realPath, t_loc *locNode)
 {
 	if (locNode->dirListFlg)
 	{
-		srv.resp.body = ft_dirlisting(locNode->location.substr(1) + "/");//do some from Egor's file
-		std::cout << "DIR LISTING ON on: " << locNode->location << std::endl;
+		srv.resp.body = ft_dirlisting(realPath, srv);
+		if (srv.Stage == 9)
+		{
+			HandlerRequest::prepareToSendError(srv);
+			return;
+		}
 		srv.setResponse("HTTP/1.1 200 OK\r\nContent-type: text/html\r\nContent-Length: " + Size_tToString(srv.resp.body.length(), DEC_BASE) + "\r\n\r\n" + srv.resp.body);
 		srv.Stage = 5;
 		srv.writeStage = 2;
@@ -160,7 +203,7 @@ void HandlerRequest::handleDirectoryResponse(Server &srv, t_loc *locNode)
 	}
 	if (!locNode->indexFile.empty())
 	{
-		srv.getReq_struct()->base.start_string.uri += locNode->indexFile;
+		srv.getReq_struct()->base.start_string.uri += std::string("/") + locNode->indexFile;
 		HandlerRequest::handleRequest(srv);
 		return;
 	}
@@ -175,11 +218,9 @@ void HandlerRequest::handleDirectoryResponse(Server &srv, t_loc *locNode)
 	HandlerRequest::prepareToSendError(srv);
 }
 
-void HandlerRequest::GET(Server &srv, std::string &fileName, bool CGIflg)
+void HandlerRequest::GET(Server &srv, t_serv *servNode, std::string &fileName, bool CGIflg)
 {
-	if (fileName.find("favicon.ico") != std::string::npos)
-		CGIflg = false;
-	else if ((!CGIflg && access(fileName.c_str(), R_OK) == -1) || (CGIflg && access(fileName.c_str(), X_OK) == -1))
+	if ((!CGIflg && access(fileName.c_str(), R_OK) == -1) || (CGIflg && access(fileName.c_str(), X_OK) == -1))
 	{
 		srv.getReq_struct()->answ_code[0] = 4;
 		srv.getReq_struct()->answ_code[1] = 3;
@@ -190,7 +231,7 @@ void HandlerRequest::GET(Server &srv, std::string &fileName, bool CGIflg)
 	if (!CGIflg)
 	{
 		srv.getReq_struct()->base.headers.insert(std::pair<std::string, std::string>(std::string("FILENAME"), fileName));
-		srv.getCGIptr()->PATH_TRANSLATED = std::string("./CGIs/download.py");
+		srv.getCGIptr()->PATH_TRANSLATED = std::string(servNode->root + "/CGIs/download.py");
 		srv.getCGIptr()->PATH_INFO = std::string("/CGIs/download.py");
 		srv.getCGIptr()->SCRIPT_NAME = std::string("download.py");
 	}
@@ -203,42 +244,30 @@ void HandlerRequest::GET(Server &srv, std::string &fileName, bool CGIflg)
 
 void HandlerRequest::POST(Server &srv, t_serv *servNode, t_loc *locNode, std::string &fileName)
 {
+	std::string fullPath(servNode->root + "/CGIs/upload.py");
 	//check access to upload
-	if (locNode->CGIs.find(".py") == locNode->CGIs.end())
+	if (access(fullPath.c_str(), X_OK) == -1)
 	{
 		srv.getReq_struct()->answ_code[0] = 4;
-		srv.getReq_struct()->answ_code[1] = 9;
+		srv.getReq_struct()->answ_code[1] = 3;
 		srv.Stage = 9;
 		HandlerRequest::prepareToSendError(srv);
 		return;
 	}
-//	if ()
-//	{
-//		//can't POST without CGI
-//		srv.getReq_struct()->answ_code[0] = 4;
-//		srv.getReq_struct()->answ_code[1] = 9;
-//		srv.Stage = 9;
-//		HandlerRequest::prepareToSendError(srv);
-//		return;
-//	}
 	//set upload path
 	std::string uplPath;
 
 	if (servNode->root != "/")
 		uplPath = servNode->root;
 	else
-		uplPath = std::string(".");
-	if (locNode->location != "/")
-		uplPath += locNode->location;
-	if (locNode->root != "/")
-		uplPath += locNode->root;
+		uplPath = std::string("./");
 	if (locNode->uploadPath != "/")
 		uplPath += locNode->uploadPath;
 	uplPath += std::string("/");
 	srv.getReq_struct()->base.headers.insert(std::pair<std::string, std::string>("UPLOAD_PATH", uplPath));
 	//change body if need / setup params for CGI
 	char result = HandlerRequest::changeBodyIfBoundryIsSet(srv.getReq_struct());
-	if (fileName == "./CGIs/upload.py")
+	if (fileName == fullPath)
 		HandlerRequest::addFileNameEnv(srv.getReq_struct(), result);
 	else
 	{
@@ -291,7 +320,8 @@ void HandlerRequest::DELETE(Server &srv, t_loc *locNode, std::string &fileName)
 {
 	std::string fullPath;
 
-	if (locNode->uploadPath.empty() || access(fileName.c_str(), W_OK) != 0)
+	(void) locNode;
+	if (access(fileName.c_str(), W_OK) != 0)
 	{
 		srv.getReq_struct()->answ_code[0] = 4;
 		srv.getReq_struct()->answ_code[1] = 3;
@@ -299,6 +329,7 @@ void HandlerRequest::DELETE(Server &srv, t_loc *locNode, std::string &fileName)
 		HandlerRequest::prepareToSendError(srv);
 		return;
 	}
+
 	srv.getReq_struct()->base.headers.insert(std::pair<std::string, std::string>(std::string("FILENAME"), fileName));
 	srv.getCGIptr()->PATH_INFO = std::string("/CGIs/delete.sh");
 	srv.getCGIptr()->PATH_TRANSLATED = std::string("./CGIs/delete.sh");
@@ -314,14 +345,15 @@ bool HandlerRequest::haveErrorPage(Server &srv, t_serv *servNode, int code)
 
 	if (it == servNode->errPages.end())
 		return (false);
-	if (access("./CGIs/download.py", X_OK) == -1)
+	std::string								fullPath(servNode->root + it->second);
+	if (access((servNode->root + "/CGIs/download.py").c_str(), X_OK) == -1)
 	{
 		Logger::putMsg("download.py have no access to execute => error pages can't be open", FILE_ERR, ERR);
 		return(false);
 	}
-	if (access(it->second.c_str(), R_OK) == -1)
+	if (access(fullPath.c_str(), R_OK) == -1)
 	{
-		Logger::putMsg("can't find error " + it->second + " or FILE have no access to read", FILE_ERR, ERR);
+		Logger::putMsg("can't find error " + fullPath + " or FILE have no access to read", FILE_ERR, ERR);
 		servNode->errPages.erase(it);
 		return(false);
 	}
@@ -336,7 +368,7 @@ bool HandlerRequest::haveErrorPage(Server &srv, t_serv *servNode, int code)
 		case 505: { startStringForError += std::string("505 HTTP Version Not Supported\r\n"); break; }
 	}
 	srv.getReq_struct()->base.headers.insert(std::pair<std::string, std::string>(std::string("RESPONSE_START_STRING"), startStringForError));
-	HandlerRequest::GET(srv, it->second, false);
+	HandlerRequest::GET(srv, servNode, fullPath, false);
 	return (true);
 }
 
@@ -442,13 +474,15 @@ void HandlerRequest::prepareToSendCGI(Server &srv)
 {
 	if (srv.CGIStage == 20)
 		return;
-	if (srv.getReq_struct()->body.empty())
+	if (srv.getReq_struct()->body.empty() && srv.parseStage < 3)
 	{
 		srv.Stage = 1;
 		return;
 	}
 	srv.Stage = 4;
-	if (srv.parseStage == 3)
+	if (srv.parseStage == 3 && srv.getReq_struct()->body.empty())
+		srv.CGIStage = 4;
+	else if (srv.parseStage == 3)
 		srv.CGIStage = 2;
 	else
 		srv.CGIStage = 1;
@@ -549,14 +583,22 @@ char HandlerRequest::changeBodyIfBoundryIsSet(HTTP_Request *req)
 		return (0);
 	std::string filename = subHeads.substr(i + 6, j - (i + 6));
 	i = subHeads.find(filename, j);
+	if (i == std::string::npos)
+		return (0);
 	i = subHeads.find("\"", i + 1);
 	j = subHeads.find("\"", i + 1);
 	if (i == std::string::npos || j == std::string::npos)
 		return (0);
 	filename = subHeads.substr(i + 1, j - (i + 1));
 	i = filename.rfind(".");
-	std::string ext = filename.substr(i);
-	filename.erase(i);
+	std::string ext;
+	if (i != std::string::npos)
+	{
+		ext = filename.substr(i);
+		filename.erase(i);
+	}
+	else
+		ext = std::string(".unknown");
 	if (!filename.empty() && !ext.empty())
 	{
 		req->base.headers.insert(std::pair<std::string, std::string>(std::string("FILENAME"), filename));
@@ -596,7 +638,7 @@ void HandlerRequest::prepareToSendError(Server &srv)
 	t_serv		*servNode = srv.findServer(srv.getReq_struct()->host);;
 
 	srv.writeStage = 0;
-	if (srv.Stage == 99) //runtime error
+	if (srv.Stage == 99) //runtime error //fix me: add close for parse fatal error
 	{
 		srv.getReq_struct()->answ_code[0] = 4;
 		srv.getReq_struct()->answ_code[1] = 8;
@@ -607,11 +649,9 @@ void HandlerRequest::prepareToSendError(Server &srv)
 		srv.getReq_struct()->answ_code[1] = 0;
 	}
 	int code = srv.getReq_struct()->answ_code[0] * 100 + srv.getReq_struct()->answ_code[1];
-
 	if (HandlerRequest::haveErrorPage(srv, servNode, code))
 		return;
 	tmp = HTTP_Answer::ft_reqtoansw(*(srv.getReq_struct()));
-	std::cout << HTTP_Answer::ft_answtostr(tmp);
 	srv.setResponse(HTTP_Answer::ft_answtostr(tmp), true);
 	srv.Stage = 5;
 	srv.writeStage = 2;

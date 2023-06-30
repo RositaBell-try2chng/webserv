@@ -18,12 +18,12 @@ private:
 	static void	parserRequest(Server &srv);
 	static void	handleRequest(Server &srv);
 	static void	prepareToSendError(Server &srv);
-	static void	GET(Server &srv, std::string &fileName, bool CGIflg);
+	static void	GET(Server &srv, t_serv *servNode, std::string &fileName, bool CGIflg);
 	static void	POST(Server &srv, t_serv *servNode, t_loc *locNode, std::string &fileName);
 	static void	DELETE(Server &srv, t_loc *locNode, std::string &fileName);
 	static void	CGIerrorManager(Server &srv);
 	static bool	isBodyNeed(Server &srv);
-	static void	handleDirectoryResponse(Server &srv, t_loc *locNode);
+	static void	handleDirectoryResponse(Server &srv, std::string realPath, t_loc *locNode);
 	static char changeBodyIfBoundryIsSet(HTTP_Request *req);
 	static void addFileNameEnv(HTTP_Request *req, char result);
 	//CGIs
@@ -33,6 +33,7 @@ private:
 	static void	CGIHandler(Server &srv);
 	static void	redirectResponse(Server &srv, t_loc *locNode);
 	static bool	haveErrorPage(Server &srv, t_serv *servNode, int code);
+	
 public:
 	static void	mainHandler(Server &srv);
 };

@@ -232,7 +232,7 @@ bool ConfParser::fillServParam(std::string &src, std::map <std::string, std::str
             {
                 if (line2[0] != '/')
 				    line2.insert(line2.begin(), '/');
-                if (line2[line2.length() - 1] != '/')
+                if (line2[line2.length() - 1] == '/')
                     line2.erase(line2.length() - 1, 1);
             }
 			if (paramS.find(line) != paramS.end())

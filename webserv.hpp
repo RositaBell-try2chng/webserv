@@ -61,6 +61,8 @@ typedef struct	s_listen
 class Server;
 class Servers;
 
+void printStages(Server &srv); //fix me: delete this and in cpp
+
 void delSpaces(std::string &str);
 bool checkCorrectHost(std::string &Host);
 ssize_t strToSSize_t(std::string const &src, ssize_t limit);

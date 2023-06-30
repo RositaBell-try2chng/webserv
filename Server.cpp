@@ -84,11 +84,10 @@ t_loc *Server::findLocation(std::string &str, t_serv *src)
 //finders
 bool	Server::findFile(Server &srv, std::string &str, t_serv *servNode, t_loc *loc, bool &CGIflg)
 {
-	std::string	fullPath;
 	std::string extension;
 	size_t		i = str.rfind('.');
 
-	if (srv.getReq_struct()->base.start_string.method == "POST" && str != "upload.py")
+	if (srv.getReq_struct()->base.start_string.method == "POST" && str != (servNode->root + "/CGIs/upload.py"))
 		return (true);
 	//check if file CGI Script
 	if (i != std::string::npos)
@@ -97,18 +96,8 @@ bool	Server::findFile(Server &srv, std::string &str, t_serv *servNode, t_loc *lo
 		if (loc->CGIs.find(extension) != loc->CGIs.end())
 			CGIflg = true;
 	}
-	if (!servNode->root.empty() && servNode->root != "/")
-		fullPath = servNode->root;
-	else
-		fullPath = std::string(".");
-	if (loc->location != "/")
-		fullPath += loc->location;
-	if (!loc->root.empty() && loc->root != "/")
-		fullPath += loc->root;
-	fullPath += std::string("/") + str;
-	if (access(fullPath.c_str(), F_OK) != 0)
+	if (access(str.c_str(), F_OK) != 0)
 		return (false);
-	str = fullPath;
 	return (true);
 }
 
