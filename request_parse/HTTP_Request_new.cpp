@@ -23,7 +23,7 @@ int ft_set_method(HTTP_Request &req, std::string url, int end) {
 
 	// checking if method implemented
 	if (i < end && ft_if_method_implemented(method)) {
-		Logger::putMsg("Method is not implemented", FILE_WREQ, WREQ);
+		Logger::putMsg("Method is not implemented: " + method, FILE_WREQ, WREQ);
 		req.answ_code[0] = 4;
 		req.answ_code[1] = 5;
 
@@ -74,7 +74,7 @@ int	ft_set_version(HTTP_Request &req, std::string url, int end, int i) {
 	}
 
 	if (req.base.start_string.version.compare("HTTP/1.1")) {
-		Logger::putMsg("Request has wrong HTTP version", FILE_WREQ, WREQ);
+		Logger::putMsg("Request has wrong HTTP version: " + req.base.start_string.version, FILE_WREQ, WREQ);
 		req.answ_code[0] = 5;
 		req.answ_code[1] = 5;
 		return 0;
@@ -85,6 +85,7 @@ int	ft_set_version(HTTP_Request &req, std::string url, int end, int i) {
 
 int	ft_set_url(HTTP_Request &req) {
 
+	std::cout << "\nNEW REQ:\n" << std::endl;
 	int	end = req.left.size();
 
 	if (end > REQ_MAX_SIZE) {
@@ -110,18 +111,28 @@ void	ft_parse_start_string(HTTP_Request &req, std::string &raw, int &end) {
 	if (end == 0 || req.stage != 50)
 		return ;
 
+	while (end > 0 && (raw[0] == '\r' || raw[0] == 'n')) {
+		raw.erase(0, 1);
+		end -= 1;
+	}
+
 	int i;
 
 	for (i = 0; (i + 1 < end) && !(raw[i + 1] == '\n' && raw[i] == '\r'); ++i)
 		req.left.push_back(raw[i]);
 
-	if (raw[i + 1] == '\n' && raw[i] == '\r') {
-		ft_set_url(req);
+	if (i != 0) {
+		if (raw[i + 1] == '\n' && raw[i] == '\r') {
+			ft_set_url(req);
 			++req.stage;
-		req.left.clear();
+			std::cout << req.stage - 1 << " --> " << req.stage << std::endl;
+			req.left.clear();
+		}
+		else
+			req.left.push_back(raw[i]);
 	}
-	else
-		req.left.push_back(raw[i]);
+	if (i == 0 && end == 4)
+		i += 2;
 	raw.erase(0, i + 2);
 	end = raw.size();
 }
@@ -174,29 +185,40 @@ void ft_set_hdr(HTTP_Request &req) {
 void	ft_parse_headers(HTTP_Request &req, std::string &raw, int &end) {
 
 	if (end == 0 || req.stage != 51)
-		return;
+		return ;
 
 	int	i;
 	int	letter;
 
 	for (i = 0; i < end; ++i) {
+		if (i != 0)
+			req.base.check = false;
 		for (letter = 1;
 				i + letter < end && !(raw[i + letter] == '\n' && raw[i + letter - 1] == '\r');
 				++letter) {}
 		req.left += raw.substr(i, letter);
-		if (raw[i + letter] == '\n' && raw[i + letter - 1] == '\r' && !req.base.check) {
+		if (raw[i + letter] == '\n' && raw[i + letter - 1] == '\r') {
 			ft_set_hdr(req);
+			req.base.check = true;
 			i += (letter - 1);
 		}
 		else {
-			req.left.clear();
+			i += (letter - 1);
 			break ;
 		}
 		++i;
-		if ((i + 2 < end && raw[i + 2] == '\n' && raw[i + 1] == '\r')) {
+		if ((i + 2 < end && raw[i + 2] == '\n' && raw[i + 1] == '\r')
+				|| (end > 1 && req.base.check && raw[1] == '\n' && raw[0] == '\r')) {
 			ft_headers_parse(req);
 			++req.stage;
-			i += 3;
+			std::cout << req.stage - 1 << " --> " << req.stage << std::endl;
+			++i;
+			if (!req.base.check)
+				i += 2;
+			else {
+				req.left.clear();
+			}
+			req.base.check = false;
 			break ;
 		}
 	}
@@ -211,11 +233,16 @@ void	ft_parse_chunked_body(HTTP_Request &req, std::string &raw, int &end) {
 	int	i = 1;
 
 	std::string	content;
-
+	
+	while (end > 0 && (raw[0] == '\r' || raw[0] == 'n')) {
+		raw.erase(0, 1);
+		end -= 1;
+	}
 	for (; i < end && raw[i - 1] != '\r' && raw[i] != '\n';) {
 		for (i = 1; i < end && !(raw[i - 1] == '\r' && raw[i] == '\n'); ++i){}
 		if (raw[i - 1] == '\r' && raw[i] == '\n') {
-			req.chunk_size = StringToSize_t(raw.substr(0, i - 1), HEX_BASE, req.flg_ch_sz_crct);
+			req.chunk_size = StringToSize_t(req.left + raw.substr(0, i - 1), HEX_BASE, req.flg_ch_sz_crct);
+			req.left.clear();
 			req.content_lngth += req.chunk_size;
 			raw.erase(0, i + 1);
 			end = raw.size();
@@ -227,6 +254,7 @@ void	ft_parse_chunked_body(HTTP_Request &req, std::string &raw, int &end) {
 			}
 			if (req.chunk_size == 0) {
 				++req.stage;
+				std::cout << req.stage - 1 << " --> " << req.stage << std::endl;
 				break ;
 			}
 			for (i = 0; i < req.chunk_size && i < end; ++i){}
@@ -274,6 +302,7 @@ void	ft_parse_body(HTTP_Request &req, std::string &raw, int &end) {
 		else {
 			req.body = req.left + content;
 			++req.stage;
+			std::cout << req.stage - 1 << " --> " << req.stage << std::endl;
 			req.left.clear();
 		}
 		req.body_left -= i;
@@ -329,7 +358,6 @@ void	ft_skip(HTTP_Request &req, std::string &raw, int end) {
 			}
 		}
 	}
-	
 	if (req.stage != 54)
 		req.stage = 59;
 }
