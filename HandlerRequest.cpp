@@ -225,7 +225,7 @@ void HandlerRequest::handleDirectoryResponse(Server &srv, std::string realPath, 
 
 void HandlerRequest::GET(Server &srv, t_serv *servNode, std::string &fileName, bool CGIflg)
 {
-	if ((!CGIflg && access(fileName.c_str(), R_OK) == -1) || (CGIflg && access(fileName.c_str(), X_OK) == -1))
+	if (!CGIflg && access(fileName.c_str(), R_OK) == -1)
 	{
 		srv.getReq_struct()->answ_code[0] = 4;
 		srv.getReq_struct()->answ_code[1] = 3;
@@ -381,7 +381,7 @@ bool HandlerRequest::haveErrorPage(Server &srv, t_serv *servNode, int code)
 	return (true);
 }
 
-void HandlerRequest::redirectResponse(Server &srv, t_loc *locNode) //fix me: test this at all
+void HandlerRequest::redirectResponse(Server &srv, t_loc *locNode)
 {
 	std::map<int, std::string>::iterator	it = locNode->redirect.begin();
 	int										code = it->first;
