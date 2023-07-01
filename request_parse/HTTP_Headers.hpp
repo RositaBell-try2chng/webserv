@@ -60,7 +60,8 @@ enum Basic_Headers	{	Host,
 						Content_Type,
 						Date,
 						Transfer_Encoding,
-						Something_six	};
+						User_Agent,
+						Something_else	};
 
 struct HTTP_Request;
 

@@ -40,7 +40,7 @@ log_clean:
 			${RM} logs/errors.txt logs/info.txt logs/requests.txt logs/wrong_requests.txt
 
 tester:	all
-			./tester http://127.0.0.1:8080
+			make log_clean & ./tester http://127.0.0.1:8080
 
 stop:
 			pkill webserv
