@@ -22,7 +22,8 @@ typedef struct s_loc
 	std::string					root;
 	bool			        	dirListFlg;
 	std::string		 			defFileIfDir;
-	std::set<std::string>		CGIs; //extensions of file
+	std::vector<std::string>	CGIs; //extensions of file
+	std::vector<std::string>	CGIs_path;
 	std::string					uploadPath;
 	s_loc*				    	next;
 }   t_loc;
@@ -58,7 +59,7 @@ private:
 	CGI				*ptrCGI;
 
 	static void		setMethods(t_loc* cur, std::string &src);
-	static void		setCGIs(std::set<std::string> &dst, std::string &src);
+	static void		setCGIs(std::vector<std::string> &dst, std::string &src);
 	static void		fillErrorPages(std::vector<std::string> &E, t_serv *cur);
 	static void		setRedirect(t_loc *cur, std::string line1);
 

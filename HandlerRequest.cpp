@@ -121,7 +121,7 @@ void HandlerRequest::handleRequest(Server &srv)
 	else if (locNode->location != "/")
 		realPath += locNode->location;
 	fileName = srv.getReq_struct()->base.start_string.uri.substr(i);
-	srv.getCGIptr()->PATH_INFO = srv.getReq_struct()->base.start_string.uri;
+	srv.getCGIptr()->PATH_INFO = std::string("");//srv.getReq_struct()->base.start_string.uri;
 	srv.getCGIptr()->SCRIPT_NAME = fileName;
 	std::string method = srv.getReq_struct()->base.start_string.method;
 	//check exists methods not ALLOWED
@@ -181,7 +181,7 @@ void HandlerRequest::handleRequest(Server &srv)
 	else if (method == "POST")
 		HandlerRequest::POST(srv, servNode, locNode, realPath);
 	else if (method == "DELETE")
-		HandlerRequest::DELETE(srv, locNode, realPath);
+		HandlerRequest::DELETE(srv, servNode, locNode, realPath);
 	else
 	{
 		srv.Stage = 9;
@@ -236,8 +236,9 @@ void HandlerRequest::GET(Server &srv, t_serv *servNode, std::string &fileName, b
 	if (!CGIflg)
 	{
 		srv.getReq_struct()->base.headers.insert(std::pair<std::string, std::string>(std::string("FILENAME"), fileName));
+		srv.getCGIptr()->PATH_TO_SGI = std::string("/usr/local/bin/python3.9");
 		srv.getCGIptr()->PATH_TRANSLATED = std::string(servNode->root + "/CGIs/download.py");
-		srv.getCGIptr()->PATH_INFO = std::string("/CGIs/download.py");
+		srv.getCGIptr()->PATH_INFO = std::string("");
 		srv.getCGIptr()->SCRIPT_NAME = std::string("download.py");
 	}
 	else
@@ -315,13 +316,14 @@ void HandlerRequest::POST(Server &srv, t_serv *servNode, t_loc *locNode, std::st
 		else
 			srv.getReq_struct()->base.headers.insert(std::pair<std::string, std::string>("FILENAME", "default"));
 	}
-	srv.getCGIptr()->PATH_TRANSLATED = std::string("./CGIs/upload.py");
+	srv.getCGIptr()->PATH_TRANSLATED = std::string(servNode->root + "/CGIs/upload.py");
+	srv.getCGIptr()->PATH_TO_SGI = std::string("/usr/local/bin/python3.9");
 	srv.Stage = 4;
 	srv.CGIStage = 0;
 	HandlerRequest::CGIHandler(srv);
 }
 
-void HandlerRequest::DELETE(Server &srv, t_loc *locNode, std::string &fileName)
+void HandlerRequest::DELETE(Server &srv, t_serv *servNode, t_loc *locNode, std::string &fileName)
 {
 	std::string fullPath;
 
@@ -336,8 +338,9 @@ void HandlerRequest::DELETE(Server &srv, t_loc *locNode, std::string &fileName)
 	}
 
 	srv.getReq_struct()->base.headers.insert(std::pair<std::string, std::string>(std::string("FILENAME"), fileName));
-	srv.getCGIptr()->PATH_INFO = std::string("/CGIs/delete.sh");
-	srv.getCGIptr()->PATH_TRANSLATED = std::string("./CGIs/delete.sh");
+	srv.getCGIptr()->PATH_INFO = std::string("");
+	srv.getCGIptr()->PATH_TRANSLATED = std::string(servNode->root + "/CGIs/delete.sh");
+	srv.getCGIptr()->PATH_TO_SGI = std::string("/bin/bash");
 	srv.getCGIptr()->SCRIPT_NAME = std::string("delete.sh");
 	srv.Stage = 4;
 	srv.CGIStage = 0;
@@ -450,14 +453,14 @@ void HandlerRequest::startCGI(Server &srv)
 		HandlerRequest::prepareToSendError(srv);
 		return;
 	}
-	if (access(srv.getCGIptr()->PATH_TRANSLATED.c_str(), X_OK) == -1)
-	{
-		srv.Stage = 9;
-		srv.getReq_struct()->answ_code[0] = 4;
-		srv.getReq_struct()->answ_code[1] = 3;
-		HandlerRequest::prepareToSendError(srv);
-		return;
-	}
+	// if (access(srv.getCGIptr()->PATH_TRANSLATED.c_str(), X_OK) == -1)
+	// {
+	// 	srv.Stage = 9;
+	// 	srv.getReq_struct()->answ_code[0] = 4;
+	// 	srv.getReq_struct()->answ_code[1] = 3;
+	// 	HandlerRequest::prepareToSendError(srv);
+	// 	return;
+	// }
 	srv.CGIStage = srv.getCGIptr()->startCGI();
 	srv.CGIStage = srv.getCGIptr()->ForkCGI(srv);
 	if (srv.CGIStage == 9)

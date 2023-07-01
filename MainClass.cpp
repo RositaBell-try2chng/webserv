@@ -25,6 +25,11 @@ void MainClass::doIt(int args, char **argv)
 
 	for (std::map<int, Server *>::iterator it = allServers->getConnections(true).begin(); it != allServers->getConnections(true).end(); it++)
 	{
+		if (!MainClass::isCorrectCGIs(it))
+		{
+			std::cerr << "BAD CGIs configs, check logs\n";
+			return;
+		}
 		if (!MainClass::isCorrectRedirection(it))
 		{
 			std::cerr << "BAD redirection, check logs\n";
@@ -325,6 +330,26 @@ int	MainClass::setContentLengthResponse(Server &srv)
 		srv.getReq_struct()->answ_code[1] = 0;
 		return (9);
 	}
+	//check if content length exists
+	std::string startAndHead = resp.substr(0, i);
+	std::stringstream ss(startAndHead);
+	std::string tmp;
+	size_t	j;
+	std::getline(ss, tmp);
+	j = tmp.find("HTTP/1.");
+	if (j != 0)
+	{
+		j = startAndHead.find("Status: ");
+		tmp = startAndHead.substr(j + 7);
+		std::stringstream strstream(tmp);
+		int code;
+		strstream >> code;
+		int answ_code[2];
+		answ_code[0] = code / 100;
+		answ_code[1] = code % 100;
+		resp.insert(0, "HTTP/1.1 " + Size_tToString(code, DEC_BASE) + std::string(" ") + ft_reason_phrase(answ_code) + std::string("\r\n"));
+	}
+	i = resp.find("\r\n\r\n");
 	size_t		bodyLen = resp.length() - (i + 4);
 	std::string	bodyLenStr = Size_tToString(bodyLen, DEC_BASE);
 
@@ -340,6 +365,19 @@ int	MainClass::setChunkedResponse(Server &srv)
 	std::string BodySize;
 	size_t		i;
 
+	i = Body.find("HTTP/1.");
+	if (i != 0)
+	{
+		i = Body.find("Status:");
+		std::string tmp = Body.substr(i + 7);
+		std::stringstream ss(tmp);
+		int code;
+		ss >> code;
+		int answ_code[2];
+		answ_code[0] = code / 100;
+		answ_code[1] = code % 100;
+		Body.insert(0, "HTTP/1.1 " + Size_tToString(code, DEC_BASE) + std::string(" ") + ft_reason_phrase(answ_code) + std::string("\r\n"));
+	}
 	i = Body.find("\r\n\r\n");
 	if (i == std::string::npos)
 	{
@@ -382,6 +420,33 @@ void MainClass::addToSet(int fd, fd_set *dst)
 	FD_SET(fd, dst);
 	if (fd > MainClass::maxFd)
 		MainClass::maxFd = fd;
+}
+
+bool MainClass::isCorrectCGIs(std::map<int, Server *>::iterator it)
+{
+	t_serv	*curServ;
+	t_loc	*curLoc;
+
+	for (curServ = it->second->serv; curServ != NULL; curServ = curServ->next)
+	{
+		for (curLoc = curServ->locList; curLoc != NULL; curLoc = curLoc->next)
+		{
+			if (curLoc->CGIs.size() != curLoc->CGIs_path.size())
+			{
+				Logger::putMsg("size of CGIs and CGIs_path are diffrent", FILE_ERR, ERR);
+				return (false);
+			}
+			for (size_t i = 0; i < curLoc->CGIs_path.size(); i++)
+			{
+				if (access(curLoc->CGIs_path[i].c_str(), X_OK) == -1)
+				{
+					Logger::putMsg(std::string("CGIs_path ") + curLoc->CGIs_path[i] + std::string(" Not found or have no access X"), FILE_ERR, ERR);
+					return (false);
+				}
+			}
+		}
+	}
+	return (true);
 }
 
 bool MainClass::isCorrectRedirection(std::map<int, Server *>::iterator it)

@@ -61,6 +61,7 @@ public:
     std::string PATH_INFO;
     std::string PATH_TRANSLATED;
     std::string SCRIPT_NAME;
+    std::string PATH_TO_SGI;
 
 	int  prevStage;
 };

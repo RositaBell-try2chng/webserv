@@ -262,10 +262,11 @@ char** CGI::setArgv(Server &src)
     std::string loc;
 
     try {
-        res = new char*[2];
+        res = new char*[3];
         res[0] = NULL;
-        res[0] = CGI::getAllocatedCharPointer(this->PATH_TRANSLATED);
-        res[1] = NULL;
+        res[0] = CGI::getAllocatedCharPointer(this->PATH_TO_SGI);
+        res[1] = CGI::getAllocatedCharPointer(this->PATH_TRANSLATED);
+        res[2] = NULL;
     }
     catch (std::exception &e)
     {

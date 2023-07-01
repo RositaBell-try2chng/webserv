@@ -30,6 +30,7 @@ private:
     static void     CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_set *reads, fd_set *writes);
     static int      setChunkedResponse(Server &srv);
     static int      setContentLengthResponse(Server &srv);
+    static bool     isCorrectCGIs(std::map<int, Server *>::iterator it);
 public:
     static void				doIt(int args, char** argv);
     static void				exitHandler(int sig);

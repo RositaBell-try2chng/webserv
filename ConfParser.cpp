@@ -186,7 +186,7 @@ bool ConfParser::fillLocations(std::map <std::string, std::string> &paramL, std:
 				Logger::putMsg("BAD PARAM:\nindex file can't have / at the end:\n" + line + "=" + line2, FILE_ERR, ERR);
 				return (false);
 			}
-			else if (line != "acceptedMethods" && line != "dirListOn" && line != "CGIs" && line != "return" && line != "index") {
+			else if (line != "acceptedMethods" && line != "dirListOn" && line != "CGIs" && line != "CGIs_path" && line != "return" && line != "index") {
 				Logger::putMsg("BAD PARAM:\n" + line, FILE_ERR, ERR);
 				return (false);
 			}
@@ -230,8 +230,8 @@ bool ConfParser::fillServParam(std::string &src, std::map <std::string, std::str
 		{
 			if (line == "root")
             {
-                if (line2[0] != '/')
-				    line2.insert(line2.begin(), '/');
+                // if (line2[0] != '/')
+				//     line2.insert(line2.begin(), '/');
                 if (line2[line2.length() - 1] == '/')
                     line2.erase(line2.length() - 1, 1);
             }

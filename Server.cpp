@@ -86,6 +86,7 @@ bool	Server::findFile(Server &srv, std::string &str, t_serv *servNode, t_loc *lo
 {
 	std::string extension;
 	size_t		i = str.rfind('.');
+	size_t		j;
 
 	if (srv.getReq_struct()->base.start_string.method == "POST" && str != (servNode->root + "/CGIs/upload.py"))
 		return (true);
@@ -93,8 +94,15 @@ bool	Server::findFile(Server &srv, std::string &str, t_serv *servNode, t_loc *lo
 	if (i != std::string::npos)
 	{
 		extension = str.substr(i);
-		if (loc->CGIs.find(extension) != loc->CGIs.end())
-			CGIflg = true;
+		for (j = 0; j < loc->CGIs.size(); j++)
+		{
+			if (extension == loc->CGIs[j])
+			{
+				CGIflg = true;
+				srv.getCGIptr()->PATH_TO_SGI = loc->CGIs_path[j];
+				break;
+			}
+		}
 	}
 	if (access(str.c_str(), F_OK) != 0)
 		return (false);
@@ -108,7 +116,7 @@ void Server::setServList(std::map<std::string, std::string> &S, std::map <std::s
 	std::vector<std::string>::iterator it;
 	t_serv*		cur;
 	ssize_t		limit = -1;
-	std::string	root("./www/");
+	std::string	root("./html");
 
 	for (itS = S.begin(); itS != S.end(); itS++)
 	{
@@ -259,11 +267,10 @@ t_loc* Server::setLocList(std::map <std::string, std::map<std::string, std::stri
 			}
 			else if (it2->first == "CGIs")
 				Server::setCGIs(cur->CGIs, it2->second);
+			else if (it2->first == "CGIs_path")
+				Server::setCGIs(cur->CGIs_path, it2->second);
 			else if (it2->first == "upload_path")
-			{
-
 				cur->uploadPath = std::string(it2->second);
-			}
 			else if (it2->first == "return")
 				Server::setRedirect(cur, it2->second);
 			else if (it2->first == "index")
@@ -366,14 +373,13 @@ void Server::setMethods(t_loc *cur, std::string &src)
 }
 
 //for configs
-void Server::setCGIs(std::set<std::string> &dst, std::string &src)
+void Server::setCGIs(std::vector<std::string> &dst, std::string &src)
 {
 	std::string	line;
-
 	while (!src.empty())
 	{
 		ConfParser::splitLine(src, line);
-		dst.insert(src);
+		dst.push_back(src);
 		src = line;
 	}
 }
@@ -434,6 +440,7 @@ t_loc* Server::cloneLocList(t_loc const *src)
 		currRes->redirect = src->redirect;
 		currRes->root = src->root;
 		currRes->CGIs = src->CGIs;
+		currRes->CGIs_path = src->CGIs_path;
 		currRes->uploadPath = src->uploadPath;
 		currRes->dirListFlg = src->dirListFlg;
 		currRes->indexFile = src->indexFile;
