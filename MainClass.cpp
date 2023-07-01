@@ -82,10 +82,9 @@ void MainClass::mainLoop()
 		//select
 		switch (select(MainClass::maxFd + 1, &readFds, &writeFds, NULL, &timeout))
 		{
-			case -1: { //select error
+			case -1: {
 				//Logger::putMsg(strerror(errno), FILE_ERR, ERR); 
-				std::cout << "bad select!!!\n";
-				continue; //fix me: need to continue or exit from server?
+				continue;
 			}
 			case 0: {continue;} //timeout. try another select
 			default: {break;} //have something to do
@@ -95,12 +94,6 @@ void MainClass::mainLoop()
 		it = allServers->getConnections().begin();
 		while (it != allServers->getConnections().end())
 		{
-			if (it->second->checkTimeOut())
-			{
-				std::cout << it->first << " closed by TIMOUT\n";
-				MainClass::closeConnection(it);
-				continue;
-			}
 			switch (it->second->Stage)
 			{
 				//read from socket
@@ -181,9 +174,9 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *writ
 		return;
 	}
 	ssize_t sendRes;
-	if (it->second->getResponse().empty()) // nothing to send = ERROR //should not to happen //fix me: test this
+	if (it->second->getResponse().empty()) // nothing to send = ERROR
 	{
-		std::cout << it->first << ": ERROR, NOTHING TO SEND\n"; //fix me: send error
+		std::cout << it->first << ": ERROR, NOTHING TO SEND\n";
 		MainClass::closeConnection(it);
 		return;
 	}
@@ -213,6 +206,11 @@ void MainClass::sendResponse(std::map<int, Server *>::iterator &it, fd_set *writ
 			it->second->CntTryingSendZero();
 			if (static_cast<size_t>(sendRes) == it->second->getResponse().length())
 			{
+				if (it->second->writeStage == 3)
+				{
+					MainClass::closeConnection(it);
+					return;
+				}
 				if (!it->second->isChunkedResponse || it->second->writeStage == 2)
 					it->second->reqClear();
 				else if (it->second->writeStage == 1 || (it->second->writeStage == 0 && it->second->isChunkedResponse))
@@ -237,7 +235,7 @@ void MainClass::CGIHandlerReadWrite(std::map<int, Server *>::iterator &it, fd_se
 			it->second->getCGIptr()->prevStage = 1;
 			if (it->second->CGIStage == 9)
 				it->second->Stage = 9;
-			else if (it->second->CGIStage != 20) //fix me: need??
+			else if (it->second->CGIStage != 20)
 				it->second->Stage = 1;
 			break;
 		}

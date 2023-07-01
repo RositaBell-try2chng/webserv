@@ -2,6 +2,11 @@
 
 void HandlerRequest::mainHandler(Server &srv)
 {
+	if (srv.checkTimeOut())
+	{
+		// std::cout << it->first << " closed by TIMOUT\n";
+		srv.Stage = 99;
+	}
 	switch (srv.Stage)
 	{
 		case 0: { HandlerRequest::start(srv); break; } //start
@@ -46,7 +51,7 @@ void HandlerRequest::parserRequest(Server &srv)
 	}
 	else if (srv.getReq_struct()->stage == 54)
 	{
-		srv.Stage = 99;
+		srv.Stage = 98;
 		HandlerRequest::prepareToSendError(srv);
 		return;
 	}
@@ -131,8 +136,8 @@ void HandlerRequest::handleRequest(Server &srv)
 	else if (method != "GET" && method != "POST" && method != "DELETE")
 	{
 		srv.Stage = 9;
-		srv.getReq_struct()->answ_code[0] = 5;
-		srv.getReq_struct()->answ_code[1] = 1;
+		srv.getReq_struct()->answ_code[0] = 4;
+		srv.getReq_struct()->answ_code[1] = 5;
 		HandlerRequest::prepareToSendError(srv);
 		return;
 	}
@@ -345,7 +350,7 @@ bool HandlerRequest::haveErrorPage(Server &srv, t_serv *servNode, int code)
 
 	if (it == servNode->errPages.end())
 		return (false);
-	std::string								fullPath(servNode->root + it->second);
+	std::string	fullPath(servNode->root + it->second);
 	if (access((servNode->root + "/CGIs/download.py").c_str(), X_OK) == -1)
 	{
 		Logger::putMsg("download.py have no access to execute => error pages can't be open", FILE_ERR, ERR);
@@ -366,6 +371,7 @@ bool HandlerRequest::haveErrorPage(Server &srv, t_serv *servNode, int code)
 		case 405: { startStringForError += std::string("405 Method Not Allowed\r\n"); break; }
 		case 500: { startStringForError += std::string("500 Internal Server Error\r\n"); break; }
 		case 505: { startStringForError += std::string("505 HTTP Version Not Supported\r\n"); break; }
+		default: { if (srv.Stage > 90) return (false); }
 	}
 	srv.getReq_struct()->base.headers.insert(std::pair<std::string, std::string>(std::string("RESPONSE_START_STRING"), startStringForError));
 	HandlerRequest::GET(srv, servNode, fullPath, false);
@@ -638,7 +644,7 @@ void HandlerRequest::prepareToSendError(Server &srv)
 	t_serv		*servNode = srv.findServer(srv.getReq_struct()->host);;
 
 	srv.writeStage = 0;
-	if (srv.Stage == 99) //runtime error //fix me: add close for parse fatal error
+	if (srv.Stage == 99) //runtime error/FATAL
 	{
 		srv.getReq_struct()->answ_code[0] = 4;
 		srv.getReq_struct()->answ_code[1] = 8;
@@ -653,8 +659,11 @@ void HandlerRequest::prepareToSendError(Server &srv)
 		return;
 	tmp = HTTP_Answer::ft_reqtoansw(*(srv.getReq_struct()));
 	srv.setResponse(HTTP_Answer::ft_answtostr(tmp), true);
+	if (srv.Stage > 90)
+		srv.writeStage = 3;
+	else
+		srv.writeStage = 2;
 	srv.Stage = 5;
-	srv.writeStage = 2;
 	srv.isChunkedResponse = false;
 	srv.getRequest().clear();
 }

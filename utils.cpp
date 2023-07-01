@@ -100,6 +100,8 @@ std::string::size_type StringToSize_t(std::string src, std::string const &base, 
     delSpaces(src);
     for (size_t i = 0; i < src.length(); i++)
     {
+        if (src[i] >= 'a' && src[i] <= 'z')
+            src[i] -= 32;
         j = base.find(src[i]);
         if (j == std::string::npos)
         {
