@@ -60,6 +60,7 @@ enum Basic_Headers	{	Host,
 						Content_Type,
 						Date,
 						Transfer_Encoding,
+						Accept_Encoding,
 						User_Agent,
 						Something_else	};
 

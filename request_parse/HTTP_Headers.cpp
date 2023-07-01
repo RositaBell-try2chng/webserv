@@ -161,8 +161,9 @@ void	ft_headers_parse(HTTP_Request &req) {
 									"Content-Type",
 									"Date",
 									"Transfer-Encoding",
-									"Stop",
-									"User-Agent"              	};
+									"Accept-Encoding",
+									"User-Agent",
+									"Stop"			     	};
 
 	std::map<std::string, std::string>::iterator end = req.base.headers.end();
 
@@ -174,6 +175,7 @@ void	ft_headers_parse(HTTP_Request &req) {
 			case Content_Type:		{ ft_hdr_content_type(req.content_type, it->second); break ; }
 			case Date:				{ ft_hdr_date(req.date, it->second); break ; }
 			case Transfer_Encoding:	{ req.flg_te = ft_hdr_te(it->second); break ; }
+			case Accept_Encoding:	{ break ; }
 			case User_Agent:		{ break ; }
 
 			default: {
