@@ -161,7 +161,8 @@ void	ft_headers_parse(HTTP_Request &req) {
 									"Content-Type",
 									"Date",
 									"Transfer-Encoding",
-									"Stop"              	};
+									"Stop",
+									"User-Agent"              	};
 
 	std::map<std::string, std::string>::iterator end = req.base.headers.end();
 

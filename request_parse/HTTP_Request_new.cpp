@@ -188,8 +188,10 @@ void	ft_parse_headers(HTTP_Request &req, std::string &raw, int &end) {
 			ft_set_hdr(req);
 			i += (letter - 1);
 		}
-		else
+		else {
+			req.left.clear();
 			break ;
+		}
 		++i;
 		if ((i + 2 < end && raw[i + 2] == '\n' && raw[i + 1] == '\r')) {
 			ft_headers_parse(req);
