@@ -191,7 +191,6 @@ void	ft_parse_headers(HTTP_Request &req, std::string &raw, int &end) {
 	int	letter;
 
 	for (i = 0; i < end; ++i) {
-		std::cout << i << std::endl;
 		if (i != 0)
 			req.base.check = false;
 		for (letter = 1;
@@ -217,7 +216,6 @@ void	ft_parse_headers(HTTP_Request &req, std::string &raw, int &end) {
 			if (!req.base.check)
 				i += 2;
 			else {
-				std::cout << req.left << std::endl;
 				req.left.clear();
 			}
 			req.base.check = false;
@@ -236,7 +234,6 @@ void	ft_parse_chunked_body(HTTP_Request &req, std::string &raw, int &end) {
 
 	std::string	content;
 	
-	std::cout << raw << std::endl;
 	while (end > 0 && (raw[0] == '\r' || raw[0] == 'n')) {
 		raw.erase(0, 1);
 		end -= 1;
@@ -247,7 +244,6 @@ void	ft_parse_chunked_body(HTTP_Request &req, std::string &raw, int &end) {
 			req.chunk_size = StringToSize_t(req.left + raw.substr(0, i - 1), HEX_BASE, req.flg_ch_sz_crct);
 			req.left.clear();
 			req.content_lngth += req.chunk_size;
-			std::cout << "I'm still here" << std::endl;
 			raw.erase(0, i + 1);
 			end = raw.size();
 			if (!req.flg_ch_sz_crct) {
